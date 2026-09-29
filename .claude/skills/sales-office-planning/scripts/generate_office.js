@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* Генератор офиса продаж → файл проекта для «Планировщика офиса продаж».
  *
+ *   node generate_office.js --pkg S|M|L --area 280 [--w 25 --d 12 --h 4.5]      (пакет по площади, здание подбирается само)
  *   node generate_office.js --w 40 --d 12 --h 7 --M 6 --B 6 [--maket 5x3] [--mezz auto|yes|no]
  *        [--kids 1] [--cafe 1] [--wardrobe 1] [--bank 1] [--cashier 0] [--media 0] [--showroom 0] [--director 1]
  *        [--name "Офис продаж ЖК …"] [--out office.json] [--json '{"w":40,…}']
@@ -18,10 +19,14 @@ for (let i = 0; i < a.length; i++) {
   else p[k] = v;
 }
 const bool = ["kids", "cafe", "wardrobe", "bank", "cashier", "media", "showroom", "director"];
-const num = ["w", "d", "h", "M", "B"];
+const num = ["w", "d", "h", "M", "B", "area"];
 for (const k of bool) if (k in p && typeof p[k] === "string") p[k] = !["0", "false", "no", "нет"].includes(p[k].toLowerCase());
 for (const k of num) if (k in p) p[k] = +String(p[k]).replace(",", ".");
 const out = p.out; delete p.out;
+if (p.pkg) { p.pkg = String(p.pkg).toUpperCase(); if (!KB.PACKAGES[p.pkg]) { console.error("Пакет: S, M или L"); process.exit(1); }
+  p.area = p.area || KB.PACKAGES[p.pkg].A; const b = KB.suggestBuilding(p.pkg, p.area); for (const k of ["w", "d", "h"]) if (!(k in p)) p[k] = b[k];
+  const pp = KB.packageProgram(p.pkg, p.area, p.opts || {}, p.counts || {});
+  process.stderr.write(`Пакет «${KB.PACKAGES[p.pkg].name}» ${p.area} м²: M=${pp.vars.M}, B=${pp.vars.B}, мест ожидания ${pp.vars.seats}; помещения ${pp.net} м² × ${pp.k} = ${pp.need} м²; здание ${p.w}×${p.d}×${p.h}\n`); }
 const fit = KB.fit(p);
 const r = KB.generate(p);
 process.stderr.write(`Вмещается: нужно ≈ ${fit.need} м² (${fit.net} × ${fit.k}), есть ${fit.have} м² → ${fit.ratio >= 1 ? "да" : "НЕТ"}\n`);

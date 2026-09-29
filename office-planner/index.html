@@ -1,0 +1,1014 @@
+<title>Планировщик офиса продаж</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: инструментальная панель сверху, библиотека слева, чертёж по центру, свойства справа. Палитра — чертёжная калька + синий карандаш. */
+:root{
+  --bg:#eef0ec; --panel:#f8f9f6; --paper:#ffffff; --ink:#1f2622; --muted:#66706a; --line:#d5d9d2;
+  --accent:#1f5fa8; --accent-soft:#dbe7f5; --warn:#b4541e; --ok:#2e7d4f;
+  --grid:#e9ece6; --grid-major:#d6dbd3; --wall:#3a3f3b; --glass:#8cc8ec; --glass-edge:#2a78b8; --dim:#b3392f; --sel:#1f5fa8;
+  --font-ui:"Golos Text", "Segoe UI", system-ui, sans-serif; --font-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161a18; --panel:#1e2320; --paper:#232926; --ink:#e7ebe6; --muted:#9aa49d; --line:#343b37;
+  --accent:#6aa6ea; --accent-soft:#223449; --warn:#e08a55; --ok:#5fbf86;
+  --grid:#2a302c; --grid-major:#353d38; --wall:#c9cfca; --glass:#4b86ad; --glass-edge:#8cc8ec; --dim:#ef7a6e; --sel:#6aa6ea; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161a18; --panel:#1e2320; --paper:#232926; --ink:#e7ebe6; --muted:#9aa49d; --line:#343b37;
+  --accent:#6aa6ea; --accent-soft:#223449; --warn:#e08a55; --ok:#5fbf86;
+  --grid:#2a302c; --grid-major:#353d38; --wall:#c9cfca; --glass:#4b86ad; --glass-edge:#8cc8ec; --dim:#ef7a6e; --sel:#6aa6ea; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:13px;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr;grid-template-columns:250px 1fr 310px;grid-template-areas:"top top top" "lib main side"}
+.top{grid-area:top;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{font-weight:700;letter-spacing:.01em;display:flex;align-items:center;gap:8px;margin-right:6px}
+.brand i{display:inline-block;width:18px;height:18px;border:2px solid var(--accent);border-radius:2px;position:relative}
+.brand i:after{content:"";position:absolute;left:5px;top:-2px;width:2px;height:10px;background:var(--accent)}
+.pname{border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:6px;min-width:140px;max-width:260px;font-weight:600}
+.pname:hover,.pname:focus{border-color:var(--line);background:var(--paper);outline:none}
+.grp{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
+.grp button{border:0;background:transparent;padding:6px 10px;cursor:pointer;white-space:nowrap}
+.grp button+button{border-left:1px solid var(--line)}
+.grp button.on{background:var(--accent);color:#fff}
+.btn{border:1px solid var(--line);background:var(--paper);padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--warn)}
+.btn:focus-visible,.grp button:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.spacer{flex:1}
+.status{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lib{grid-area:lib;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.lib .search{padding:10px 12px;border-bottom:1px solid var(--line)}
+.lib .search input{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.lib .list{overflow:auto;padding:4px 10px 16px;flex:1}
+.lib h4{margin:14px 2px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.card{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:6px;cursor:grab;display:flex;flex-direction:column;gap:3px;text-align:left;min-width:0}
+.card:hover{border-color:var(--accent)}
+.card.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.card svg{width:100%;height:38px;display:block}
+.card b{font-weight:500;font-size:11.5px;line-height:1.2}
+.card small{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+.main{grid-area:main;position:relative;min-width:0;min-height:0;background:var(--paper)}
+#plan{width:100%;height:100%;display:block;touch-action:none;user-select:none;cursor:default}
+#plan.pan{cursor:grab}#plan.panning{cursor:grabbing}#plan.draw{cursor:crosshair}
+#three{position:absolute;inset:0}
+.hud{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hud .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:6px 12px;border-radius:8px;font-size:12px;max-width:90%;text-align:center}
+.side{grid-area:side;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:transparent;padding:10px 6px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.pane{overflow:auto;padding:12px 14px 24px;flex:1;min-height:0}
+.pane h3{margin:2px 0 10px;font-size:15px}
+.pane h5{margin:16px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.row.one{grid-template-columns:1fr}
+.row.four{grid-template-columns:repeat(4,1fr)}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);min-width:0}
+label.f input,label.f select,label.f textarea{padding:6px 7px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font-size:13px;min-width:0;width:100%}
+label.f input[type=number]{font-family:var(--font-mono);font-size:12px}
+label.f input[type=color]{padding:2px;height:32px}
+label.c{display:flex;gap:8px;align-items:center;font-size:12.5px;margin:6px 0}
+.sw{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
+.sw button{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);cursor:pointer;padding:0}
+.sw button:focus-visible{outline:2px solid var(--accent)}
+.actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+table.ex{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+table.ex th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line);padding:5px 4px}
+table.ex td{border-bottom:1px solid var(--line);padding:5px 4px;vertical-align:top}
+table.ex td.n{text-align:right;font-family:var(--font-mono);font-size:11.5px;white-space:nowrap}
+table.ex tr.tot td{font-weight:700;border-bottom:0}
+table.ex tr.sub td{color:var(--muted)}
+table.ex tr:hover td{background:var(--accent-soft);cursor:pointer}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.15)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--paper)}
+.kpi span{display:block;font-size:11px;color:var(--muted)}
+.kpi b{font-family:var(--font-mono);font-size:16px;font-weight:600}
+.note{font-size:12px;color:var(--muted);line-height:1.45}
+.modal{position:fixed;inset:0;background:rgba(10,14,12,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;max-width:560px;width:100%;max-height:90%;overflow:auto;padding:18px}
+.dlg h3{margin:0 0 12px}
+.plist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.pitem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--paper)}
+.pitem div{flex:1;min-width:0}
+.pitem small{color:var(--muted);display:block}
+.toast{position:fixed;right:16px;bottom:16px;background:var(--ink);color:var(--paper);padding:8px 12px;border-radius:8px;font-size:12.5px;z-index:30}
+kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--paper)}
+/* plan styles */
+.nss{vector-effect:non-scaling-stroke}
+#plan text{font-family:var(--font-ui)}
+@media (max-width:980px){
+  body{overflow:auto}
+  .app{height:auto;grid-template-columns:1fr;grid-template-rows:auto 62vh auto auto;grid-template-areas:"top" "main" "side" "lib"}
+  .lib,.side{border:0;border-top:1px solid var(--line);max-height:none}
+  .lib .list{max-height:60vh}
+  .pane{max-height:none}
+  .cards{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><i></i>Планировщик</div>
+    <input id="pname" class="pname" aria-label="Название проекта" value="Офис продаж">
+    <button class="btn" id="bProjects">Проекты</button>
+    <div class="grp" role="group" aria-label="Уровень">
+      <button id="lv0" class="on">1 этаж</button><button id="lv1">Антресоль</button>
+    </div>
+    <div class="grp" role="group" aria-label="Вид">
+      <button id="v2d" class="on">План 2D</button><button id="v3d">3D</button>
+    </div>
+    <div class="grp" role="group" aria-label="История">
+      <button id="bUndo" title="Отменить (Ctrl+Z)">↶</button><button id="bRedo" title="Повторить (Ctrl+Y)">↷</button>
+    </div>
+    <button class="btn" id="bFit" title="Показать всё здание">Весь план</button>
+    <span class="spacer"></span>
+    <span class="status" id="status">—</span>
+    <button class="btn primary" id="bExport">Выгрузить</button>
+  </header>
+
+  <aside class="lib" aria-label="Библиотека">
+    <div class="search"><input id="q" placeholder="Поиск: диван, кабинет, витраж…" aria-label="Поиск по библиотеке"></div>
+    <div class="list" id="lib"></div>
+  </aside>
+
+  <main class="main">
+    <svg id="plan" aria-label="План помещения"></svg>
+    <div id="three" hidden></div>
+    <div class="hint" id="hint" hidden></div>
+    <div class="hud" id="hud"></div>
+  </main>
+
+  <aside class="side">
+    <div class="tabs" role="tablist">
+      <button id="tProps" class="on">Свойства</button><button id="tEx">Экспликация</button><button id="tProj">Здание</button>
+    </div>
+    <div class="pane" id="pane"></div>
+  </aside>
+</div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* ============================================================ справочники */
+const CAT = {
+  client:{n:"Клиентская зона", c:"#F3E6CF"},
+  office:{n:"Кабинеты продаж", c:"#DAE8F6"},
+  meet:{n:"Переговорные", c:"#F7D9C2"},
+  back:{n:"Бэк-офис", c:"#E5DBF2"},
+  staff:{n:"Помещения персонала", c:"#E0ECD8"},
+  service:{n:"Служебные / технические", c:"#E2E2DC"},
+  wc:{n:"Санузлы", c:"#D3EEEA"},
+  circ:{n:"Коммуникации", c:"#EDEDE6"},
+};
+const FLOORS = [
+  ["Керамогранит светлый","#EDE8DE"],["Керамогранит серый","#C9C9C4"],["Мрамор","#F2F0EA"],["Бетон / микроцемент","#BDBAB2"],
+  ["Ламинат дуб","#D9B98E"],["Паркет орех","#A8784E"],["Ковролин серый","#9EA3A6"],["Ковролин синий","#5F7390"],
+  ["Плитка санузла","#CFE8E6"],["Резиновое покрытие (детская)","#F4D36B"],["Тёмный керамогранит","#5B5854"],["Белый глянец","#FAFAF7"]
+];
+const WALLS = {
+  ext:{n:"Наружная стена", th:.3, h:"H", col:"#8f928d"},
+  block:{n:"Стена (газоблок)", th:.2, h:"H", col:"#b8b8b2"},
+  part:{n:"Перегородка ГКЛ", th:.1, h:3.0, col:"#e7e5df"},
+  glass:{n:"Стеклянная перегородка", th:.1, h:3.0, glass:true},
+  vitrage:{n:"Витраж", th:.15, h:"H", glass:true},
+  rail:{n:"Ограждение h 1.1 м", th:.05, h:1.1, glass:true},
+};
+const BORDERS = {none:"Без стен (зона)", wall:"Стены (ГКЛ / блок)", glass:"Стеклянные перегородки"};
+// помещения-заготовки: w × h, м
+const ROOMS = [
+  ["Зал продаж",12,8,"client","none"],["Зона ожидания",5,4,"client","none"],["Ресепшен",4.4,2.2,"client","none",true],
+  ["Зона макета",6,4.4,"client","none",true],["Детская зона",3.5,3.5,"client","none",true,"#F4D36B"],["Кофе-поинт / бар",4,3.2,"client","none"],
+  ["Тамбур",2.6,2.2,"circ","glass"],["Коридор",1.6,8,"circ","none"],["Лестничная клетка",2.8,5.1,"circ","wall"],
+  ["Кабинет менеджера",3,3.2,"office","glass"],["Кабинет менеджера (большой)",3.6,3.6,"office","glass"],["Open-space продаж",6,5,"office","none"],
+  ["Переговорная на 6",4.5,4,"meet","glass"],["Переговорная на 10",6,4.5,"meet","glass"],["Сделочная / VIP",5,4.5,"meet","glass"],
+  ["Касса",3,3,"service","wall"],["Кабинет руководителя",5,4.5,"back","wall"],["Бэк-офис open-space",6,5,"back","glass"],
+  ["Бухгалтерия",4,4,"back","wall"],["Юрист / ипотечный брокер",3,3.2,"back","glass"],["Архив",2.5,3,"service","wall"],
+  ["Серверная",2,2.5,"service","wall"],["Электрощитовая",2,2.5,"service","wall"],["КУИ",1.8,2,"service","wall"],
+  ["Кухня персонала",4,3.5,"staff","wall"],["Комната отдыха",3.5,3,"staff","wall"],["Гардероб",2,2.5,"staff","wall"],
+  ["С/у посетителей",3.2,5,"wc","wall","","#CFE8E6"],["С/у МГН",2.2,2.2,"wc","wall","","#CFE8E6"],["С/у персонала",1.8,2.5,"wc","wall","","#CFE8E6"],
+];
+// мебель и оборудование: key, название, группа, w, h (глубина), z (высота 3D), тип символа, цвет 3D
+const FURN = [
+  // проёмы
+  ["door9","Дверь 900","Двери и окна",.9,1.2,2.1,"door","#9a7b56"],["door10","Дверь 1000","Двери и окна",1,1.3,2.1,"door","#9a7b56"],
+  ["door18","Дверь двустворчатая 1800","Двери и окна",1.8,1.2,2.4,"door2","#9a7b56"],["slide","Дверь раздвижная 1000","Двери и окна",1,.3,2.4,"slide","#a9d3ee"],
+  ["auto","Автоматическая дверь 2000","Двери и окна",2,.3,2.6,"auto","#a9d3ee"],["win","Окно 1500","Двери и окна",1.5,.3,1.5,"win","#a9d3ee"],
+  // клиентская зона
+  ["recep","Стойка ресепшен","Клиентская зона",3,.8,1.1,"recep","#d9c19a"],["recepL","Стойка ресепшен угловая","Клиентская зона",2.6,1.8,1.1,"recepL","#d9c19a"],
+  ["model","Стол макета ЖК 5×3","Клиентская зона",5,3,.9,"model","#e9e2d2"],["modelS","Стол макета 3×2","Клиентская зона",3,2,.9,"model","#e9e2d2"],
+  ["lounge","Мягкая зона (диван+2 кресла)","Клиентская зона",2.2,2.9,.8,"lounge","#c9c4bb"],
+  ["sofa2","Диван 2-местный","Клиентская зона",1.6,.9,.8,"sofa","#b9b2a6"],["sofa3","Диван 3-местный","Клиентская зона",2.2,.9,.8,"sofa","#b9b2a6"],
+  ["arm","Кресло","Клиентская зона",.8,.8,.8,"arm","#b9b2a6"],["ctab","Журнальный столик","Клиентская зона",1.2,.6,.45,"table","#e0d6c6"],
+  ["bench","Банкетка","Клиентская зона",1.2,.45,.45,"table","#b9b2a6"],["cafe4","Стол кафе на 4","Клиентская зона",1.9,1.9,.75,"cafe4","#e0d6c6"],
+  ["led","LED-экран / ТВ","Клиентская зона",2,.2,1.2,"screen","#2b2f33"],["media","Медиастена 4 м","Клиентская зона",4,.3,2.5,"screen","#2b2f33"],
+  ["stand","Стенд с планировками","Клиентская зона",1.2,.4,2,"stand","#f1efe9"],["plant","Растение в кашпо","Клиентская зона",.6,.6,1.4,"plant","#5d8c4e"],
+  ["cooler","Кулер","Клиентская зона",.35,.35,1.1,"cooler","#e6eef3"],["kidtab","Детский столик","Клиентская зона",1,.6,.5,"kidtab","#f2b76a"],
+  ["kidmat","Игровой коврик","Клиентская зона",2,2,.05,"mat","#f4d36b"],
+  // кабинеты
+  ["work3","Рабочее место менеджера + 2 гостя","Офисная мебель",1.6,2.3,.75,"work3","#e8e2d6"],["desk","Стол менеджера 1600","Офисная мебель",1.6,.8,.75,"table","#e8e2d6"],
+  ["deskB","Стол руководителя 1800","Офисная мебель",1.8,.9,.75,"table","#8c6a4a"],["os1","Рабочее место open-space","Офисная мебель",1.4,1.3,.75,"os1","#e8e2d6"],
+  ["os4","Блок open-space на 4","Офисная мебель",2.8,2.6,.75,"os4","#e8e2d6"],["chairO","Кресло офисное","Офисная мебель",.6,.6,1,"chair","#3c4146"],
+  ["chairV","Стул посетителя","Офисная мебель",.5,.5,.85,"chair","#6b7075"],["cab","Шкаф для документов","Офисная мебель",.9,.45,2,"cab","#dcd6cb"],
+  ["shelf","Стеллаж архивный","Офисная мебель",1,.4,2.2,"shelf","#c9c4ba"],["safe","Сейф","Офисная мебель",.5,.5,1.2,"safe","#55595c"],
+  ["mfp","МФУ / принтер","Офисная мебель",.6,.5,1,"mfp","#d8dbdd"],
+  // переговоры
+  ["meet6","Стол переговоров на 6","Переговорные",2.4,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
+  ["meet10","Стол переговоров на 10","Переговорные",4,2.2,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
+  // кухня и бар
+  ["kitch","Кухонный гарнитур 2.4 м","Кухня и бар",2.4,.6,.9,"kitch","#e9e6df"],["fridge","Холодильник","Кухня и бар",.7,.7,1.9,"fridge","#e9ecee"],
+  ["bar","Барная стойка 3 м","Кухня и бар",3,.6,1.1,"bar","#c8a877"],["stool","Барный стул","Кухня и бар",.45,.45,.75,"stool","#555"],
+  ["dine","Обеденный стол на 4","Кухня и бар",1.9,1.9,.75,"cafe4","#e0d6c6"],
+  // сантехника
+  ["wc","Унитаз","Сантехника",.4,.7,.8,"toilet","#f4f4f2"],["sink","Раковина","Сантехника",.55,.45,.85,"sink","#f4f4f2"],
+  ["urinal","Писсуар","Сантехника",.4,.35,1,"urinal","#f4f4f2"],["shower","Душевой поддон","Сантехника",.9,.9,2,"shower","#dbe9f0"],
+  ["cubicle","Кабина с/у 1.2×1.8","Сантехника",1.2,1.8,2.1,"cubicle","#c7d7da"],
+  // конструкции
+  ["col","Колонна 400×400","Конструкции",.4,.4,"H","col","#8f928d"],["col3","Колонна 300×300","Конструкции",.3,.3,"H","col","#8f928d"],
+  ["stair2","Лестница двухмаршевая","Конструкции",2.6,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
+];
+const FK = Object.fromEntries(FURN.map(f=>[f[0],{k:f[0],n:f[1],g:f[2],w:f[3],h:f[4],z:f[5],d:f[6],c:f[7]}]));
+const FIXH = {door:(w)=>w+.3, door2:(w)=>w/2+.3, slide:()=>.3, auto:()=>.3, win:()=>.3};
+
+/* ============================================================ состояние */
+const uid = () => Math.random().toString(36).slice(2,10);
+let S = null;            // проект
+let sel = null;          // id выбранного
+let level = 0, view = "2d", tab = "props";
+let tool = null;         // {type:'wall', kind} | {type:'room', preset}
+let snapOn = true, grid = 0.05;
+const undo = [], redo = [];
+const V = {s:30, tx:40, ty:40};   // масштаб px/м и сдвиг
+let dirty = false, projectId = null, store = null, hasUserEdit = false;
+
+function blankProject(w=40,d=12,h=7){
+  return {v:1, name:"Новый офис продаж", notes:"", b:{w, d, h, mz:3.3, front:"vitrage"}, items:[]};
+}
+function room(name,x,y,w,h,cat,border,o={}){
+  return Object.assign({id:uid(),t:"room",lv:0,name,x,y,w,h,cat,border,color:CAT[cat].c,sub:false,ph:3.0},o);
+}
+function furn(k,x,y,rot=0,o={}){
+  const f=FK[k]; return Object.assign({id:uid(),t:"item",lv:0,k,x,y,w:f.w,h:f.h,rot,flip:false,label:""},o);
+}
+function wallEl(kind,x1,y1,x2,y2,o={}){ return Object.assign({id:uid(),t:"wall",lv:0,kind,x1,y1,x2,y2,th:WALLS[kind].th},o); }
+
+/* Пример: офис продаж 40×12 м с антресолью (из эскизного проекта). Фасад с витражом — снизу (y = 12). */
+function templateSales(){
+  const P = blankProject(40,12,7); P.name = "Офис продаж 40×12 (пример)";
+  P.notes = "Пример-заготовка. Зал продаж 30×12 м со вторым светом h 6.5–7.0 м, в торце — сервисный блок и антресоль бэк-офиса (25%).";
+  const I = P.items, L1 = {lv:1};
+  I.push(room("Зал продаж (второй свет)",.3,3.5,29.7,8.2,"client","none",{color:"#EDE8DE"}));
+  I.push(room("Проход к сервисному блоку",25.3,.3,4.7,3.2,"circ","none",{color:"#EDE8DE"}));
+  I.push(room("Тамбур",21.2,9.8,2.6,2.2,"circ","glass",{sub:true}));
+  I.push(room("Бар / кофе-поинт",.3,.3,4,3.2,"client","none",{color:"#D9B98E"}));
+  for(let i=0;i<6;i++) I.push(room("Кабинет менеджера",4.3+3*i,.3,3,3.2,"office","glass",{color:"#9EA3A6"}));
+  I.push(room("Касса",22.3,.3,3,3.2,"service","wall"));
+  I.push(room("Зона макета",12.5,5.1,6,4.4,"client","none",{sub:true,color:"#F2F0EA"}));
+  I.push(room("Ресепшен",20.6,5.2,4.6,2.4,"client","none",{sub:true,color:"#F3E6CF"}));
+  I.push(room("Детская зона",.3,8.2,3.5,3.5,"client","none",{sub:true,color:"#F4D36B"}));
+  I.push(room("Сделочная / VIP",30,7,5,4.7,"meet","glass",{color:"#A8784E"}));
+  I.push(room("Кухня / комната отдыха",35,7,4.7,4.7,"staff","wall"));
+  I.push(room("Коридор",30,5.4,9.7,1.6,"circ","none"));
+  I.push(room("Лестничная клетка",30,.3,2.8,5.1,"circ","none"));
+  I.push(room("С/у посетителей",32.8,.3,3.2,5.1,"wc","wall",{color:"#CFE8E6"}));
+  I.push(room("С/у персонала",36,.3,1.8,5.1,"wc","wall",{color:"#CFE8E6"}));
+  I.push(room("КУИ",37.8,3,1.9,2.4,"service","wall"));
+  I.push(room("Электрощитовая",37.8,.3,1.9,2.7,"service","wall"));
+  // мебель 1 этажа
+  for(let i=0;i<6;i++){ const c=4.3+3*i+1.5; I.push(furn("work3",c-.8,.6)); I.push(furn("slide",4.3+3*i+.3,3.35)); }
+  I.push(furn("model",13,5.8)); I.push(furn("recep",20.9,6.9,180));
+  I.push(furn("chairO",22,6.2,180)); I.push(furn("chairO",23.6,6.2,180));
+  for(const cx of [5.9,9.4,27.4]) I.push(furn("lounge",cx-1.1,8.4));
+  I.push(furn("sofa3",5,5,270)); I.push(furn("sofa3",8.3,5,90)); I.push(furn("ctab",6.4,5.6,90,{w:1.6,h:1.2}));
+  I.push(furn("bar",.9,2.1,0,{w:3.4})); I.push(furn("kitch",.3,.3,0,{w:4}));
+  for(const x of [1.3,2.1,2.9,3.7]) I.push(furn("stool",x-.22,2.8));
+  I.push(furn("cafe4",1.45,6.3)); I.push(furn("cafe4",1.45,4.3));
+  I.push(furn("kidmat",.5,9.6,0,{w:1.8,h:1.5})); I.push(furn("kidtab",1.6,8.9));
+  I.push(furn("media",.3,4.6,90,{w:4})); I.push(furn("plant",29.2,10.9)); I.push(furn("plant",19.1,10.9)); I.push(furn("cooler",25.6,3.9));
+  I.push(furn("door18",21.6,10.8,180)); I.push(furn("door18",21.6,8.7,180));
+  I.push(furn("meet8",30.9,8.25)); I.push(furn("door9",30,5.8,270));
+  I.push(furn("kitch",39.1,8.2,90,{w:3})); I.push(furn("fridge",39,7.1)); I.push(furn("dine",36.3,8.5)); I.push(furn("sofa2",35.1,8.6,270));
+  I.push(furn("door9",38,5.95,180)); I.push(furn("stair2",30.1,.3)); I.push(furn("safe",22.45,.4)); I.push(furn("desk",22.5,2.3,0,{w:2.6,h:.6}));
+  I.push(furn("door9",25.2,1.5,90));
+  I.push(furn("cubicle",32.9,.35)); I.push(furn("cubicle",34.6,.35,0,{w:1.35})); I.push(furn("wc",33.3,.4)); I.push(furn("wc",35.1,.4));
+  I.push(furn("sink",35.3,3.4,90)); I.push(furn("sink",35.3,4.3,90)); I.push(furn("door9",32.95,4.6,0,{flip:true}));
+  I.push(furn("wc",36.7,.4)); I.push(furn("shower",36.45,1.6)); I.push(furn("sink",36.6,4.2,180));
+  I.push(furn("door9",36.2,4.8,0,{w:.8,h:1.1})); I.push(furn("door9",38,4.8,0,{w:.8,h:1.1}));
+  I.push(furn("door9",39.7,5.6,270,{w:1.1,h:1.4,label:"Служебный вход"})); I.push(furn("door9",39.7,1.2,270,{label:"Вход в щитовую"}));
+  // антресоль
+  I.push(room("Переговорная (вид на зал)",30,7,4.6,4.7,"meet","glass",Object.assign({color:"#9EA3A6"},L1)));
+  I.push(room("Кабинет руководителя",34.6,7,5.1,4.7,"back","wall",Object.assign({color:"#A8784E"},L1)));
+  I.push(room("Холл-галерея",30,5.4,9.7,1.6,"circ","none",L1));
+  I.push(room("Площадка лестницы",30,4.3,2.8,1.1,"circ","none",L1));
+  I.push(room("Бэк-офис open-space",32.8,.3,5.2,5.1,"back","glass",Object.assign({color:"#9EA3A6"},L1)));
+  I.push(room("Архив / серверная",38,.3,1.7,5.1,"service","wall",L1));
+  I.push(wallEl("rail",30,.3,30,5.4,L1)); I.push(wallEl("rail",30,5.4,30,7,L1));
+  I.push(furn("meet8",30.7,8.25,0,L1)); I.push(furn("deskB",36.3,9.6,0,L1)); I.push(furn("chairO",36.9,10.6,180,L1));
+  I.push(furn("chairV",36.6,8.9,0,L1)); I.push(furn("chairV",37.3,8.9,0,L1)); I.push(furn("sofa2",38.7,7.3,90,L1)); I.push(furn("cab",34.75,7.2,270,L1));
+  I.push(furn("os4",33.3,1.8,0,L1)); I.push(furn("os1",36.3,1.9,0,L1)); I.push(furn("cab",33,.3,0,L1)); I.push(furn("cab",34,.3,0,L1)); I.push(furn("mfp",36.8,.4,0,L1));
+  I.push(furn("shelf",39.25,.6,90,Object.assign({w:4.2},L1)));
+  I.push(furn("stair2",30.1,.3,0,Object.assign({label:"проём"},L1)));
+  I.push(furn("door9",31.2,7,180,L1)); I.push(furn("door9",35,7,180,L1)); I.push(furn("door9",33.1,5.4,0,L1)); I.push(furn("door9",38.2,5.4,0,Object.assign({w:.8,h:1.1},L1)));
+  return P;
+}
+
+/* ============================================================ утилиты */
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const r2 = v => Math.round(v*100)/100;
+const fmt = (v,d=2) => (Math.round(v*10**d)/10**d).toFixed(d).replace(".",",");
+const m2 = v => fmt(v,1);
+const byId = id => S.items.find(i=>i.id===id);
+const snap = v => snapOn ? Math.round(v/grid)*grid : v;
+const aabb = it => { if(it.t!=="item") return {x:it.x,y:it.y,w:it.w,h:it.h};
+  const q=(it.rot||0)%180!==0; return {x:it.x,y:it.y,w:q?it.h:it.w,h:q?it.w:it.h}; };
+const hx = (c,a) => { const n=parseInt(c.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
+function wallH(kind){ const h=WALLS[kind].h; return h==="H" ? S.b.h : h; }
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+
+function pushUndo(){ undo.push(JSON.stringify(S)); if(undo.length>120) undo.shift(); redo.length=0; }
+function commit(){ hasUserEdit = true; dirty = true; render(); scheduleSave(); }
+function doUndo(){ if(!undo.length) return; redo.push(JSON.stringify(S)); S=JSON.parse(undo.pop()); if(sel&&!byId(sel)) sel=null; commit(); }
+function doRedo(){ if(!redo.length) return; undo.push(JSON.stringify(S)); S=JSON.parse(redo.pop()); if(sel&&!byId(sel)) sel=null; commit(); }
+
+/* ============================================================ символы мебели (локальные координаты 0..w, 0..h) */
+function sym(it, forCard){
+  const f=FK[it.k]||{d:"rect"}, w=it.w, h=it.h, k="class='nss'";
+  const st = "fill='var(--paper)' stroke='var(--ink)' stroke-width='0.8' "+k;
+  const lt = "fill='none' stroke='var(--ink)' stroke-width='0.5' "+k;
+  const R=(x,y,ww,hh,extra="")=>`<rect x='${x}' y='${y}' width='${Math.max(ww,0)}' height='${Math.max(hh,0)}' ${extra||st}/>`;
+  const chair=(cx,cy,a=.45,dir=0)=>`<g transform='translate(${cx} ${cy}) rotate(${dir})'>${R(-a/2,-a/2,a,a)}${R(-a/2,-a/2,a,a*.2,"fill='var(--ink)' opacity='.55'")}</g>`;
+  switch(f.d){
+    case "door": { const lf=w, b=Math.min(.3,h);
+      return `${R(0,0,w,b,"fill='var(--paper)' stroke='none'")}<line x1='0' y1='${b}' x2='0' y2='${b+lf}' stroke='var(--ink)' stroke-width='1.6' ${k}/><path d='M ${lf} ${b} A ${lf} ${lf} 0 0 1 0 ${b+lf}' ${lt}/>`; }
+    case "door2": { const lf=w/2, b=.3;
+      return `${R(0,0,w,b,"fill='var(--paper)' stroke='none'")}<line x1='0' y1='${b}' x2='0' y2='${b+lf}' stroke='var(--ink)' stroke-width='1.6' ${k}/><line x1='${w}' y1='${b}' x2='${w}' y2='${b+lf}' stroke='var(--ink)' stroke-width='1.6' ${k}/><path d='M ${lf} ${b} A ${lf} ${lf} 0 0 1 0 ${b+lf}' ${lt}/><path d='M ${lf} ${b} A ${lf} ${lf} 0 0 0 ${w} ${b+lf}' ${lt}/>`; }
+    case "slide": return `${R(0,0,w,h,"fill='var(--paper)' stroke='none'")}${R(-.05,h*.55,w*.6,.06)}<line x1='${w*.2}' y1='${h*.85}' x2='${w*.8}' y2='${h*.85}' ${lt}/>`;
+    case "auto": return `${R(0,0,w,h,"fill='var(--paper)' stroke='none'")}${R(0,h*.5,w*.48,.06)}${R(w*.52,h*.5,w*.48,.06)}<path d='M ${w*.3} ${h*.2} L ${w*.1} ${h*.2} M ${w*.7} ${h*.2} L ${w*.9} ${h*.2}' ${lt}/>`;
+    case "win": return `${R(0,0,w,h,"fill='var(--glass)' stroke='var(--glass-edge)' stroke-width='.6' "+k)}<line x1='0' y1='${h/2}' x2='${w}' y2='${h/2}' stroke='var(--glass-edge)' stroke-width='.5' ${k}/>`;
+    case "chair": return chair(w/2,h/2,Math.min(w,h));
+    case "stool": return `<circle cx='${w/2}' cy='${h/2}' r='${Math.min(w,h)/2}' ${st}/>`;
+    case "arm": return `${R(0,0,w,h)}${R(0,0,w,h*.22,"fill='var(--ink)' opacity='.3'")}${R(0,0,w*.15,h)}${R(w*.85,0,w*.15,h)}`;
+    case "sofa": { const n=Math.max(2,Math.round(w/.7)); let s=R(0,0,w,h)+R(0,0,w,h*.25,"fill='var(--ink)' opacity='.25'");
+      for(let i=1;i<n;i++) s+=`<line x1='${w*i/n}' y1='${h*.25}' x2='${w*i/n}' y2='${h}' ${lt}/>`; return s; }
+    case "lounge": { let s=R(.3,1.15,1.6,.65);
+      for(const cx of [.55,1.65]) s+=`${R(cx-.4,0,.8,.8)}${R(cx-.4,0,.8,.18,"fill='var(--ink)' opacity='.3'")}`;
+      s+=R(0,h-.9,w,.9)+R(0,h-.22,w,.22,"fill='var(--ink)' opacity='.25'"); for(let i=1;i<3;i++) s+=`<line x1='${w*i/3}' y1='${h-.9}' x2='${w*i/3}' y2='${h-.22}' ${lt}/>`; return s; }
+    case "table": case "rect": return R(0,0,w,h);
+    case "cafe4": { const r=Math.min(w,h)*.23; return `<circle cx='${w/2}' cy='${h/2}' r='${r}' ${st}/>`+chair(w/2,h*.13,.42,0)+chair(w/2,h*.87,.42,180)+chair(w*.13,h/2,.42,270)+chair(w*.87,h/2,.42,90); }
+    case "meet": { const tw=w-.8, th=h-1.1, n=Math.max(2,Math.round(tw/.75)); let s=R(.4,.55,tw,th);
+      for(let i=0;i<n;i++){ const cx=.4+tw*(i+.5)/n; s+=chair(cx,.25,.45,0)+chair(cx,h-.25,.45,180); }
+      return s+chair(.2,h/2,.4,270)+chair(w-.2,h/2,.4,90); }
+    case "work3": return chair(w/2,.3,.55,0)+R(0,.65,w,.8)+chair(w/2-.4,h-.25,.45,180)+chair(w/2+.4,h-.25,.45,180);
+    case "os1": return R(0,0,w,.7)+`<rect x='${w*.15}' y='.05' width='${w*.3}' height='.06' fill='var(--ink)' opacity='.5'/>`+chair(w/2,1.0,.55,180);
+    case "os4": { let s=R(0,.6,w/2,.7)+R(w/2,.6,w/2,.7)+R(0,1.3,w/2,.7)+R(w/2,1.3,w/2,.7);
+      return s+chair(w/4,.3,.5,0)+chair(w*.75,.3,.5,0)+chair(w/4,h-.3,.5,180)+chair(w*.75,h-.3,.5,180); }
+    case "recep": return R(0,0,w,h,"fill='#d9c19a' stroke='var(--ink)' stroke-width='.8' "+k)+`<line x1='.1' y1='${h*.35}' x2='${w-.1}' y2='${h*.35}' ${lt}/>`;
+    case "recepL": return `<path d='M0 0 H${w} V.8 H.8 V${h} H0 Z' fill='#d9c19a' stroke='var(--ink)' stroke-width='.8' ${k}/>`;
+    case "model": { let s=R(0,0,w,h,"fill='#e9e2d2' stroke='#8a7d62' stroke-width='1' "+k)+R(w*.08,h*.1,w*.84,h*.8,"fill='var(--paper)' stroke='#8a7d62' stroke-width='.6' "+k);
+      const bx=[[.15,.2,.18,.25],[.4,.18,.12,.35],[.6,.25,.22,.2],[.2,.55,.25,.2],[.55,.55,.12,.25],[.72,.52,.12,.3]];
+      for(const b of bx) s+=R(w*b[0],h*b[1],w*b[2],h*b[3],"fill='#cfc4ab' stroke='#8a7d62' stroke-width='.4' "+k); return s; }
+    case "screen": return R(0,0,w,h,"fill='#2b2f33' stroke='none'");
+    case "stand": return R(0,0,w,h)+`<line x1='0' y1='0' x2='${w}' y2='${h}' ${lt}/>`;
+    case "plant": { const r=Math.min(w,h)/2; let s=`<circle cx='${w/2}' cy='${h/2}' r='${r}' fill='#8fbf7a' stroke='#4d7a3e' stroke-width='.7' ${k}/>`;
+      for(let i=0;i<6;i++){ const a=i*Math.PI/3; s+=`<line x1='${w/2}' y1='${h/2}' x2='${w/2+Math.cos(a)*r*.85}' y2='${h/2+Math.sin(a)*r*.85}' stroke='#4d7a3e' stroke-width='.6' ${k}/>`; } return s; }
+    case "cooler": return R(0,0,w,h)+`<circle cx='${w/2}' cy='${h/2}' r='${w*.32}' fill='#bfe0f2' stroke='var(--ink)' stroke-width='.5' ${k}/>`;
+    case "kidtab": return R(.2,.1,w-.4,h-.2,"fill='#f2b76a' stroke='var(--ink)' stroke-width='.7' "+k)+chair(.1,h/2,.2,270)+chair(w-.1,h/2,.2,90);
+    case "mat": return `<rect x='0' y='0' width='${w}' height='${h}' rx='.2' fill='#f4d36b' opacity='.8' stroke='#c89b1c' stroke-width='.7' ${k}/>`;
+    case "cab": return R(0,0,w,h)+`<line x1='0' y1='${h}' x2='${w}' y2='0' ${lt}/>`;
+    case "shelf": { let s=R(0,0,w,h); const n=Math.max(1,Math.round(w/.9)); for(let i=1;i<n;i++) s+=`<line x1='${w*i/n}' y1='0' x2='${w*i/n}' y2='${h}' ${lt}/>`; return s+`<line x1='0' y1='${h/2}' x2='${w}' y2='${h/2}' ${lt}/>`; }
+    case "safe": return R(0,0,w,h,"fill='#6b6f72' stroke='var(--ink)' stroke-width='.8' "+k)+`<path d='M0 0 L${w} ${h} M${w} 0 L0 ${h}' stroke='#ddd' stroke-width='.5' ${k}/>`;
+    case "mfp": return R(0,0,w,h)+R(w*.15,h*.15,w*.7,h*.3,"fill='var(--ink)' opacity='.25'");
+    case "kitch": return R(0,0,w,h)+`<ellipse cx='${Math.min(.5,w*.2)}' cy='${h/2}' rx='.2' ry='.15' ${lt}/>`+[1.2,1.5].map(x=>x<w?`<circle cx='${x}' cy='${h/2}' r='.1' ${lt}/>`:"").join("");
+    case "fridge": return R(0,0,w,h)+`<text x='${w/2}' y='${h/2}' font-size='.28' text-anchor='middle' dominant-baseline='central' fill='var(--muted)'>Х</text>`;
+    case "bar": return R(0,0,w,h,"fill='#c8a877' stroke='var(--ink)' stroke-width='.8' "+k);
+    case "toilet": return R(w*.1,0,w*.8,h*.28)+`<ellipse cx='${w/2}' cy='${h*.62}' rx='${w*.42}' ry='${h*.34}' ${st}/>`;
+    case "sink": return R(0,0,w,h)+`<ellipse cx='${w/2}' cy='${h*.55}' rx='${w*.32}' ry='${h*.3}' ${lt}/>`;
+    case "urinal": return `<path d='M0 0 H${w} V${h*.5} Q${w/2} ${h*1.4} 0 ${h*.5} Z' ${st}/>`;
+    case "shower": return R(0,0,w,h,"fill='#dbe9f0' stroke='var(--ink)' stroke-width='.8' "+k)+`<path d='M0 0 L${w} ${h} M${w} 0 L0 ${h}' ${lt}/>`;
+    case "cubicle": return R(0,0,w,h,"fill='none' stroke='var(--ink)' stroke-width='1.2' "+k)+`<path d='M${w*.2} ${h} A ${w*.6} ${w*.6} 0 0 1 ${w*.8} ${h-w*.6}' ${lt}/>`;
+    case "col": return R(0,0,w,h,"fill='var(--wall)' stroke='none'");
+    case "stair2": { const fw=(w-.2)/2, land=Math.min(1.3,h*.33), run=h-land; let s=R(0,0,w,h,"fill='var(--paper)' stroke='var(--ink)' stroke-width='.8' "+k);
+      const n=Math.max(3,Math.round(run/.3)); for(let i=0;i<=n;i++){ const y=land+run*i/n; s+=`<line x1='0' y1='${y}' x2='${fw}' y2='${y}' ${lt}/><line x1='${fw+.2}' y1='${y}' x2='${w}' y2='${y}' ${lt}/>`; }
+      s+=R(fw,land,.2,run,"fill='var(--ink)' opacity='.35'")+`<path d='M${fw/2} ${h-.2} V${land+.2} M${fw/2-.12} ${land+.4} L${fw/2} ${land+.2} L${fw/2+.12} ${land+.4}' stroke='var(--ink)' stroke-width='.9' fill='none' ${k}/>`; return s; }
+    case "stair1": { let s=R(0,0,w,h); const n=Math.max(3,Math.round(h/.3)); for(let i=1;i<n;i++) s+=`<line x1='0' y1='${h*i/n}' x2='${w}' y2='${h*i/n}' ${lt}/>`;
+      return s+`<path d='M${w/2} ${h-.2} V.3' stroke='var(--ink)' stroke-width='.9' fill='none' ${k}/>`; }
+    default: return R(0,0,w,h);
+  }
+}
+function itemTf(it){ const a=aabb(it), r=it.rot||0;
+  return `translate(${a.x+a.w/2} ${a.y+a.h/2}) rotate(${r}) scale(${it.flip?-1:1} 1) translate(${-it.w/2} ${-it.h/2})`; }
+
+/* ============================================================ разметка плана (строка SVG, единицы — метры) */
+function numbering(){
+  const map={}; for(const lv of [0,1]){ let n=1;
+    S.items.filter(i=>i.t==="room"&&i.lv===lv&&!i.sub).sort((a,b)=>(a.y-b.y)||(a.x-b.x)).forEach(r=>map[r.id]=(lv?"А":"")+(n++)); }
+  return map;
+}
+function wallRect(wl){ const dx=wl.x2-wl.x1, dy=wl.y2-wl.y1, L=Math.hypot(dx,dy)||1e-6, nx=-dy/L*wl.th/2, ny=dx/L*wl.th/2;
+  return `${wl.x1+nx},${wl.y1+ny} ${wl.x2+nx},${wl.y2+ny} ${wl.x2-nx},${wl.y2-ny} ${wl.x1-nx},${wl.y1-ny}`; }
+function drawWall(wl, ghost, interactive){
+  const W=WALLS[wl.kind]; const pts=wallRect(wl);
+  if(ghost) return `<polygon points='${pts}' fill='none' stroke='var(--muted)' stroke-width='.6' opacity='.5' class='nss'/>`;
+  let s = W.glass
+    ? `<polygon points='${pts}' fill='var(--glass)' stroke='var(--glass-edge)' stroke-width='.7' class='nss'/><line x1='${wl.x1}' y1='${wl.y1}' x2='${wl.x2}' y2='${wl.y2}' stroke='var(--glass-edge)' stroke-width='.6' class='nss' ${wl.kind==="rail"?"stroke-dasharray='4 2'":""}/>`
+    : `<polygon points='${pts}' fill='${wl.kind==="part"?"var(--paper)":"var(--wall)"}' stroke='var(--wall)' stroke-width='.8' class='nss'/>`;
+  if(interactive) s += `<line x1='${wl.x1}' y1='${wl.y1}' x2='${wl.x2}' y2='${wl.y2}' stroke='transparent' stroke-width='12' class='nss' data-id='${wl.id}' style='cursor:move'/>`;
+  return s;
+}
+function planMarkup(lv, opt={}){
+  const {b}=S, nums=numbering(), out=[], exp=!!opt.export;
+  const mine = S.items.filter(i=>i.lv===lv), other = S.items.filter(i=>i.lv!==lv);
+  out.push(`<rect x='0' y='0' width='${b.w}' height='${b.d}' fill='${exp?"#fff":"var(--paper)"}' stroke='none'/>`);
+  if(lv===1 && !exp) out.push(`<rect x='0' y='0' width='${b.w}' height='${b.d}' fill='url(#hatch)' opacity='.6'/>`);
+  // призрак другого уровня
+  if(!exp || lv===1) for(const it of other){
+    if(it.t==="room") out.push(`<rect x='${it.x}' y='${it.y}' width='${it.w}' height='${it.h}' fill='none' stroke='var(--muted)' stroke-width='.6' stroke-dasharray='3 3' opacity='.55' class='nss'/>`);
+    else if(it.t==="wall") out.push(drawWall(it,true));
+    else if(lv===1) out.push(`<g transform='${itemTf(it)}' opacity='.18'>${sym(it)}</g>`);
+  }
+  const rooms = mine.filter(i=>i.t==="room");
+  const ordered = [...rooms.filter(r=>!r.sub), ...rooms.filter(r=>r.sub)];
+  for(const r of ordered){
+    out.push(`<rect x='${r.x}' y='${r.y}' width='${r.w}' height='${r.h}' fill='${r.sub?hx(r.color,.55):r.color}' ${r.sub?"stroke='#8a7d62' stroke-width='.8' stroke-dasharray='5 3' class='nss'":"stroke='none'"} ${exp?"":`data-id='${r.id}' style='cursor:move'`}/>`);
+  }
+  for(const r of rooms){ if(r.border==="none"||r.sub) continue;
+    if(r.border==="wall") out.push(`<rect x='${r.x}' y='${r.y}' width='${r.w}' height='${r.h}' fill='none' stroke='var(--wall)' stroke-width='.12' pointer-events='none'/>`);
+    else out.push(`<rect x='${r.x}' y='${r.y}' width='${r.w}' height='${r.h}' fill='none' stroke='var(--glass-edge)' stroke-width='.09' pointer-events='none'/><rect x='${r.x}' y='${r.y}' width='${r.w}' height='${r.h}' fill='none' stroke='var(--glass)' stroke-width='.04' pointer-events='none'/>`);
+  }
+  for(const wl of mine.filter(i=>i.t==="wall")) out.push(drawWall(wl,false,!exp));
+  for(const it of mine.filter(i=>i.t==="item")){
+    const lbl = it.label ? `<text x='${aabb(it).x+aabb(it).w/2}' y='${aabb(it).y+aabb(it).h+.28}' font-size='.22' text-anchor='middle' fill='var(--muted)' pointer-events='none'>${esc(it.label)}</text>`:"";
+    out.push(`<g transform='${itemTf(it)}' ${exp?"":`data-id='${it.id}' style='cursor:move'`}>${sym(it)}<rect x='0' y='0' width='${it.w}' height='${it.h}' fill='transparent' stroke='none'/></g>${lbl}`);
+  }
+  // наружные стены здания
+  const t=.3, fr=b.front;
+  out.push(`<g pointer-events='none'>`);
+  out.push(`<rect x='0' y='0' width='${b.w}' height='${t}' fill='var(--wall)'/><rect x='0' y='0' width='${t}' height='${b.d}' fill='var(--wall)'/><rect x='${b.w-t}' y='0' width='${t}' height='${b.d}' fill='var(--wall)'/>`);
+  if(fr==="vitrage"){ out.push(`<rect x='${t}' y='${b.d-t}' width='${b.w-2*t}' height='${t}' fill='var(--glass)' stroke='var(--glass-edge)' stroke-width='.6' class='nss'/><line x1='${t}' y1='${b.d-t/2}' x2='${b.w-t}' y2='${b.d-t/2}' stroke='var(--glass-edge)' stroke-width='.6' class='nss'/>`);
+    for(let x=0;x<=b.w+1e-6;x+=5){ const cx=Math.min(Math.max(x,.2),b.w-.2); out.push(`<rect x='${cx-.2}' y='${b.d-.4}' width='.4' height='.4' fill='var(--wall)'/>`); } }
+  else out.push(`<rect x='0' y='${b.d-t}' width='${b.w}' height='${t}' fill='var(--wall)'/>`);
+  out.push(`</g>`);
+  // подписи помещений
+  for(const r of ordered){
+    const fs = Math.max(.16, Math.min(.34, r.w/12, r.h/5));
+    const cx=r.x+r.w/2, cy=r.y+r.h/2, num=nums[r.id];
+    const area = r.w*r.h;
+    const name = r.sub ? r.name : `${num}. ${r.name}`;
+    const words = wrapText(name, r.w, fs);
+    const lines = [...words, `${m2(area)} м²`];
+    const y0 = cy - (lines.length-1)*fs*1.2/2;
+    out.push(`<text font-size='${fs}' text-anchor='middle' fill='${exp?"#222":"var(--ink)"}' pointer-events='none' style='paint-order:stroke;stroke:${hx(r.color,.8)};stroke-width:${fs*.25}px'>`+
+      lines.map((l,i)=>`<tspan x='${cx}' y='${y0+i*fs*1.2}' dominant-baseline='central' ${i===lines.length-1?"font-weight='600'":""}>${esc(l)}</tspan>`).join("")+`</text>`);
+  }
+  return out.join("");
+}
+function wrapText(s, w, fs){ const max=Math.max(6, Math.floor(w/(fs*.55))); const words=s.split(" "); const lines=[]; let cur="";
+  for(const wd of words){ if((cur+" "+wd).trim().length>max && cur){ lines.push(cur); cur=wd; } else cur=(cur+" "+wd).trim(); }
+  if(cur) lines.push(cur); return lines.slice(0,3); }
+
+/* ============================================================ размерные линии */
+function dimLine(x1,y1,x2,y2,label,off=0){
+  const s=V.s, ang=Math.atan2(y2-y1,x2-x1), nx=-Math.sin(ang), ny=Math.cos(ang);
+  const ox=nx*off, oy=ny*off, a=[x1+ox,y1+oy], b=[x2+ox,y2+oy], tk=6/s;
+  const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2; let deg=ang*180/Math.PI; if(deg>90||deg<-90) deg+=180;
+  const fs=12/s;
+  return `<g pointer-events='none'><line x1='${a[0]}' y1='${a[1]}' x2='${b[0]}' y2='${b[1]}' stroke='var(--dim)' stroke-width='1' class='nss'/>`+
+    [a,b].map(p=>`<line x1='${p[0]-tk}' y1='${p[1]+tk}' x2='${p[0]+tk}' y2='${p[1]-tk}' stroke='var(--dim)' stroke-width='1.4' class='nss'/>`).join("")+
+    (off?`<line x1='${x1}' y1='${y1}' x2='${a[0]}' y2='${a[1]}' stroke='var(--dim)' stroke-width='.5' class='nss'/><line x1='${x2}' y1='${y2}' x2='${b[0]}' y2='${b[1]}' stroke='var(--dim)' stroke-width='.5' class='nss'/>`:"")+
+    `<text x='${mx}' y='${my}' transform='rotate(${deg} ${mx} ${my}) translate(0 ${-5/s})' font-size='${fs}' text-anchor='middle' fill='var(--dim)' style='font-family:var(--font-mono);paint-order:stroke;stroke:var(--paper);stroke-width:${3/s}px'>${label}</text></g>`;
+}
+const mm = v => String(Math.round(v*1000)).replace(/\B(?=(\d{3})+(?!\d))/g," ");
+
+/* ============================================================ отрисовка */
+const svg = $("#plan");
+let drag = null, guides = [], drawPreview = null;
+function render(){
+  $("#pname").value = S.name;
+  $("#lv0").classList.toggle("on",level===0); $("#lv1").classList.toggle("on",level===1);
+  if(view==="2d") renderPlan(); else build3D();
+  renderPane(); renderHud();
+}
+function renderPlan(){
+  const {b}=S, s=V.s;
+  let o = `<defs><pattern id='g1' width='1' height='1' patternUnits='userSpaceOnUse'><path d='M1 0 H0 V1' fill='none' stroke='var(--grid)' stroke-width='${1/s}'/></pattern>
+  <pattern id='g5' width='5' height='5' patternUnits='userSpaceOnUse'><rect width='5' height='5' fill='url(#g1)'/><path d='M5 0 H0 V5' fill='none' stroke='var(--grid-major)' stroke-width='${1/s}'/></pattern>
+  <pattern id='hatch' width='.6' height='.6' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'><line x1='0' y1='0' x2='0' y2='.6' stroke='var(--grid-major)' stroke-width='${1/s}'/></pattern></defs>`;
+  o += `<g transform='translate(${V.tx} ${V.ty}) scale(${s})'>`;
+  o += `<rect x='-60' y='-60' width='${b.w+120}' height='${b.d+120}' fill='url(#g5)' data-bg='1'/>`;
+  o += `<rect x='-3' y='${b.d+1.6}' width='${b.w+6}' height='3.2' fill='var(--grid-major)' opacity='.6' pointer-events='none'/><text x='${b.w/2}' y='${b.d+3.2}' font-size='.5' text-anchor='middle' dominant-baseline='central' fill='var(--muted)' pointer-events='none' letter-spacing='.2'>ДОРОГА · ФАСАД</text>`;
+  o += planMarkup(level);
+  // размеры здания
+  o += dimLine(0,0,b.w,0,mm(b.w),-1.1) + dimLine(0,b.d,0,0,mm(b.d),-1.1);
+  // оси колонн при витраже
+  // выделение
+  const it = sel && byId(sel);
+  if(it && it.lv===level){
+    if(it.t==="wall"){
+      const L=Math.hypot(it.x2-it.x1,it.y2-it.y1);
+      o += dimLine(it.x1,it.y1,it.x2,it.y2,mm(L), .6);
+      o += [[it.x1,it.y1,0],[it.x2,it.y2,1]].map(p=>`<circle cx='${p[0]}' cy='${p[1]}' r='${6/s}' fill='var(--paper)' stroke='var(--sel)' stroke-width='2' class='nss' data-wp='${p[2]}' style='cursor:crosshair'/>`).join("");
+    } else {
+      const a=aabb(it);
+      o += `<rect x='${a.x}' y='${a.y}' width='${a.w}' height='${a.h}' fill='none' stroke='var(--sel)' stroke-width='1.5' stroke-dasharray='5 3' class='nss' pointer-events='none'/>`;
+      o += dimLine(a.x,a.y,a.x+a.w,a.y,mm(a.w),-.45) + dimLine(a.x,a.y+a.h,a.x,a.y,mm(a.h),-.45);
+      if(drag && (drag.mode==="move"||drag.mode==="resize")) o += clearances(a);
+      const hs=[["nw",0,0],["n",.5,0],["ne",1,0],["e",1,.5],["se",1,1],["s",.5,1],["sw",0,1],["w",0,.5]];
+      const cur={nw:"nwse",se:"nwse",ne:"nesw",sw:"nesw",n:"ns",s:"ns",e:"ew",w:"ew"};
+      const fixed = it.t==="item" && FIXH[FK[it.k]?.d];
+      for(const [h,fx,fy] of hs){ if(fixed && (h!=="e"&&h!=="w") && ((it.rot||0)%180===0)) continue; if(fixed && (h!=="n"&&h!=="s") && ((it.rot||0)%180!==0)) continue;
+        const px=a.x+a.w*fx, py=a.y+a.h*fy, z=5/s;
+        o += `<rect x='${px-z}' y='${py-z}' width='${2*z}' height='${2*z}' fill='var(--paper)' stroke='var(--sel)' stroke-width='1.6' class='nss' data-h='${h}' style='cursor:${cur[h]}-resize'/>`; }
+    }
+  }
+  for(const g of guides) o += g.v!=null ? `<line x1='${g.v}' y1='-2' x2='${g.v}' y2='${b.d+2}' stroke='var(--sel)' stroke-width='1' stroke-dasharray='2 3' class='nss' pointer-events='none'/>` : `<line x1='-2' y1='${g.h}' x2='${b.w+2}' y2='${g.h}' stroke='var(--sel)' stroke-width='1' stroke-dasharray='2 3' class='nss' pointer-events='none'/>`;
+  if(drawPreview){ const p=drawPreview;
+    if(p.type==="wall"){ o += drawWall({...p, id:"_"}) + dimLine(p.x1,p.y1,p.x2,p.y2,mm(Math.hypot(p.x2-p.x1,p.y2-p.y1)),.6); }
+    else { o += `<rect x='${p.x}' y='${p.y}' width='${p.w}' height='${p.h}' fill='${hx(CAT[p.cat].c,.7)}' stroke='var(--sel)' stroke-width='1.5' class='nss'/>`+dimLine(p.x,p.y,p.x+p.w,p.y,mm(p.w),-.45)+dimLine(p.x,p.y+p.h,p.x,p.y,mm(p.h),-.45); }
+  }
+  // ручки здания
+  const z=6/s;
+  o += `<rect x='${b.w-z}' y='${b.d/2-3*z}' width='${2*z}' height='${6*z}' rx='${z}' fill='var(--accent)' data-bh='e' style='cursor:ew-resize'><title>Тяните, чтобы изменить длину здания</title></rect>`;
+  o += `<rect x='${b.w/2-3*z}' y='${-z}' width='${6*z}' height='${2*z}' rx='${z}' fill='var(--accent)' data-bh='n' style='cursor:ns-resize'><title>Тяните, чтобы изменить глубину здания</title></rect>`;
+  o += `</g>`;
+  svg.innerHTML = o;
+}
+function clearances(a){
+  const {b}=S, t=.3; let o="";
+  const L=a.x-t, R=(b.w-t)-(a.x+a.w), T=a.y-t, B=(b.d-t)-(a.y+a.h), cy=a.y+a.h/2, cx=a.x+a.w/2;
+  if(L>.02) o+=dimLine(t,cy,a.x,cy,mm(L)); if(R>.02) o+=dimLine(a.x+a.w,cy,b.w-t,cy,mm(R));
+  if(T>.02) o+=dimLine(cx,t,cx,a.y,mm(T)); if(B>.02) o+=dimLine(cx,a.y+a.h,cx,b.d-t,mm(B));
+  return o;
+}
+function renderHud(){
+  const rooms=S.items.filter(i=>i.t==="room"&&!i.sub);
+  const a0=rooms.filter(r=>r.lv===0).reduce((s,r)=>s+r.w*r.h,0), a1=rooms.filter(r=>r.lv===1).reduce((s,r)=>s+r.w*r.h,0);
+  const bA=S.b.w*S.b.d;
+  $("#hud").innerHTML = `<span class="chip">${fmt(S.b.w,1)} × ${fmt(S.b.d,1)} м · ${m2(bA)} м²</span><span class="chip">1 этаж ${m2(a0)} м²</span><span class="chip">Антресоль ${m2(a1)} м² · ${Math.round(a1/bA*100)}%</span><span class="chip">Сетка ${Math.round(grid*100)} см ${snapOn?"· привязка":""}</span>`;
+}
+
+/* ============================================================ взаимодействие с планом */
+function toWorld(ev){ const r=svg.getBoundingClientRect(); return {x:(ev.clientX-r.left-V.tx)/V.s, y:(ev.clientY-r.top-V.ty)/V.s}; }
+function snapEdges(it, nx, ny, a){
+  // магнит к краям помещений, мебели и внутренним граням стен
+  const th = 8/V.s, xs=[.3,S.b.w-.3,0,S.b.w], ys=[.3,S.b.d-.3,0,S.b.d];
+  for(const o of S.items){ if(o.id===it.id||o.lv!==it.lv||o.t==="wall") continue; const q=aabb(o); xs.push(q.x,q.x+q.w); ys.push(q.y,q.y+q.h); }
+  guides=[]; let bx=null, by=null;
+  for(const c of xs){ for(const e of [nx, nx+a.w]){ const d=c-e; if(Math.abs(d)<th && (bx===null||Math.abs(d)<Math.abs(bx.d))) bx={d,c}; } }
+  for(const c of ys){ for(const e of [ny, ny+a.h]){ const d=c-e; if(Math.abs(d)<th && (by===null||Math.abs(d)<Math.abs(by.d))) by={d,c}; } }
+  if(bx){ nx+=bx.d; guides.push({v:bx.c}); } if(by){ ny+=by.d; guides.push({h:by.c}); }
+  return [nx,ny];
+}
+let spaceDown=false;
+svg.addEventListener("pointerdown", ev=>{
+  if(ev.button===2) return;
+  const p=toWorld(ev), t=ev.target, d=t.closest("[data-id],[data-h],[data-wp],[data-bh]");
+  svg.setPointerCapture(ev.pointerId);
+  if(ev.button===1 || spaceDown){ drag={mode:"pan", sx:ev.clientX, sy:ev.clientY, tx:V.tx, ty:V.ty}; svg.classList.add("panning"); return; }
+  if(tool){ const sp={x:snap(p.x),y:snap(p.y)};
+    drag={mode:"draw", p0:sp}; drawPreview = tool.type==="wall" ? {type:"wall",kind:tool.kind,th:WALLS[tool.kind].th,x1:sp.x,y1:sp.y,x2:sp.x,y2:sp.y} : {type:"room",x:sp.x,y:sp.y,w:0,h:0,cat:tool.preset[3]}; return; }
+  if(d && d.dataset.bh){ pushUndo(); drag={mode:"bres", h:d.dataset.bh, p0:p, b0:{...S.b}}; return; }
+  if(d && d.dataset.h){ const it=byId(sel); pushUndo(); drag={mode:"resize", h:d.dataset.h, p0:p, a0:aabb(it), o:{...it}}; return; }
+  if(d && d.dataset.wp){ const it=byId(sel); pushUndo(); drag={mode:"wend", i:+d.dataset.wp, o:{...it}}; return; }
+  if(d && d.dataset.id){
+    sel=d.dataset.id; const it=byId(sel); pushUndo(); drag={mode:"move", p0:p, o:{...it}, moved:false};
+    if(ev.altKey){ const c=JSON.parse(JSON.stringify(it)); c.id=uid(); S.items.push(c); sel=c.id; drag.o={...c}; }
+    tab="props"; setTabs(); render(); return; }
+  drag={mode:"pan", sx:ev.clientX, sy:ev.clientY, tx:V.tx, ty:V.ty, click:true}; svg.classList.add("panning");
+});
+svg.addEventListener("pointermove", ev=>{
+  if(!drag) return; const p=toWorld(ev);
+  if(drag.mode==="pan"){ V.tx=drag.tx+ev.clientX-drag.sx; V.ty=drag.ty+ev.clientY-drag.sy; if(Math.abs(ev.clientX-drag.sx)+Math.abs(ev.clientY-drag.sy)>3) drag.click=false; renderPlan(); return; }
+  if(drag.mode==="draw"){ const q={x:snap(p.x),y:snap(p.y)}, p0=drag.p0;
+    if(drawPreview.type==="wall"){ let x2=q.x,y2=q.y; if(!ev.shiftKey){ if(Math.abs(x2-p0.x)>Math.abs(y2-p0.y)) y2=p0.y; else x2=p0.x; } drawPreview.x2=x2; drawPreview.y2=y2; }
+    else Object.assign(drawPreview,{x:Math.min(p0.x,q.x),y:Math.min(p0.y,q.y),w:Math.abs(q.x-p0.x),h:Math.abs(q.y-p0.y)});
+    renderPlan(); return; }
+  const it=byId(sel);
+  if(drag.mode==="move"&&it){ const dx=p.x-drag.p0.x, dy=p.y-drag.p0.y; if(Math.abs(dx)+Math.abs(dy)>.02) drag.moved=true;
+    if(it.t==="wall"){ const sx=snap(dx), sy=snap(dy); Object.assign(it,{x1:drag.o.x1+sx,y1:drag.o.y1+sy,x2:drag.o.x2+sx,y2:drag.o.y2+sy}); }
+    else { const a=aabb(drag.o); let nx=snap(drag.o.x+dx), ny=snap(drag.o.y+dy); if(!ev.ctrlKey) [nx,ny]=snapEdges(it,nx,ny,a); it.x=+nx.toFixed(3); it.y=+ny.toFixed(3); }
+    renderPlan(); renderHud(); return; }
+  if(drag.mode==="resize"&&it){ const a=drag.a0, h=drag.h; let x0=a.x,y0=a.y,x1=a.x+a.w,y1=a.y+a.h; const q={x:snap(p.x),y:snap(p.y)};
+    if(h.includes("w")) x0=Math.min(q.x,x1-.1); if(h.includes("e")) x1=Math.max(q.x,x0+.1);
+    if(h.includes("n")) y0=Math.min(q.y,y1-.1); if(h.includes("s")) y1=Math.max(q.y,y0+.1);
+    const nw=x1-x0, nh=y1-y0, rot=(it.rot||0)%180!==0;
+    it.x=+x0.toFixed(3); it.y=+y0.toFixed(3);
+    if(it.t==="item"&&rot){ it.w=+nh.toFixed(3); it.h=+nw.toFixed(3); } else { it.w=+nw.toFixed(3); it.h=+nh.toFixed(3); }
+    fixDoor(it); renderPlan(); renderPane(); renderHud(); return; }
+  if(drag.mode==="wend"&&it){ let q={x:snap(p.x),y:snap(p.y)}; const ox=drag.i?it.x1:it.x2, oy=drag.i?it.y1:it.y2;
+    if(!ev.shiftKey){ if(Math.abs(q.x-ox)>Math.abs(q.y-oy)) q.y=oy; else q.x=ox; }
+    if(drag.i){ it.x2=q.x; it.y2=q.y; } else { it.x1=q.x; it.y1=q.y; } renderPlan(); return; }
+  if(drag.mode==="bres"){ const b=S.b; if(drag.h==="e") b.w=Math.max(4,+snap(drag.b0.w+(p.x-drag.p0.x)).toFixed(2));
+    else { const nd=Math.max(4,+snap(drag.b0.d-(p.y-drag.p0.y)).toFixed(2)); const dd=nd-drag.b0.d; b.d=nd; } renderPlan(); renderHud(); return; }
+});
+function fixDoor(it){ if(it.t!=="item") return; const f=FK[it.k]; const fn=f&&FIXH[f.d]; if(fn) it.h=+fn(it.w).toFixed(3); }
+function endDrag(){
+  if(!drag) return; const m=drag.mode; svg.classList.remove("panning");
+  if(m==="pan"&&drag.click){ sel=null; render(); }
+  else if(m==="draw"){ const p=drawPreview; drawPreview=null;
+    if(p.type==="wall" && Math.hypot(p.x2-p.x1,p.y2-p.y1)>.1){ pushUndo(); const w=wallEl(p.kind,p.x1,p.y1,p.x2,p.y2,{lv:level}); S.items.push(w); sel=w.id; commit(); }
+    else if(p.type==="room" && p.w>.3 && p.h>.3){ pushUndo(); const pr=tool.preset; const r=room(pr[0],p.x,p.y,p.w,p.h,pr[3],pr[4],{lv:level,sub:!!pr[5],color:pr[6]||CAT[pr[3]].c}); S.items.push(r); sel=r.id; tool=null; setToolUI(); commit(); }
+    else render(); }
+  else if(m==="move"){ guides=[]; if(drag.moved) commit(); else { undo.pop(); render(); } }
+  else if(m!=="pan"){ guides=[]; commit(); }
+  drag=null;
+}
+svg.addEventListener("pointerup", endDrag); svg.addEventListener("pointercancel", endDrag);
+svg.addEventListener("wheel", ev=>{ ev.preventDefault(); const r=svg.getBoundingClientRect(), mx=ev.clientX-r.left, my=ev.clientY-r.top;
+  const k=Math.exp(-ev.deltaY*.0015), ns=Math.min(400,Math.max(4,V.s*k)); V.tx=mx-(mx-V.tx)*ns/V.s; V.ty=my-(my-V.ty)*ns/V.s; V.s=ns; renderPlan(); },{passive:false});
+svg.addEventListener("contextmenu", e=>e.preventDefault());
+svg.addEventListener("dragover", e=>e.preventDefault());
+svg.addEventListener("drop", e=>{ e.preventDefault(); const key=e.dataTransfer.getData("text/plain"); if(!key) return; addFromLib(key, toWorld(e)); });
+function fit(){ const r=svg.getBoundingClientRect(); if(!r.width) return; const pad=70; V.s=Math.min((r.width-2*pad)/S.b.w,(r.height-2*pad-60)/(S.b.d+4)); V.tx=(r.width-S.b.w*V.s)/2; V.ty=(r.height-(S.b.d+4)*V.s)/2+30; }
+
+/* ============================================================ библиотека */
+function libCardIcon(kind, key){
+  if(kind==="room"){ const p=ROOMS[key]; const w=p[1],h=p[2],sc=Math.min(56/w,30/h);
+    return `<svg viewBox='-2 -2 64 40'><rect x='${30-w*sc/2}' y='${18-h*sc/2}' width='${w*sc}' height='${h*sc}' fill='${p[6]||CAT[p[3]].c}' stroke='${p[4]==="glass"?"#2a78b8":p[4]==="wall"?"#3a3f3b":"#999"}' stroke-width='${p[4]==="none"?1:2}' ${p[4]==="none"?"stroke-dasharray='3 2'":""}/></svg>`; }
+  if(kind==="wall"){ const W=WALLS[key]; return `<svg viewBox='0 0 64 40'><rect x='4' y='${20-W.th*20}' width='56' height='${Math.max(2,W.th*40)}' fill='${W.glass?"var(--glass)":"var(--wall)"}' stroke='${W.glass?"var(--glass-edge)":"none"}'/></svg>`; }
+  const f=FK[key]; const it={k:key,w:f.w,h:f.h}; const sc=Math.min(56/f.w,32/f.h);
+  return `<svg viewBox='-2 -2 64 40'><g transform='translate(${30-f.w*sc/2} ${18-f.h*sc/2}) scale(${sc})'>${sym(it,true)}</g></svg>`;
+}
+function renderLib(){
+  const q=$("#q").value.trim().toLowerCase(); const m=s=>!q||s.toLowerCase().includes(q);
+  let o="";
+  const rooms=ROOMS.map((p,i)=>[p,i]).filter(([p])=>m(p[0])||m(CAT[p[3]].n));
+  if(rooms.length){ o+=`<h4>Помещения и зоны</h4><div class="cards">`+rooms.map(([p,i])=>`<button class="card ${tool&&tool.type==="room"&&tool.preset===p?"on":""}" draggable="true" data-add="room:${i}" title="Перетащите на план или нажмите, чтобы добавить. Двойной клик — нарисовать своего размера">${libCardIcon("room",i)}<b>${esc(p[0])}</b><small>${fmt(p[1],1)}×${fmt(p[2],1)} м · ${m2(p[1]*p[2])} м²</small></button>`).join("")+`</div>`; }
+  const walls=Object.entries(WALLS).filter(([k,W])=>m(W.n));
+  if(walls.length){ o+=`<h4>Стены и витражи — рисуются мышкой</h4><div class="cards">`+walls.map(([k,W])=>`<button class="card ${tool&&tool.type==="wall"&&tool.kind===k?"on":""}" data-tool="${k}">${libCardIcon("wall",k)}<b>${W.n}</b><small>${Math.round(W.th*1000)} мм · h ${W.h==="H"?"на всю высоту":fmt(W.h,1)+" м"}</small></button>`).join("")+`</div>`; }
+  const groups=[...new Set(FURN.map(f=>f[2]))];
+  for(const g of groups){ const list=FURN.filter(f=>f[2]===g && (m(f[1])||m(g))); if(!list.length) continue;
+    o+=`<h4>${g}</h4><div class="cards">`+list.map(f=>`<button class="card" draggable="true" data-add="item:${f[0]}" title="Перетащите на план или нажмите">${libCardIcon("item",f[0])}<b>${esc(f[1])}</b><small>${Math.round(f[3]*1000)}×${Math.round(f[4]*1000)}</small></button>`).join("")+`</div>`; }
+  $("#lib").innerHTML = o || `<p class="note">Ничего не найдено. Попробуйте «диван», «переговорная» или «витраж».</p>`;
+}
+$("#lib").addEventListener("dragstart", e=>{ const c=e.target.closest("[data-add]"); if(c) e.dataTransfer.setData("text/plain", c.dataset.add); });
+$("#lib").addEventListener("click", e=>{ const c=e.target.closest("[data-add],[data-tool]"); if(!c) return;
+  if(c.dataset.tool){ tool = (tool&&tool.kind===c.dataset.tool)?null:{type:"wall",kind:c.dataset.tool}; setToolUI(); return; }
+  if(view!=="2d") setView("2d");
+  const r=svg.getBoundingClientRect(); addFromLib(c.dataset.add, {x:(r.width/2-V.tx)/V.s, y:(r.height/2-V.ty)/V.s}); });
+$("#lib").addEventListener("dblclick", e=>{ const c=e.target.closest("[data-add^='room:']"); if(!c) return; tool={type:"room",preset:ROOMS[+c.dataset.add.split(":")[1]]}; setToolUI(); });
+$("#q").addEventListener("input", renderLib);
+function addFromLib(key, p){
+  const [kind,k]=key.split(":"); pushUndo(); let it;
+  if(kind==="room"){ const pr=ROOMS[+k]; it=room(pr[0],snap(p.x-pr[1]/2),snap(p.y-pr[2]/2),pr[1],pr[2],pr[3],pr[4],{lv:level,sub:!!pr[5],color:pr[6]||CAT[pr[3]].c}); }
+  else { const f=FK[k]; it=furn(k,snap(p.x-f.w/2),snap(p.y-f.h/2),0,{lv:level}); }
+  S.items.push(it); sel=it.id; tab="props"; setTabs(); commit();
+}
+function setToolUI(){ const h=$("#hint");
+  if(tool){ h.hidden=false; h.textContent = tool.type==="wall" ? `Рисование: ${WALLS[tool.kind].n}. Зажмите мышь и тяните. Shift — под любым углом. Esc — выход.` : `Нарисуйте «${tool.preset[0]}» рамкой нужного размера. Esc — отмена.`; svg.classList.add("draw"); }
+  else { h.hidden=true; svg.classList.remove("draw"); }
+  renderLib(); }
+
+/* ============================================================ правая панель */
+function setTabs(){ $("#tProps").classList.toggle("on",tab==="props"); $("#tEx").classList.toggle("on",tab==="ex"); $("#tProj").classList.toggle("on",tab==="proj"); }
+for(const [id,t] of [["tProps","props"],["tEx","ex"],["tProj","proj"]]) $("#"+id).onclick=()=>{ tab=t; setTabs(); renderPane(); };
+const num = (id,label,v,step=.05) => `<label class="f">${label}<input type="number" id="${id}" value="${r2(v)}" step="${step}"></label>`;
+function renderPane(){
+  const P=$("#pane"); if(document.activeElement && P.contains(document.activeElement) && drag==null && document.activeElement.tagName!=="BUTTON" && renderPane.lock) return;
+  if(tab==="ex"){ P.innerHTML=explicationHTML(); return; }
+  if(tab==="proj"){ P.innerHTML=projectHTML(); return; }
+  const it=sel&&byId(sel);
+  if(!it){ P.innerHTML=`<h3>Ничего не выбрано</h3><p class="note">Перетащите помещение или мебель из библиотеки слева на план. Потяните за край — размер меняется, цифры видны сразу.</p>
+    <h5>Управление</h5><p class="note">Колесо мыши — масштаб. Перетаскивание пустого места — сдвиг плана.<br><kbd>Del</kbd> удалить · <kbd>Ctrl</kbd>+<kbd>D</kbd> копия · <kbd>R</kbd> повернуть на 90° · стрелки — сдвиг на шаг сетки (с <kbd>Shift</kbd> ×10) · <kbd>Alt</kbd>+перетаскивание — копия · <kbd>Ctrl</kbd> при перетаскивании — без магнита · <kbd>Ctrl</kbd>+<kbd>Z</kbd> отмена.</p>
+    <h5>Уровни</h5><p class="note">«1 этаж» и «Антресоль» переключаются сверху. На антресоли помещения первого этажа показаны пунктиром, над залом — штриховка второго света.</p>`; return; }
+  if(it.t==="room"){
+    P.innerHTML=`<h3>Помещение</h3>
+    <div class="row one"><label class="f">Название<input id="pN" value="${esc(it.name)}"></label></div>
+    <div class="row"><label class="f">Категория<select id="pCat">${Object.entries(CAT).map(([k,c])=>`<option value="${k}" ${k===it.cat?"selected":""}>${c.n}</option>`).join("")}</select></label>
+    <label class="f">Ограждение<select id="pB">${Object.entries(BORDERS).map(([k,n])=>`<option value="${k}" ${k===it.border?"selected":""}>${n}</option>`).join("")}</select></label></div>
+    <div class="row four">${num("pX","X, м",it.x)}${num("pY","Y, м",it.y)}${num("pW","Ширина",it.w)}${num("pH","Глубина",it.h)}</div>
+    <div class="kpis"><div class="kpi"><span>Площадь</span><b>${m2(it.w*it.h)} м²</b></div><div class="kpi"><span>Периметр</span><b>${fmt(2*(it.w+it.h),1)} м</b></div></div>
+    <h5>Покрытие пола</h5><div class="sw">${FLOORS.map(([n,c])=>`<button data-floor="${c}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join("")}</div>
+    <div class="row"><label class="f">Свой цвет<input type="color" id="pC" value="${it.color}"></label><label class="f">Высота перегородок, м<input type="number" id="pPH" value="${it.ph??3}" step=".1"></label></div>
+    <label class="c"><input type="checkbox" id="pSub" ${it.sub?"checked":""}> Зона внутри другого помещения (не суммируется в итог)</label>
+    <div class="actions"><button class="btn" id="aDup">Копия</button><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`;
+  } else if(it.t==="wall"){
+    const L=Math.hypot(it.x2-it.x1,it.y2-it.y1);
+    P.innerHTML=`<h3>${WALLS[it.kind].n}</h3>
+    <div class="row"><label class="f">Тип<select id="pK">${Object.entries(WALLS).map(([k,W])=>`<option value="${k}" ${k===it.kind?"selected":""}>${W.n}</option>`).join("")}</select></label>${num("pL","Длина, м",L)}</div>
+    <div class="row four">${num("pX1","X1",it.x1)}${num("pY1","Y1",it.y1)}${num("pX2","X2",it.x2)}${num("pY2","Y2",it.y2)}</div>
+    <div class="row">${num("pT","Толщина, м",it.th,.01)}<label class="f">Высота<input disabled value="${fmt(wallH(it.kind),1)} м"></label></div>
+    <p class="note">Тяните за круглые точки на концах, чтобы удлинить. Удерживайте Shift, чтобы вести под углом.</p>
+    <div class="actions"><button class="btn" id="aDup">Копия</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`;
+  } else {
+    const f=FK[it.k];
+    P.innerHTML=`<h3>${esc(f.n)}</h3><p class="note">${esc(f.g)} · стандарт ${Math.round(f.w*1000)}×${Math.round(f.h*1000)} мм</p>
+    <div class="row one"><label class="f">Подпись на плане<input id="pLb" value="${esc(it.label)}" placeholder="например: «Служебный вход»"></label></div>
+    <div class="row four">${num("pX","X, м",it.x)}${num("pY","Y, м",it.y)}${num("pW","Ширина",it.w)}${num("pH","Глубина",it.h)}</div>
+    <div class="row"><label class="f">Поворот<select id="pR">${[0,90,180,270].map(a=>`<option value="${a}" ${a===(it.rot||0)?"selected":""}>${a}°</option>`).join("")}</select></label>
+    <label class="f">Высота в 3D, м<input disabled value="${f.z==="H"?fmt(S.b.h,1):fmt(f.z,2)}"></label></div>
+    <div class="actions"><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aFlip">Отразить</button><button class="btn" id="aStd">Стандартный размер</button><button class="btn" id="aDup">Копия</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`;
+  }
+  bindProps(it);
+}
+function bindProps(it){
+  const ch=(id,fn)=>{ const el=$("#"+id); if(el) el.addEventListener("change",()=>{ pushUndo(); fn(el); if(it.t==="item") fixDoor(it); commit(); }); };
+  const n=el=>+String(el.value).replace(",",".");
+  ch("pN",el=>it.name=el.value); ch("pCat",el=>{ it.cat=el.value; it.color=CAT[el.value].c; }); ch("pB",el=>it.border=el.value);
+  ch("pX",el=>it.x=n(el)); ch("pY",el=>it.y=n(el)); ch("pW",el=>it.w=Math.max(.1,n(el))); ch("pH",el=>it.h=Math.max(.1,n(el)));
+  ch("pC",el=>it.color=el.value); ch("pPH",el=>it.ph=Math.max(.5,n(el))); ch("pSub",el=>it.sub=el.checked);
+  ch("pK",el=>{ it.kind=el.value; it.th=WALLS[el.value].th; }); ch("pT",el=>it.th=Math.max(.02,n(el)));
+  ch("pX1",el=>it.x1=n(el)); ch("pY1",el=>it.y1=n(el)); ch("pX2",el=>it.x2=n(el)); ch("pY2",el=>it.y2=n(el));
+  ch("pL",el=>{ const L=Math.hypot(it.x2-it.x1,it.y2-it.y1)||1, k=n(el)/L; it.x2=it.x1+(it.x2-it.x1)*k; it.y2=it.y1+(it.y2-it.y1)*k; });
+  ch("pLb",el=>it.label=el.value); ch("pR",el=>it.rot=+el.value);
+  document.querySelectorAll("[data-floor]").forEach(b=>b.onclick=()=>{ pushUndo(); it.color=b.dataset.floor; commit(); });
+  const act=(id,fn)=>{ const el=$("#"+id); if(el) el.onclick=()=>{ pushUndo(); fn(); commit(); }; };
+  act("aDel",()=>{ S.items=S.items.filter(i=>i.id!==it.id); sel=null; });
+  act("aDup",()=>dup(it)); act("aRot",()=>rot(it)); act("aFlip",()=>it.flip=!it.flip);
+  act("aStd",()=>{ const f=FK[it.k]; it.w=f.w; it.h=f.h; });
+  act("aLv",()=>{ it.lv=it.lv?0:1; level=it.lv; });
+}
+function dup(it){ const c=JSON.parse(JSON.stringify(it)); c.id=uid(); if(c.t==="wall"){ c.x1+=.5;c.x2+=.5;c.y1+=.5;c.y2+=.5; } else { c.x+=.5; c.y+=.5; } S.items.push(c); sel=c.id; }
+function rot(it){ if(it.t==="room"){ [it.w,it.h]=[it.h,it.w]; return; } if(it.t==="wall") return;
+  const a=aabb(it), cx=a.x+a.w/2, cy=a.y+a.h/2; it.rot=((it.rot||0)+90)%360; const b=aabb(it); it.x=snap(cx-b.w/2); it.y=snap(cy-b.h/2); }
+
+function explRows(){
+  const nums=numbering(); const rows=[];
+  for(const lv of [0,1]){ const rs=S.items.filter(i=>i.t==="room"&&i.lv===lv).sort((a,b)=>(a.sub-b.sub)||(a.y-b.y)||(a.x-b.x));
+    rows.push({lv, rooms:rs.map(r=>({id:r.id,num:r.sub?"—":nums[r.id],name:r.name,cat:r.cat,color:r.color,area:r.w*r.h,sub:r.sub,dims:`${fmt(r.w,2)} × ${fmt(r.h,2)}`}))}); }
+  return rows;
+}
+function furnSpec(){ const m={}; for(const it of S.items.filter(i=>i.t==="item")){ const f=FK[it.k]; const key=f.n+" "+Math.round(it.w*1000)+"×"+Math.round(it.h*1000);
+  m[key]=m[key]||{n:f.n,g:f.g,size:`${Math.round(it.w*1000)}×${Math.round(it.h*1000)}`,c0:0,c1:0}; m[key][it.lv?"c1":"c0"]++; }
+  return Object.values(m).sort((a,b)=>a.g.localeCompare(b.g)||a.n.localeCompare(b.n)); }
+function explicationHTML(){
+  const bA=S.b.w*S.b.d; let o=`<h3>Экспликация помещений</h3>`;
+  const rows=explRows(); const tot=rows.map(r=>r.rooms.filter(x=>!x.sub).reduce((s,x)=>s+x.area,0));
+  o+=`<div class="kpis"><div class="kpi"><span>Площадь застройки</span><b>${m2(bA)} м²</b></div><div class="kpi"><span>Всего полезная</span><b>${m2(tot[0]+tot[1])} м²</b></div>
+  <div class="kpi"><span>1 этаж</span><b>${m2(tot[0])} м²</b></div><div class="kpi"><span>Антресоль · доля</span><b>${m2(tot[1])} · ${Math.round(tot[1]/bA*100)}%</b></div></div>`;
+  for(const g of rows){ if(!g.rooms.length) continue;
+    o+=`<h5>${g.lv?"Антресоль, отм. +"+fmt(S.b.mz,3):"1 этаж, отм. 0,000"}</h5><table class="ex"><tr><th>№</th><th>Помещение</th><th style="text-align:right">м²</th></tr>`+
+    g.rooms.map(r=>`<tr class="${r.sub?"sub":""}" data-sel="${r.id}"><td>${r.num}</td><td><span class="dot" style="background:${r.color}"></span>${esc(r.name)}${r.sub?" <small>(в составе)</small>":""}</td><td class="n">${m2(r.area)}</td></tr>`).join("")+
+    `<tr class="tot"><td></td><td>Итого</td><td class="n">${m2(tot[g.lv])}</td></tr></table>`; }
+  const byCat={}; for(const g of rows) for(const r of g.rooms) if(!r.sub) byCat[r.cat]=(byCat[r.cat]||0)+r.area;
+  o+=`<h5>По функциям</h5><table class="ex">`+Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td><span class="dot" style="background:${CAT[k].c}"></span>${CAT[k].n}</td><td class="n">${m2(v)}</td><td class="n">${Math.round(v/(tot[0]+tot[1]||1)*100)}%</td></tr>`).join("")+`</table>`;
+  const fs=furnSpec(); if(fs.length) o+=`<h5>Спецификация мебели и оборудования</h5><table class="ex"><tr><th>Позиция</th><th>мм</th><th style="text-align:right">1 эт.</th><th style="text-align:right">Антр.</th></tr>`+fs.map(r=>`<tr><td>${esc(r.n)}</td><td class="n">${r.size}</td><td class="n">${r.c0||""}</td><td class="n">${r.c1||""}</td></tr>`).join("")+`</table>`;
+  o+=`<div class="actions"><button class="btn" data-exp="csv">Экспликация в Excel (CSV)</button></div>`;
+  return o;
+}
+$("#pane").addEventListener("click", e=>{ const r=e.target.closest("[data-sel]"); if(r){ sel=r.dataset.sel; const it=byId(sel); level=it.lv; tab="props"; setTabs(); render(); return; }
+  const x=e.target.closest("[data-exp]"); if(x) doExport(x.dataset.exp); });
+function projectHTML(){
+  const b=S.b;
+  return `<h3>Здание и проект</h3>
+  <div class="row one"><label class="f">Название проекта<input id="jN" value="${esc(S.name)}"></label></div>
+  <div class="row">${num("jW","Длина вдоль дороги, м",b.w,.1)}${num("jD","Глубина, м",b.d,.1)}</div>
+  <div class="row">${num("jH","Высота зала (до покрытия), м",b.h,.1)}${num("jM","Отметка антресоли, м",b.mz,.05)}</div>
+  <div class="row one"><label class="f">Фасад со стороны дороги<select id="jF"><option value="vitrage" ${b.front==="vitrage"?"selected":""}>Витраж, колонны шаг 5 м</option><option value="wall" ${b.front==="wall"?"selected":""}>Глухая стена</option></select></label></div>
+  <p class="note">Длину и глубину можно менять и мышкой: синие ручки на правой и верхней стене здания.</p>
+  <h5>Сетка и привязка</h5>
+  <div class="row"><label class="f">Шаг сетки<select id="jG">${[.01,.05,.1,.25,.5].map(g=>`<option value="${g}" ${g===grid?"selected":""}>${Math.round(g*100)} см</option>`).join("")}</select></label>
+  <label class="c" style="margin-top:18px"><input type="checkbox" id="jS" ${snapOn?"checked":""}> Привязка</label></div>
+  <h5>Задание проектировщику</h5>
+  <div class="row one"><label class="f">Пожелания, требования, комментарии<textarea id="jT" rows="7" placeholder="Например: 6 кабинетов менеджеров со стеклом, зона макета видна с улицы, кухня на 8 человек, бэк-офис на антресоли на 6 мест…">${esc(S.notes)}</textarea></label></div>
+  <div class="actions"><button class="btn primary" data-exp="brief">Выгрузить задание (HTML)</button><button class="btn" data-exp="svg">План в SVG 1:100</button><button class="btn" data-exp="json">Файл проекта</button><button class="btn" id="jImp">Открыть файл проекта</button></div>`;
+}
+$("#pane").addEventListener("change", e=>{ const id=e.target.id; if(!id||!id.startsWith("j")) return; const n=+String(e.target.value).replace(",",".");
+  if(id==="jG"){ grid=+e.target.value; renderHud(); return; } if(id==="jS"){ snapOn=e.target.checked; renderHud(); return; }
+  pushUndo(); const b=S.b;
+  if(id==="jN") S.name=e.target.value; if(id==="jW") b.w=Math.max(4,n); if(id==="jD") b.d=Math.max(4,n); if(id==="jH") b.h=Math.max(2.5,n); if(id==="jM") b.mz=Math.max(2,Math.min(b.h-2,n));
+  if(id==="jF") b.front=e.target.value; if(id==="jT") S.notes=e.target.value; commit(); });
+$("#pane").addEventListener("click", e=>{ if(e.target.id==="jImp") $("#fileIn").click(); });
+
+/* ============================================================ клавиатура и кнопки */
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape"){ const md=document.querySelector(".modal"); if(md){ md.remove(); return; } }
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
+  if(e.code==="Space"&&!typing){ spaceDown=true; svg.classList.add("pan"); if(view==="2d") e.preventDefault(); }
+  if(typing) return;
+  const it=sel&&byId(sel), k=e.key.toLowerCase(), ctrl=e.ctrlKey||e.metaKey;
+  if(ctrl&&(k==="z"||k==="я")){ e.preventDefault(); e.shiftKey?doRedo():doUndo(); return; }
+  if(ctrl&&(k==="y"||k==="н")){ e.preventDefault(); doRedo(); return; }
+  if(e.key==="Escape"){ tool=null; setToolUI(); sel=null; drawPreview=null; render(); return; }
+  if(!it) return;
+  if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); pushUndo(); S.items=S.items.filter(i=>i.id!==sel); sel=null; commit(); return; }
+  if(ctrl&&(k==="d"||k==="в")){ e.preventDefault(); pushUndo(); dup(it); commit(); return; }
+  if((k==="r"||k==="к")&&!ctrl){ pushUndo(); rot(it); commit(); return; }
+  const arrows={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+  if(arrows[e.key]){ e.preventDefault(); const st=(e.shiftKey?10:1)*Math.max(grid,.01), [dx,dy]=arrows[e.key]; pushUndo();
+    if(it.t==="wall"){ it.x1+=dx*st;it.x2+=dx*st;it.y1+=dy*st;it.y2+=dy*st; } else { it.x=+(it.x+dx*st).toFixed(3); it.y=+(it.y+dy*st).toFixed(3); } commit(); }
+});
+document.addEventListener("keyup", e=>{ if(e.code==="Space"){ spaceDown=false; svg.classList.remove("pan"); } });
+$("#bUndo").onclick=doUndo; $("#bRedo").onclick=doRedo;
+$("#lv0").onclick=()=>{ level=0; sel=null; render(); }; $("#lv1").onclick=()=>{ level=1; sel=null; render(); };
+$("#bFit").onclick=()=>{ if(view==="2d"){ fit(); renderPlan(); } else camReset("iso"); };
+$("#pname").addEventListener("change", e=>{ pushUndo(); S.name=e.target.value||"Без названия"; commit(); });
+$("#v2d").onclick=()=>setView("2d"); $("#v3d").onclick=()=>setView("3d");
+function setView(v){ view=v; $("#v2d").classList.toggle("on",v==="2d"); $("#v3d").classList.toggle("on",v==="3d");
+  svg.style.display = v==="2d"?"":"none"; $("#three").hidden = v!=="3d"; if(v==="3d"){ tool=null; setToolUI(); } render(); if(v==="2d"){ fit(); renderPlan(); } }
+new ResizeObserver(()=>{ if(view==="2d") renderPlan(); else resize3D(); }).observe($(".main"));
+
+/* ============================================================ 3D */
+let R3=null;
+function init3D(){
+  if(R3) return R3; if(typeof THREE==="undefined"){ $("#three").innerHTML=`<p class="note" style="padding:24px">3D-модуль не загрузился. Проверьте интернет и обновите страницу — план 2D работает без него.</p>`; return null; }
+  const el=$("#three"), renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; el.appendChild(renderer.domElement);
+  const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(45,1,.1,500);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x8a8a80,.75));
+  const sun=new THREE.DirectionalLight(0xffffff,.65); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); scene.add(sun,sun.target);
+  const root=new THREE.Group(); scene.add(root);
+  const O={theta:-.9, phi:1.0, r:40, target:new THREE.Vector3()};
+  R3={renderer,scene,cam,root,O,sun,el};
+  let d=null;
+  renderer.domElement.addEventListener("pointerdown",e=>{ d={x:e.clientX,y:e.clientY,pan:e.button===2||e.shiftKey}; renderer.domElement.setPointerCapture(e.pointerId); });
+  renderer.domElement.addEventListener("pointermove",e=>{ if(!d) return; const dx=e.clientX-d.x, dy=e.clientY-d.y; d.x=e.clientX; d.y=e.clientY;
+    if(d.pan){ const k=O.r*.0016, fx=Math.cos(O.theta), fz=Math.sin(O.theta); O.target.x+=(-dx*fz - dy*fx)*k*-1; O.target.z+=(dx*fx - dy*fz)*k*-1; }
+    else { O.theta+=dx*.006; O.phi=Math.max(.12,Math.min(1.55,O.phi-dy*.006)); } draw3D(); });
+  renderer.domElement.addEventListener("pointerup",()=>d=null);
+  renderer.domElement.addEventListener("wheel",e=>{ e.preventDefault(); O.r=Math.max(2,Math.min(150,O.r*Math.exp(e.deltaY*.0012))); draw3D(); },{passive:false});
+  renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
+  const bar=document.createElement("div"); bar.className="hud"; bar.style.bottom="44px";
+  bar.innerHTML=`<button class="btn" data-cam="iso">Изометрия</button><button class="btn" data-cam="top">Сверху</button><button class="btn" data-cam="street">С улицы</button><button class="btn" data-cam="inside">Внутри зала</button><label class="chip"><input type="checkbox" id="c3mz" checked> антресоль</label><button class="btn" data-exp="png">Снимок PNG</button>`;
+  el.appendChild(bar); bar.addEventListener("click",e=>{ const c=e.target.closest("[data-cam]"); if(c) camReset(c.dataset.cam); const x=e.target.closest("[data-exp]"); if(x) doExport("png"); });
+  bar.addEventListener("change",()=>build3D());
+  camReset("iso"); return R3;
+}
+function camReset(kind){ if(!R3) return; const O=R3.O, b=S.b; O.target.set(b.w/2,1.5,b.d/2);
+  if(kind==="top"){ O.theta=-Math.PI/2; O.phi=.13; O.r=Math.max(b.w,b.d)*1.25; }
+  else if(kind==="street"){ O.theta=Math.PI/2; O.phi=1.35; O.r=b.w*.9; }
+  else if(kind==="inside"){ O.target.set(b.w*.35,1.6,b.d*.45); O.theta=Math.PI/2+.2; O.phi=1.45; O.r=6; }
+  else { O.theta=Math.PI/2+.75; O.phi=.95; O.r=Math.max(b.w,b.d)*1.15; }
+  draw3D(); }
+function resize3D(){ if(!R3) return; const r=R3.el.getBoundingClientRect(); if(!r.width) return; R3.renderer.setSize(r.width,r.height); R3.cam.aspect=r.width/r.height; R3.cam.updateProjectionMatrix(); draw3D(); }
+function draw3D(){ if(!R3) return; const {cam,O,renderer,scene}=R3;
+  cam.position.set(O.target.x+O.r*Math.sin(O.phi)*Math.cos(O.theta), O.target.y+O.r*Math.cos(O.phi), O.target.z+O.r*Math.sin(O.phi)*Math.sin(O.theta)); cam.lookAt(O.target); renderer.render(scene,cam); }
+function build3D(){
+  if(!init3D()) return; const {root,scene,sun}=R3, b=S.b, H=b.h;
+  while(root.children.length){ const c=root.children.pop(); c.geometry&&c.geometry.dispose(); }
+  const dark = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim();
+  scene.background=new THREE.Color(dark&&dark.startsWith("#2")?0x1b201d:0xe9ece6);
+  sun.position.set(b.w*.3,30,b.d+25); sun.target.position.set(b.w/2,0,b.d/2);
+  Object.assign(sun.shadow.camera,{left:-b.w,right:b.w,top:b.w,bottom:-b.w}); sun.shadow.camera.updateProjectionMatrix();
+  const mats={}; const M=(c,o=1)=>{ const k=c+o; if(!mats[k]) mats[k]=o<1?new THREE.MeshStandardMaterial({color:c,transparent:true,opacity:o,roughness:.1,metalness:.1,depthWrite:false}):new THREE.MeshStandardMaterial({color:c,roughness:.85}); return mats[k]; };
+  const box=(w,h,d,x,y,z,c,o=1,ry=0,shadow=true)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(Math.max(w,.01),Math.max(h,.01),Math.max(d,.01)),M(c,o)); m.position.set(x,y,z); m.rotation.y=ry; if(o===1&&shadow){ m.castShadow=true; m.receiveShadow=true; } root.add(m); return m; };
+  const showMz=$("#c3mz")?$("#c3mz").checked:true;
+  // земля, дорога, плита
+  const g=new THREE.Mesh(new THREE.PlaneGeometry(b.w+60,b.d+60),M("#cfd3cb")); g.rotation.x=-Math.PI/2; g.position.set(b.w/2,-.02,b.d/2); g.receiveShadow=true; root.add(g);
+  box(b.w+20,.02,7,b.w/2,-.01,b.d+5.5,"#7d7f80",1,0,false); box(b.w+20,.03,1.8,b.w/2,-.005,b.d+1.2,"#bdbdb8",1,0,false);
+  box(b.w,.1,b.d,b.w/2,-.05,b.d/2,"#d9d7d0");
+  // наружные стены
+  const t=.3; box(b.w,H,t,b.w/2,H/2,t/2,"#dedbd3"); box(t,H,b.d,t/2,H/2,b.d/2,"#dedbd3"); box(t,H,b.d,b.w-t/2,H/2,b.d/2,"#dedbd3");
+  box(b.w,.6,b.d,b.w/2,H+.3,b.d/2,"#dedbd3",1); root.children[root.children.length-1].visible=false; // покрытие скрыто, чтобы видеть внутрь
+  box(b.w,.9,t,b.w/2,H+.45,t/2,"#dedbd3"); // парапет сзади
+  if(b.front==="vitrage"){ box(b.w-2*t,H,.04,b.w/2,H/2,b.d-t/2,"#9fd0ee",.28);
+    for(let x=0;x<=b.w+1e-6;x+=5) box(.4,H,.4,Math.min(Math.max(x,.2),b.w-.2),H/2,b.d-.2,"#8f928d");
+    for(let x=0;x<=b.w;x+=1.25) box(.05,H,.08,x,H/2,b.d-t/2,"#4a4f52",1,0,false); box(b.w,.08,.1,b.w/2,3.2,b.d-t/2,"#4a4f52",1,0,false); box(b.w,.3,.12,b.w/2,H-.15,b.d-t/2,"#4a4f52",1,0,false); }
+  else box(b.w,H,t,b.w/2,H/2,b.d-t/2,"#dedbd3");
+  for(const lv of [0,1]){ if(lv===1&&!showMz) continue; const base=lv?b.mz:0;
+    const rooms=S.items.filter(i=>i.t==="room"&&i.lv===lv);
+    for(const r of rooms){ const y=base+(r.sub?.012:.006); box(r.w,.012,r.h,r.x+r.w/2,y,r.y+r.h/2,r.color,1,0,false).receiveShadow=true;
+      if(lv===1&&!r.sub) box(r.w,.3,r.h,r.x+r.w/2,base-.15,r.y+r.h/2,"#c9c6be");
+      if(r.border!=="none"&&!r.sub){ const ph=lv?Math.min(r.ph??3,H-base):(r.ph??3), gl=r.border==="glass", c=gl?"#a9d3ee":"#f1efe9", o=gl?.3:1, th=gl?.06:.1;
+        box(r.w,ph,th,r.x+r.w/2,base+ph/2,r.y,c,o); box(r.w,ph,th,r.x+r.w/2,base+ph/2,r.y+r.h,c,o); box(th,ph,r.h,r.x,base+ph/2,r.y+r.h/2,c,o); box(th,ph,r.h,r.x+r.w,base+ph/2,r.y+r.h/2,c,o);
+        if(gl){ box(r.w,.05,.08,r.x+r.w/2,base+ph,r.y,"#555",1,0,false); box(r.w,.05,.08,r.x+r.w/2,base+ph,r.y+r.h,"#555",1,0,false); box(.08,.05,r.h,r.x,base+ph,r.y+r.h/2,"#555",1,0,false); box(.08,.05,r.h,r.x+r.w,base+ph,r.y+r.h/2,"#555",1,0,false); } } }
+    for(const wl of S.items.filter(i=>i.t==="wall"&&i.lv===lv)){ const W=WALLS[wl.kind], L=Math.hypot(wl.x2-wl.x1,wl.y2-wl.y1), hh=W.h==="H"?H-base:W.h;
+      box(L,hh,wl.th,(wl.x1+wl.x2)/2,base+hh/2,(wl.y1+wl.y2)/2,W.glass?"#a9d3ee":(W.col||"#e7e5df"),W.glass?.3:1,-Math.atan2(wl.y2-wl.y1,wl.x2-wl.x1));
+      if(wl.kind==="rail") box(L,.05,.06,(wl.x1+wl.x2)/2,base+hh,(wl.y1+wl.y2)/2,"#555",1,-Math.atan2(wl.y2-wl.y1,wl.x2-wl.x1),false); }
+    for(const it of S.items.filter(i=>i.t==="item"&&i.lv===lv)) item3D(it,base,box,H);
+  }
+  resize3D();
+}
+function item3D(it,base,box,H){
+  const f=FK[it.k], a=aabb(it), cx=a.x+a.w/2, cz=a.y+a.h/2, z=f.z==="H"?H:f.z, ry=-(it.rot||0)*Math.PI/180;
+  const W=it.w, D=it.h; const local=(lx,lz)=>{ const c=Math.cos(-ry), s=Math.sin(-ry); const x=lx*(it.flip?-1:1); return [cx+x*c-lz*s, cz+x*s+lz*c]; };
+  const part=(w,h,d,lx,y,lz,c,o=1)=>{ const [px,pz]=local(lx,lz); return box(w,h,d,px,base+y,pz,c,o,ry); };
+  switch(f.d){
+    case "door": case "door2": part(W,z,.06,0,z/2,-D/2+.15,"#9a7b56"); break;
+    case "slide": case "auto": part(W,z,.05,0,z/2,0,"#a9d3ee",.35); break;
+    case "win": break;
+    case "chair": part(W*.9,.45,D*.9,0,.225,0,f.c); part(W*.9,.5,.08,0,.7,-D*.42,f.c); break;
+    case "arm": case "sofa": part(W,.42,D,0,.21,0,f.c); part(W,.4,D*.22,0,.62,-D*.39,f.c); break;
+    case "lounge": part(W,.42,.9,0,.21,D/2-.45,f.c); part(W,.4,.2,0,.62,D/2-.1,f.c); part(1.2,.4,.6,0,.2,-.0,"#e0d6c6"); for(const x of [-.55,.55]){ part(.8,.42,.8,x,.21,-D/2+.4,f.c); part(.8,.4,.16,x,.62,-D/2+.08,f.c); } break;
+    case "table": case "recep": case "bar": case "kitch": case "model": part(W,z,D,0,z/2,0,f.c); if(f.d==="model") for(const [x,zz,w,d,h] of [[-.25,-.2,.18,.25,.9],[-.05,-.25,.12,.35,1.3],[.2,-.1,.22,.2,.6],[-.2,.25,.25,.2,.7],[.1,.25,.12,.25,1.1],[.3,.2,.12,.3,.5]]) part(W*w,h*.4,D*d,W*x,z+h*.2,D*zz,"#f4f1ea"); break;
+    case "recepL": part(W,z,.8,0,z/2,-D/2+.4,f.c); part(.8,z,D-.8,-W/2+.4,z/2,.4,f.c); break;
+    case "cafe4": { const [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.CylinderGeometry(Math.min(W,D)*.23,Math.min(W,D)*.23,.04,24),new THREE.MeshStandardMaterial({color:f.c})); m.position.set(px,base+.74,pz); m.castShadow=true; R3.root.add(m);
+      part(.08,.72,.08,0,.36,0,"#555"); for(const [x,zz] of [[0,-D*.37],[0,D*.37],[-W*.37,0],[W*.37,0]]) part(.42,.45,.42,x,.225,zz,"#6b7075"); break; }
+    case "meet": { const tw=W-.8, n=Math.max(2,Math.round(tw/.75)); part(tw,.04,D-1.1,0,.74,0,f.c); part(tw*.6,.7,.3,0,.36,0,"#777");
+      for(let i=0;i<n;i++){ const x=-tw/2+tw*(i+.5)/n; part(.45,.45,.45,x,.225,-D/2+.25,"#3c4146"); part(.45,.45,.45,x,.225,D/2-.25,"#3c4146"); } break; }
+    case "work3": part(W,.04,.8,0,.74,-D/2+1.05,f.c); part(W*.9,.7,.05,0,.36,-D/2+.7,"#999"); part(.55,.5,.55,0,.25,-D/2+.3,"#3c4146"); part(.45,.45,.45,-.4,.225,D/2-.25,"#6b7075"); part(.45,.45,.45,.4,.225,D/2-.25,"#6b7075"); break;
+    case "os1": part(W,.04,.7,0,.74,-D/2+.35,f.c); part(.55,.5,.55,0,.25,D/2-.3,"#3c4146"); part(.6,.4,.03,0,.95,-D/2+.1,"#222"); break;
+    case "os4": part(W,.04,1.4,0,.74,0,f.c); part(W,.35,.03,0,.95,0,"#b9c7cf"); for(const x of [-W/4,W/4]){ part(.5,.5,.5,x,.25,-D/2+.3,"#3c4146"); part(.5,.5,.5,x,.25,D/2-.3,"#3c4146"); } break;
+    case "plant": part(W*.6,.45,D*.6,0,.225,0,"#e9e4da"); { const [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.SphereGeometry(Math.min(W,D)*.5,12,10),new THREE.MeshStandardMaterial({color:"#5d8c4e",roughness:.9})); m.position.set(px,base+.45+Math.min(W,D)*.55,pz); m.scale.y=1.4; m.castShadow=true; R3.root.add(m); } break;
+    case "stool": part(W*.8,.05,D*.8,0,.75,0,f.c); part(.06,.75,.06,0,.37,0,"#333"); break;
+    case "mat": part(W,.03,D,0,.015,0,f.c); break;
+    case "screen": part(W,Math.min(z,H-1),D,0,.9+Math.min(z,H-1)/2,0,f.c); break;
+    case "stair2": case "stair1": { if(base) break;
+      if(f.d==="stair1"){ for(let i=0;i<20;i++){ const h=.165*(i+1); part(W,h,D/20,0,h/2,D/2-D/20*(i+.5),f.c); } }
+      else { const fw=(W-.2)/2, land=Math.min(1.3,D*.33), run=D-land;
+        for(let i=0;i<10;i++){ const h1=.165*(i+1), h2=1.65+.165*(i+1);
+          part(fw,h1,run/10,-W/2+fw/2,h1/2,D/2-run/10*(i+.5),f.c); part(fw,h2,run/10,W/2-fw/2,h2/2,-D/2+land+run/10*(i+.5),f.c); }
+        part(W,1.65,land,0,1.65/2,-D/2+land/2,f.c); } break; }
+    case "cubicle": part(.04,2,D,-W/2,1.1,0,"#c7d7da"); part(.04,2,D,W/2,1.1,0,"#c7d7da"); part(W,2,.04,0,1.1,D/2,"#c7d7da",.6); break;
+    default: part(W,z,D,0,z/2,0,f.c);
+  }
+}
+
+/* ============================================================ сохранение (db или браузер) */
+const statusEl=$("#status"); let saveTimer=null;
+function setStatus(s){ statusEl.textContent=s; }
+function scheduleSave(){ clearTimeout(saveTimer); setStatus("Изменения…"); saveTimer=setTimeout(saveNow,1200); }
+async function saveNow(){
+  if(!projectId) projectId=uid(); const rec={name:S.name, updatedAt:Date.now(), json:JSON.stringify(S)};
+  try{ if(store){ await store.collection("projects").doc(projectId).set(rec); setStatus("Сохранено в проекте · "+new Date().toLocaleTimeString("ru",{hour:"2-digit",minute:"2-digit"})); dirty=false; return; } }catch(e){ setStatus("Не удалось сохранить: "+(e.code||e.message)+" · копия в браузере"); }
+  try{ const all=JSON.parse(localStorage.getItem("op.projects")||"{}"); all[projectId]=rec; localStorage.setItem("op.projects",JSON.stringify(all)); if(!store) setStatus("Сохранено в этом браузере"); dirty=false; }catch(e){ if(!store) setStatus("Не сохранено — выгрузите файл проекта"); }
+}
+async function listProjects(){
+  const out=[]; try{ if(store){ const q=await store.collection("projects").get(); for(const d of q.docs){ const v=d.data(); out.push({id:d.id,name:v.name,updatedAt:v.updatedAt,json:v.json,src:"db"}); } } }catch(e){}
+  try{ const all=JSON.parse(localStorage.getItem("op.projects")||"{}"); for(const [id,v] of Object.entries(all)) if(!out.find(o=>o.id===id)) out.push({id,...v,src:"local"}); }catch(e){}
+  return out.sort((a,b)=>b.updatedAt-a.updatedAt);
+}
+async function deleteProject(p){ try{ if(p.src==="db"&&store) await store.collection("projects").doc(p.id).delete(); }catch(e){}
+  try{ const all=JSON.parse(localStorage.getItem("op.projects")||"{}"); delete all[p.id]; localStorage.setItem("op.projects",JSON.stringify(all)); }catch(e){} }
+function openProject(json,id){ S=JSON.parse(json); if(!S.b||!S.items) throw new Error("bad"); projectId=id; sel=null; level=0; undo.length=0; redo.length=0; setView("2d"); fit(); render(); }
+async function projectsDialog(){
+  const list=await listProjects(); const m=document.createElement("div"); m.className="modal";
+  m.innerHTML=`<div class="dlg" role="dialog" aria-label="Проекты"><h3>Проекты</h3>
+  <p class="note">${store?"Проекты сохраняются в этом планировщике и доступны при следующем открытии.":"Проекты сохраняются в этом браузере. Для передачи другим — «Выгрузить → Файл проекта»."}</p>
+  <div class="plist">${list.map((p,i)=>`<div class="pitem"><div><b>${esc(p.name)}</b><small>${new Date(p.updatedAt).toLocaleString("ru")}${p.id===projectId?" · открыт":""}</small></div><button class="btn" data-open="${i}">Открыть</button><button class="btn danger" data-del="${i}">Удалить</button></div>`).join("")||`<p class="note">Пока нет сохранённых проектов.</p>`}</div>
+  <h5>Создать новый</h5>
+  <div class="row four"><label class="f">Длина, м<input id="nW" type="number" value="40" step=".5"></label><label class="f">Глубина, м<input id="nD" type="number" value="12" step=".5"></label><label class="f">Высота, м<input id="nH" type="number" value="7" step=".1"></label><label class="f">&nbsp;<button class="btn primary" id="nNew">Пустое здание</button></label></div>
+  <div class="actions"><button class="btn" id="nTpl">Пример: офис продаж 40×12 с антресолью</button><button class="btn" id="nImp">Открыть файл…</button><span class="spacer"></span><button class="btn" id="nClose">Закрыть</button></div>
+  <p class="note" id="nConfirm" hidden></p></div>`;
+  document.body.appendChild(m); const close=()=>m.remove();
+  m.addEventListener("click",async e=>{ if(e.target===m) return close(); const t=e.target;
+    if(t.id==="nClose") close();
+    if(t.dataset.open){ const p=list[+t.dataset.open]; try{ openProject(p.json,p.id); close(); }catch(err){ toast("Файл проекта повреждён"); } }
+    if(t.dataset.del){ const i=+t.dataset.del; if(t.dataset.sure){ await deleteProject(list[i]); close(); projectsDialog(); } else { t.dataset.sure="1"; t.textContent="Точно удалить?"; } }
+    if(t.id==="nNew"){ await flush(); S=blankProject(+$("#nW").value||40,+$("#nD").value||12,+$("#nH").value||7); projectId=uid(); sel=null; level=0; undo.length=0; setView("2d"); fit(); commit(); close(); }
+    if(t.id==="nTpl"){ await flush(); S=templateSales(); projectId=uid(); sel=null; level=0; undo.length=0; setView("2d"); fit(); commit(); close(); }
+    if(t.id==="nImp"){ close(); $("#fileIn").click(); } });
+}
+async function flush(){ if(dirty){ clearTimeout(saveTimer); await saveNow(); } }
+$("#bProjects").onclick=async()=>{ await flush(); projectsDialog(); };
+$("#fileIn").addEventListener("change",async e=>{ const f=e.target.files[0]; if(!f) return; try{ const txt=await f.text(); await flush(); openProject(txt, uid()); commit(); toast("Проект открыт"); }catch(err){ toast("Это не файл проекта планировщика"); } e.target.value=""; });
+
+/* ============================================================ выгрузка */
+let downloads=null;
+function exportSVG(){
+  const b=S.b, pad=2.5, gap=4, lvls=S.items.some(i=>i.lv===1)?[0,1]:[0];
+  const planH=b.d+pad*2, W=b.w+pad*2+14; let y=pad+1.2, body="";
+  const css=`<style>:root{--paper:#fff;--ink:#222;--muted:#777;--wall:#3a3f3b;--glass:#9fd3f0;--glass-edge:#2a78b8;--dim:#b3392f;--grid:#eee;--grid-major:#ddd}.nss{vector-effect:non-scaling-stroke}text{font-family:Arial,sans-serif}</style>`;
+  const title=`<text x='${pad}' y='1.3' font-size='.7' font-weight='700'>${esc(S.name)} — ${fmt(b.w,1)} × ${fmt(b.d,1)} м</text>`;
+  for(const lv of lvls){ body+=`<text x='${pad}' y='${y}' font-size='.45' font-weight='700'>${lv?"План антресоли, отм. +"+fmt(b.mz,3):"План 1-го этажа, отм. 0,000"}</text>`;
+    body+=`<g transform='translate(${pad} ${y+.8})'>${planMarkup(lv,{export:true})}</g>`;
+    // экспликация справа
+    const g=explRows()[lv]; let ty=y+.9; body+=`<text x='${b.w+pad+.8}' y='${ty}' font-size='.32' font-weight='700'>Экспликация</text>`;
+    for(const r of g.rooms){ ty+=.42; body+=`<text x='${b.w+pad+.8}' y='${ty}' font-size='.27'>${r.num} ${esc(r.name.slice(0,34))}</text><text x='${W-.5}' y='${ty}' font-size='.27' text-anchor='end'>${m2(r.area)}</text>`; }
+    y+=planH+gap; }
+  const H=y; const s=`<svg xmlns='http://www.w3.org/2000/svg' width='${W*10}mm' height='${H*10}mm' viewBox='0 0 ${W} ${H}'>${css}<rect width='${W}' height='${H}' fill='#fff'/>${title}${body}<text x='${pad}' y='${H-.6}' font-size='.28' fill='#777'>Масштаб 1:100 при печати в натуральную величину. Подготовлено в «Планировщике офиса продаж».</text></svg>`;
+  return s;
+}
+function briefHTML(){
+  const svgStr=exportSVG().replace(/width='[\d.]+mm' height='[\d.]+mm'/,"width='100%'"); const rows=explRows(); const fs=furnSpec(); const bA=S.b.w*S.b.d;
+  const tab=g=>`<table><tr><th>№</th><th>Помещение</th><th>Размеры, м</th><th>Категория</th><th>Площадь, м²</th></tr>${g.rooms.map(r=>`<tr${r.sub?" style='color:#777'":""}><td>${r.num}</td><td>${esc(r.name)}${r.sub?" (в составе)":""}</td><td>${r.dims}</td><td>${CAT[r.cat].n}</td><td align='right'>${m2(r.area)}</td></tr>`).join("")}<tr><td></td><td><b>Итого</b></td><td></td><td></td><td align='right'><b>${m2(g.rooms.filter(r=>!r.sub).reduce((s,r)=>s+r.area,0))}</b></td></tr></table>`;
+  return `<!doctype html><html lang='ru'><head><meta charset='utf-8'><title>Задание: ${esc(S.name)}</title><style>body{font-family:Arial,sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;color:#222}table{border-collapse:collapse;width:100%;margin:8px 0 20px;font-size:13px}td,th{border:1px solid #ccc;padding:5px 7px;text-align:left}h1{font-size:22px}h2{font-size:16px;margin-top:28px}.n{white-space:pre-wrap;background:#f6f6f2;padding:12px;border-radius:6px}</style></head><body>
+  <h1>Задание на проектирование: ${esc(S.name)}</h1><p>Дата: ${new Date().toLocaleDateString("ru")}. Здание ${fmt(S.b.w,1)} × ${fmt(S.b.d,1)} м, площадь застройки ${m2(bA)} м², высота зала ${fmt(S.b.h,1)} м${S.items.some(i=>i.lv===1)?`, антресоль на отм. +${fmt(S.b.mz,3)}`:""}. Фасад со стороны дороги: ${S.b.front==="vitrage"?"витраж":"глухая стена"}.</p>
+  <h2>Пожелания заказчика</h2><div class='n'>${esc(S.notes||"—")}</div>
+  <h2>Планировка (эскиз заказчика)</h2>${svgStr}
+  ${rows.map(g=>g.rooms.length?`<h2>Экспликация — ${g.lv?"антресоль":"1 этаж"}</h2>${tab(g)}`:"").join("")}
+  <h2>Спецификация мебели и оборудования</h2><table><tr><th>Позиция</th><th>Группа</th><th>Размер, мм</th><th>1 этаж</th><th>Антресоль</th></tr>${fs.map(r=>`<tr><td>${esc(r.n)}</td><td>${esc(r.g)}</td><td>${r.size}</td><td>${r.c0||""}</td><td>${r.c1||""}</td></tr>`).join("")}</table>
+  <p style='color:#777;font-size:12px'>Эскиз заказчика. Размеры, конструктив, пожарные и инженерные требования проверяет и уточняет проектировщик.</p></body></html>`;
+}
+function csv(){ const rows=[["Уровень","№","Помещение","Категория","Ширина, м","Глубина, м","Площадь, м²","В составе другого"]];
+  for(const g of explRows()) for(const r of g.rooms){ const it=byId(r.id); rows.push([g.lv?"Антресоль":"1 этаж",r.num,r.name,CAT[r.cat].n,fmt(it.w),fmt(it.h),fmt(r.area),r.sub?"да":""]); }
+  return "﻿"+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(";")).join("\r\n"); }
+async function doExport(kind){
+  const base=(S.name||"проект").replace(/[\\/:*?"<>|]+/g," ").trim();
+  let data, filename;
+  if(kind==="json"){ data=JSON.stringify(S,null,1); filename=base+".json"; }
+  else if(kind==="svg"){ data=exportSVG(); filename=base+" — план.svg"; }
+  else if(kind==="csv"){ data=csv(); filename=base+" — экспликация.csv"; }
+  else if(kind==="brief"){ data=briefHTML(); filename=base+" — задание проектировщику.html"; }
+  else if(kind==="png"){ if(!R3) return; draw3D(); data=await new Promise(r=>R3.renderer.domElement.toBlob(r,"image/png")); filename=base+" — 3D.png"; }
+  if(!downloads){ toast("Выгрузка файлов недоступна в этом просмотре"); return; }
+  try{ await downloads.save({filename,data}); toast("Файл передан на сохранение"); }catch(e){ if(e.code!=="declined") toast("Не удалось выгрузить: "+(e.message||e.code)); }
+}
+$("#bExport").onclick=()=>{ const m=document.createElement("div"); m.className="modal";
+  m.innerHTML=`<div class="dlg"><h3>Выгрузить</h3><div class="plist">
+  <div class="pitem"><div><b>Задание проектировщику</b><small>HTML-страница: пожелания, план обоих уровней, экспликация, спецификация мебели</small></div><button class="btn primary" data-exp="brief">Выгрузить</button></div>
+  <div class="pitem"><div><b>План в SVG, масштаб 1:100</b><small>Открывается в браузере, Illustrator, CorelDRAW, импортируется в AutoCAD</small></div><button class="btn" data-exp="svg">Выгрузить</button></div>
+  <div class="pitem"><div><b>Экспликация для Excel</b><small>CSV с площадями всех помещений</small></div><button class="btn" data-exp="csv">Выгрузить</button></div>
+  <div class="pitem"><div><b>Файл проекта</b><small>Чтобы продолжить работу на другом компьютере или передать коллеге</small></div><button class="btn" data-exp="json">Выгрузить</button></div>
+  <div class="pitem"><div><b>Снимок 3D</b><small>PNG текущего ракурса (откройте вид 3D)</small></div><button class="btn" data-exp="png" ${view==="3d"?"":"disabled"}>Выгрузить</button></div>
+  </div><div class="actions"><span class="spacer"></span><button class="btn" id="xClose">Закрыть</button></div></div>`;
+  document.body.appendChild(m); m.addEventListener("click",e=>{ if(e.target===m||e.target.id==="xClose") m.remove(); const x=e.target.closest("[data-exp]"); if(x){ doExport(x.dataset.exp); } }); };
+
+/* ============================================================ запуск */
+S = templateSales();
+try{ const last=JSON.parse(localStorage.getItem("op.projects")||"{}"); const ids=Object.keys(last).sort((a,b)=>last[b].updatedAt-last[a].updatedAt); if(ids[0]){ S=JSON.parse(last[ids[0]].json); projectId=ids[0]; } }catch(e){}
+renderLib(); fit(); render(); setStatus(projectId?"Открыт последний проект":"Пример — изменения сохранятся автоматически");
+(async()=>{
+  if(!window.claude||!window.claude.use) { setStatus("Сохранение в этом браузере"); return; }
+  try{ downloads=await claude.use("downloads"); }catch(e){}
+  try{ store=await claude.use("db"); }catch(e){ store=null; }
+  if(store && !hasUserEdit){ const list=await listProjects(); const p=list.find(x=>x.src==="db"); if(p){ try{ openProject(p.json,p.id); setStatus("Открыт: "+p.name); }catch(e){} } }
+  if(!store) setStatus("Сохранение в этом браузере");
+})();
+</script>

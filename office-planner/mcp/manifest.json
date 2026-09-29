@@ -1,0 +1,26 @@
+{
+  "manifest_version": "0.3",
+  "name": "office-planner",
+  "display_name": "Планировщик офиса продаж",
+  "version": "1.0.0",
+  "description": "Claude расставляет помещения и мебель офиса продаж в планировщике, проверяет нормы и показывает план вживую в браузере.",
+  "author": { "name": "graceprojects" },
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": { "command": "node", "args": ["${__dirname}/server.js"] }
+  },
+  "tools": [
+    { "name": "open_planner", "description": "Открыть планировщик в браузере (живой вид)" },
+    { "name": "describe_plan", "description": "План текстом: помещения, мебель, проверки" },
+    { "name": "view_plan", "description": "Картинка плана 2D/3D" },
+    { "name": "package_program", "description": "Программа помещений пакета S/M/L по площади" },
+    { "name": "new_office", "description": "Собрать офис продаж по пакету и площади" },
+    { "name": "add_room", "description": "Добавить помещение с мебелью" },
+    { "name": "update_element", "description": "Передвинуть / изменить элемент" },
+    { "name": "furnish_room", "description": "Расставить мебель по типу помещения" },
+    { "name": "batch", "description": "Много правок за раз" },
+    { "name": "check_plan", "description": "Проверки норм и программы" }
+  ],
+  "compatibility": { "platforms": ["darwin", "win32", "linux"], "runtimes": { "node": ">=18.0.0" } }
+}

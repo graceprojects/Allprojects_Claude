@@ -40,6 +40,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn.danger{color:var(--warn)}
 .btn:focus-visible,.grp button:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .spacer{flex:1}
+#bClaude.live{border-color:var(--ok);color:var(--ok);font-weight:600}
+.ailog{margin:6px 0;padding-left:18px;font-size:12px}.ailog li.bad{color:var(--warn)}
 .status{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .lib{grid-area:lib;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
 .lib .search{padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -149,6 +151,7 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     <button class="btn" id="bFit" title="Показать всё здание">Весь план</button>
     <span class="spacer"></span>
     <span class="status" id="status">—</span>
+    <button class="btn" id="bClaude" title="Claude: помощник и подключение Claude Desktop / Code">Claude</button>
     <button class="btn primary" id="bExport">Выгрузить</button>
   </header>
 
@@ -191,7 +194,7 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
  */
 (function (root) {
   "use strict";
-  const KB = { version: "1.0" };
+  const KB = { version: "1.1" };
 
   KB.CAT = {
     client: { n: "Клиентская зона", c: "#F3E6CF" }, office: { n: "Кабинеты продаж", c: "#DAE8F6" },
@@ -211,6 +214,47 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     dine: [1.9, 1.9], bar: [3, .6], stool: [.45, .45], wc: [.4, .7], sink: [.55, .45], cubicle: [1.2, 1.8],
     stair2: [2.6, 4], mfp: [.6, .5], sofa2: [1.6, .9], stand: [1.2, .4],
   };
+
+  // Каталог мебели и оборудования: key, название, группа, w, h (глубина), z (высота 3D, "H" — до потолка), тип символа, цвет 3D
+  KB.FURN = [
+    // проёмы
+    ["door9","Дверь 900","Двери и окна",.9,1.2,2.1,"door","#9a7b56"],["door10","Дверь 1000","Двери и окна",1,1.3,2.1,"door","#9a7b56"],
+    ["door18","Дверь двустворчатая 1800","Двери и окна",1.8,1.2,2.4,"door2","#9a7b56"],["slide","Дверь раздвижная 1000","Двери и окна",1,.3,2.4,"slide","#a9d3ee"],
+    ["auto","Автоматическая дверь 2000","Двери и окна",2,.3,2.6,"auto","#a9d3ee"],["win","Окно 1500","Двери и окна",1.5,.3,1.5,"win","#a9d3ee"],
+    // клиентская зона
+    ["recep","Стойка ресепшен","Клиентская зона",3,.8,1.1,"recep","#d9c19a"],["recepL","Стойка ресепшен угловая","Клиентская зона",2.6,1.8,1.1,"recepL","#d9c19a"],
+    ["model","Стол макета ЖК 5×3","Клиентская зона",5,3,.9,"model","#e9e2d2"],["modelS","Стол макета 3×2","Клиентская зона",3,2,.9,"model","#e9e2d2"],
+    ["lounge","Мягкая зона (диван+2 кресла)","Клиентская зона",2.2,2.9,.8,"lounge","#c9c4bb"],
+    ["sofa2","Диван 2-местный","Клиентская зона",1.6,.9,.8,"sofa","#b9b2a6"],["sofa3","Диван 3-местный","Клиентская зона",2.2,.9,.8,"sofa","#b9b2a6"],
+    ["arm","Кресло","Клиентская зона",.8,.8,.8,"arm","#b9b2a6"],["ctab","Журнальный столик","Клиентская зона",1.2,.6,.45,"table","#e0d6c6"],
+    ["bench","Банкетка","Клиентская зона",1.2,.45,.45,"table","#b9b2a6"],["cafe4","Стол кафе на 4","Клиентская зона",1.9,1.9,.75,"cafe4","#e0d6c6"],
+    ["led","LED-экран / ТВ","Клиентская зона",2,.2,1.2,"screen","#2b2f33"],["media","Медиастена 4 м","Клиентская зона",4,.3,2.5,"screen","#2b2f33"],
+    ["stand","Стенд с планировками","Клиентская зона",1.2,.4,2,"stand","#f1efe9"],["plant","Растение в кашпо","Клиентская зона",.6,.6,1.4,"plant","#5d8c4e"],
+    ["cooler","Кулер","Клиентская зона",.35,.35,1.1,"cooler","#e6eef3"],["kidtab","Детский столик","Клиентская зона",1,.6,.5,"kidtab","#f2b76a"],
+    ["kidmat","Игровой коврик","Клиентская зона",2,2,.05,"mat","#f4d36b"],
+    // кабинеты
+    ["work3","Рабочее место менеджера + 2 гостя","Офисная мебель",1.6,2.3,.75,"work3","#e8e2d6"],["desk","Стол менеджера 1600","Офисная мебель",1.6,.8,.75,"table","#e8e2d6"],
+    ["deskB","Стол руководителя 1800","Офисная мебель",1.8,.9,.75,"table","#8c6a4a"],["os1","Рабочее место open-space","Офисная мебель",1.4,1.3,.75,"os1","#e8e2d6"],
+    ["os4","Блок open-space на 4","Офисная мебель",2.8,2.6,.75,"os4","#e8e2d6"],["chairO","Кресло офисное","Офисная мебель",.6,.6,1,"chair","#3c4146"],
+    ["chairV","Стул посетителя","Офисная мебель",.5,.5,.85,"chair","#6b7075"],["cab","Шкаф для документов","Офисная мебель",.9,.45,2,"cab","#dcd6cb"],
+    ["shelf","Стеллаж архивный","Офисная мебель",1,.4,2.2,"shelf","#c9c4ba"],["safe","Сейф","Офисная мебель",.5,.5,1.2,"safe","#55595c"],
+    ["mfp","МФУ / принтер","Офисная мебель",.6,.5,1,"mfp","#d8dbdd"],
+    // переговоры
+    ["meet6","Стол переговоров на 6","Переговорные",2.4,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
+    ["meet10","Стол переговоров на 10","Переговорные",4,2.2,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
+    // кухня и бар
+    ["kitch","Кухонный гарнитур 2.4 м","Кухня и бар",2.4,.6,.9,"kitch","#e9e6df"],["fridge","Холодильник","Кухня и бар",.7,.7,1.9,"fridge","#e9ecee"],
+    ["bar","Барная стойка 3 м","Кухня и бар",3,.6,1.1,"bar","#c8a877"],["stool","Барный стул","Кухня и бар",.45,.45,.75,"stool","#555"],
+    ["dine","Обеденный стол на 4","Кухня и бар",1.9,1.9,.75,"cafe4","#e0d6c6"],
+    // сантехника
+    ["wc","Унитаз","Сантехника",.4,.7,.8,"toilet","#f4f4f2"],["sink","Раковина","Сантехника",.55,.45,.85,"sink","#f4f4f2"],
+    ["urinal","Писсуар","Сантехника",.4,.35,1,"urinal","#f4f4f2"],["shower","Душевой поддон","Сантехника",.9,.9,2,"shower","#dbe9f0"],
+    ["cubicle","Кабина с/у 1.2×1.8","Сантехника",1.2,1.8,2.1,"cubicle","#c7d7da"],
+    // конструкции
+    ["col","Колонна 400×400","Конструкции",.4,.4,"H","col","#8f928d"],["col3","Колонна 300×300","Конструкции",.3,.3,"H","col","#8f928d"],
+    ["stair2","Лестница двухмаршевая","Конструкции",2.6,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
+  ];
+  KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {
     name: "Офис продаж", w: 40, d: 12, h: 7, M: 6, B: 6, maket: "5x3",
@@ -407,7 +451,7 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     return Object.assign({ id: uid(), t: "room", lv: 0, name, x: r3(x), y: r3(y), w: r3(w), h: r3(h), cat, border, color: KB.CAT[cat].c, sub: false, ph: 3 }, o);
   }
   function furn(k, x, y, rot = 0, o = {}) {
-    const d = DIMS[k] || [1, 1];
+    const d = DIMS[k] || (KB.FK[k] ? [KB.FK[k].w, KB.FK[k].h] : [1, 1]);
     return Object.assign({ id: uid(), t: "item", lv: 0, k, x: r3(x), y: r3(y), w: d[0], h: d[1], rot, flip: false, label: "" }, o);
   }
   // Дверь на стороне помещения: side n|s|e|w, off — от левого/верхнего угла, inward — открывается внутрь
@@ -789,6 +833,374 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     return lines.join("\n");
   };
 
+  /* ============================================================ КОМАНДЫ ПЛАНИРОВЩИКА (для Claude / MCP / ИИ-помощника)
+   * Все команды меняют проект S на месте и возвращают { ok, msg, ids }.
+   * Помещение или предмет указывается id или названием («Кабинет менеджера 2», «кухня»).
+   * Координаты — метры от левого верхнего угла здания: X вдоль дороги, Y вглубь, фасад с витражом — Y = b.d.
+   */
+  const isDoorK = k => /^(door|slide|auto|win)/.test(k || "");
+  const aabbOf = it => { if (it.t !== "item") return { x: it.x, y: it.y, w: it.w, h: it.h };
+    const q = (it.rot || 0) % 180 !== 0; return { x: it.x, y: it.y, w: q ? it.h : it.w, h: q ? it.w : it.h }; };
+  KB.aabb = aabbOf;
+  const lvOf = it => it.lv || 0;
+  const inside = (a, r, m = 0) => { const cx = a.x + a.w / 2, cy = a.y + a.h / 2; return cx >= r.x - m && cx <= r.x + r.w + m && cy >= r.y - m && cy <= r.y + r.h + m; };
+  const overlap = (a, c, m = 0) => a.x < c.x + c.w + m && a.x + a.w + m > c.x && a.y < c.y + c.h + m && a.y + a.h + m > c.y;
+  const isHall = r => /зал|холл|open-space продаж/i.test(r.name || "") && !r.sub;
+  const isCirc = r => r.cat === "circ" || /проход|коридор|галерея/i.test(r.name || "");
+
+  /* Типы помещений: как распознать по названию, категория, ограждение, типовой размер и наполнение. */
+  KB.ROOM_TYPES = [
+    { key: "tambour", re: /тамбур/, cat: "circ", border: "glass", size: [2.6, 2.5] },
+    { key: "reception", re: /ресепшен|хостес|стойка/, cat: "client", border: "none", size: [4.4, 2.2], zone: true },
+    { key: "kids", re: /детск/, cat: "client", border: "none", size: [3.5, 3.5], zone: true, color: "#F4D36B" },
+    { key: "maket", re: /макет/, cat: "client", border: "none", size: [7.4, 5.4], zone: true, color: "#F2F0EA" },
+    { key: "cafe", re: /кофе|бар|кафе/, cat: "client", border: "none", size: [4, 3.2], zone: true, color: "#D9B98E" },
+    { key: "lounge", re: /ожидан|лаунж|мягк/, cat: "client", border: "none", size: [5, 4], zone: true },
+    { key: "media", re: /медиа|vr/, cat: "client", border: "none", size: [3.5, 3], zone: true },
+    { key: "showroom", re: /шоурум|материал/, cat: "client", border: "glass", size: [5, 3.2] },
+    { key: "wardrobe", re: /гардероб/, cat: "staff", border: "wall", size: [2, 3.2] },
+    { key: "opendesk", re: /место консультац|open-space продаж/, cat: "office", border: "none", size: [2.8, 2.6], zone: true },
+    { key: "bank", re: /ипотек|банк|брокер|юрист/, cat: "office", border: "glass", size: [3, 3.2] },
+    { key: "cabinet", re: /кабинет менеджер|кабинет продаж|менеджер/, cat: "office", border: "glass", size: [3, 3.2] },
+    { key: "vip", re: /сделочн|vip/, cat: "meet", border: "glass", size: [5, 4.5] },
+    { key: "meet", re: /переговорн/, cat: "meet", border: "glass", size: [4.5, 3.2] },
+    { key: "cashier", re: /касса/, cat: "service", border: "wall", size: [3, 3] },
+    { key: "director", re: /руководител|роп|директор/, cat: "back", border: "wall", size: [4.5, 4] },
+    { key: "backoffice", re: /бэк|back|бухгалтер|open-space/, cat: "back", border: "glass", size: [6, 5] },
+    { key: "kitchen", re: /кухн|приём пищи|прием пищи|комната отдыха/, cat: "staff", border: "wall", size: [4, 3.5] },
+    { key: "wcv", re: /мгн|посетит|универсал/, cat: "wc", border: "wall", size: [2.4, 2.4], color: "#CFE8E6", wc: true },
+    { key: "wcs", re: /с\/у|санузел|туалет|wc/, cat: "wc", border: "wall", size: [1.8, 2.5], color: "#CFE8E6", wc: true },
+    { key: "kui", re: /куи|уборочн/, cat: "service", border: "wall", size: [1.8, 2] },
+    { key: "elec", re: /электрощит|щитов|слаботоч/, cat: "service", border: "wall", size: [2, 2.5] },
+    { key: "server", re: /сервер/, cat: "service", border: "wall", size: [2, 2.5] },
+    { key: "archive", re: /архив|склад|кладов/, cat: "service", border: "wall", size: [2.5, 3] },
+    { key: "security", re: /охран/, cat: "service", border: "wall", size: [2, 2] },
+    { key: "stair", re: /лестниц/, cat: "circ", border: "wall", size: [2.8, 5.1] },
+    { key: "corridor", re: /коридор|проход|галерея/, cat: "circ", border: "none", size: [1.8, 6], zone: true },
+    { key: "hall", re: /зал|холл/, cat: "client", border: "none", size: [12, 8], zone: true, color: "#EDE8DE" },
+  ];
+  KB.roomType = function (name) {
+    const n = norm(name);
+    // «с/у посетителей», «с/у МГН» — посетительский; любой другой с/у — персонала
+    for (const t of KB.ROOM_TYPES) if (t.re.test(n)) { if (t.key === "wcv" && !/с\/у|санузел|туалет|wc|кабин/.test(n)) continue; return t; }
+    return null;
+  };
+
+  /* ---------- поиск элементов */
+  function findEl(S, ref, t) {
+    if (ref == null || ref === "") throw new Error("Не указан элемент (id или название).");
+    const pool = S.items.filter(i => !t || i.t === t);
+    const byId = pool.find(i => i.id === String(ref)); if (byId) return byId;
+    const n = norm(ref).trim();
+    const label = i => norm(i.t === "room" ? i.name : i.t === "item" ? (i.label || (KB.FK[i.k] ? KB.FK[i.k].n : i.k)) : i.kind);
+    let hit = pool.filter(i => label(i) === n); if (hit.length === 1) return hit[0];
+    if (!hit.length) hit = pool.filter(i => label(i).includes(n));
+    if (hit.length === 1) return hit[0];
+    if (!hit.length) throw new Error(`Не найдено: «${ref}». Посмотрите список в describe_plan.`);
+    throw new Error(`«${ref}» — несколько совпадений: ${hit.slice(0, 8).map(i => `${i.id} (${i.t === "room" ? i.name : i.k} @ ${(+i.x || 0).toFixed(1)},${(+i.y || 0).toFixed(1)})`).join("; ")}. Укажите id.`);
+  }
+  KB.findEl = findEl;
+  // Предметы внутри помещения (центр внутри; двери — с допуском на толщину стены)
+  KB.contents = function (S, r) {
+    return S.items.filter(i => i !== r && lvOf(i) === lvOf(r) && (i.t === "item" ? inside(aabbOf(i), r, isDoorK(i.k) ? 0.35 : 0)
+      : i.t === "room" ? (i.sub && !r.sub && inside(i, r) && i.w * i.h < r.w * r.h) : false));
+  };
+
+  /* ---------- сторона двери: где снаружи проход / зал, а не другое помещение и не наружная стена */
+  function sideScore(S, r, side) {
+    const b = S.b, lv = lvOf(r), e = 0.35;
+    const mid = side === "n" ? [r.x + r.w / 2, r.y - e] : side === "s" ? [r.x + r.w / 2, r.y + r.h + e] : side === "w" ? [r.x - e, r.y + r.h / 2] : [r.x + r.w + e, r.y + r.h / 2];
+    const [px, py] = mid;
+    if (px < 0.3 || py < 0.3 || px > b.w - 0.3 || py > b.d - 0.3) return -10;          // наружу
+    const here = S.items.filter(i => i.t === "room" && i !== r && lvOf(i) === lv && px > i.x && px < i.x + i.w && py > i.y && py < i.y + i.h);
+    if (!here.length) return lv ? -5 : 2;                                                  // открытое пространство (на антресоли — пустота)
+    const solid = here.filter(i => !i.sub && !isHall(i) && !isCirc(i));
+    if (solid.length) return -3;
+    if (here.some(isCirc)) return 4;
+    if (here.some(isHall)) return 3;
+    return 1;                                                                              // зона без стен
+  }
+  KB.doorSide = function (S, r) {
+    let best = "s", bs = -1e9;
+    for (const s of ["s", "n", "e", "w"]) { const v = sideScore(S, r, s) + ((s === "n" || s === "s") ? (r.w >= r.h ? 0.3 : 0) : (r.h > r.w ? 0.3 : 0)); if (v > bs) { bs = v; best = s; } }
+    return best;
+  };
+  // Сторона, обращённая к входу/фасаду — для зон без стен (ресепшен, макет смотрят на посетителя)
+  function faceSide(S, r) {
+    const ent = S.items.find(i => i.t === "item" && lvOf(i) === 0 && (i.k === "auto" || /вход/i.test(i.label || "")) && !/служеб/i.test(i.label || ""));
+    const tx = ent ? ent.x + aabbOf(ent).w / 2 : r.x + r.w / 2, ty = ent ? ent.y : S.b.d;
+    const dx = tx - (r.x + r.w / 2), dy = ty - (r.y + r.h / 2);
+    return Math.abs(dy) >= Math.abs(dx) * 0.8 ? (dy > 0 ? "s" : "n") : (dx > 0 ? "e" : "w");
+  }
+
+  /* ---------- локальная система помещения: u — вдоль «лицевой» стены, v — от задней стены к лицевой.
+   * face: n|s|e|w — лицевая сторона (дверь / обзор). Предмет в локальных координатах: ставим по центру (cu, cv) с поворотом rl. */
+  function frame(r, face) {
+    const Wl = face === "n" || face === "s" ? r.w : r.h, Dl = face === "n" || face === "s" ? r.h : r.w;
+    const toW = (cu, cv) => face === "s" ? [r.x + cu, r.y + cv, 0] : face === "n" ? [r.x + r.w - cu, r.y + r.h - cv, 180]
+      : face === "e" ? [r.x + cv, r.y + r.h - cu, 270] : [r.x + r.w - cv, r.y + cu, 90];
+    return { W: Wl, D: Dl, put(k, u, v, rl = 0, o = {}) {   // u, v — левый-задний угол предмета в локальных координатах
+      const f = KB.FK[k] || { w: 1, h: 1 }, w = o.w || f.w, h = o.h || f.h;
+      const lw = rl % 180 ? h : w, lh = rl % 180 ? w : h;
+      const [cx, cy, ra] = toW(u + lw / 2, v + lh / 2), rot = (rl + ra) % 360, q = rot % 180 !== 0;
+      const aw = q ? h : w, ah = q ? w : h;
+      return Object.assign({ id: uid(), t: "item", lv: lvOf(r), k, x: r3(cx - aw / 2), y: r3(cy - ah / 2), w, h, rot, flip: false, label: "" }, o, { w, h });
+    } };
+  }
+  function slideDoor(r, side, off) {
+    const lv = lvOf(r);
+    if (side === "s") return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x + off), y: r3(r.y + r.h - 0.15), w: 1, h: 0.3, rot: 0, flip: false, label: "" };
+    if (side === "n") return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x + off), y: r3(r.y - 0.15), w: 1, h: 0.3, rot: 0, flip: false, label: "" };
+    if (side === "e") return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x + r.w - 0.15), y: r3(r.y + off), w: 1, h: 0.3, rot: 90, flip: false, label: "" };
+    return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x - 0.15), y: r3(r.y + off), w: 1, h: 0.3, rot: 90, flip: false, label: "" };
+  }
+
+  /* ---------- автоматическое наполнение помещения мебелью по его типу */
+  KB.furnishRoom = function (S, r, o = {}) {
+    const T = KB.roomType(r.name) || { key: "other" }, out = [], lv = lvOf(r);
+    const zone = r.border === "none";
+    const face = o.face || (zone ? faceSide(S, r) : KB.doorSide(S, r));
+    const F = frame(r, face), W = F.W, D = F.D, P = (...a) => out.push(F.put(...a));
+    const cU = w => Math.max(0.1, (W - w) / 2);
+    // дверь (если у помещения есть стены)
+    if (!zone && o.door !== false && T.key !== "stair") {
+      const along = face === "n" || face === "s" ? r.w : r.h, dw = T.key === "wcv" ? 1.0 : (T.wc || /куи|щит|сервер/.test(T.key) ? 0.8 : 0.9);
+      const off0 = Math.min(0.3, Math.max(0.05, along - dw - 0.05)), off = face === "n" || face === "e" ? Math.max(0.05, along - dw - off0) : off0; // дверь всегда слева в локальной системе
+      const inward = !(T.wc || T.key === "kui" || T.key === "elec" || T.key === "server" || T.key === "archive");
+      out.push(r.border === "glass" && T.key !== "vip" && T.key !== "meet" && T.key !== "showroom" ? slideDoor(r, face, off) : door(r, face, off, dw, inward));
+    }
+    const doorZone = 1.1; // у лицевой стены возле двери оставляем свободно
+    switch (T.key) {
+      case "cabinet": case "bank": case "opendesk":
+        P("work3", cU(1.6), zone ? Math.max(0.1, (D - 2.3) / 2) : Math.min(0.4, Math.max(0.05, D - 2.3 - 0.9)));
+        if (!zone && W >= 3.6) P("cab", W - 0.95, 0.05); break;
+      case "meet": case "vip": {
+        const opts = [["meet10", 4, 2.2], ["meet8", 3.2, 2.2], ["meet6", 2.4, 2.1], ["round4", 1.9, 1.9]];
+        let fitT = opts[3], rl = 0;
+        for (const t of (T.key === "vip" ? opts.slice(1) : opts)) { if (t[1] + 1.4 <= W && t[2] + 1.0 <= D) { fitT = t; rl = 0; break; } if (t[2] + 1.0 <= W && t[1] + 1.4 <= D) { fitT = t; rl = 90; break; } }
+        const lw = rl ? fitT[2] : fitT[1], lh = rl ? fitT[1] : fitT[2];
+        P(fitT[0], cU(lw), Math.max(0.5, (D - lh) / 2 - (D - lh > 1.6 ? 0.2 : 0)), rl);
+        if (W >= 4 && D - lh >= 2.2) P("led", cU(2), 0.02);
+        if (T.key === "vip" && W - lw >= 3.4) P("sofa2", 0.15, 0.1, 90);
+        break; }
+      case "director": {
+        P("cab", 0.1, 0.05); if (W >= 4) P("cab", W - 1.0, 0.05);
+        P("chairO", cU(0.6), 0.6, 180); P("deskB", cU(1.8), 1.25); P("chairV", W / 2 - 0.75, 2.3); P("chairV", W / 2 + 0.25, 2.3);
+        if (D >= 4.6 && W >= 4.2) P("round4", W - 2.1, D - doorZone - 1.9 > 2.6 ? D - doorZone - 1.9 : 2.8);
+        break; }
+      case "backoffice": {
+        const need = o.seats || Math.max(1, Math.floor(r.w * r.h / 6)); let seats = 0;
+        const cols4 = Math.floor((W - 0.6) / 3.6), rows4 = Math.floor((D - doorZone - 0.5) / 3.4);
+        for (let j = 0; j < rows4 && seats + 2 < need; j++) for (let i = 0; i < cols4 && seats + 2 < need; i++) { P("os4", 0.4 + i * 3.6, 0.5 + j * 3.4); seats += 4; }
+        const y1 = rows4 && seats ? 0.5 + Math.ceil(seats / 4 / Math.max(1, cols4)) * 3.4 : 0.3;
+        for (let v = y1; v + 1.3 <= D - doorZone + 0.2 && seats < need; v += 1.9) for (let u = 0.3; u + 1.4 <= W - 0.2 && seats < need; u += 1.6) { P("os1", u, v); seats++; }
+        if (W >= 3.2) { P("mfp", W - 1.7, D - 0.55); P("cab", W - 1.0, D - 0.5); }
+        out._note = `рабочих мест: ${seats}${need > seats ? ` из ${need}` : ""}`; break; }
+      case "kitchen": {
+        const kw = Math.min(2.4, W - 0.9); P("kitch", 0.1, 0.02, 0, { w: kw }); P("fridge", Math.min(W - 0.75, kw + 0.15), 0.02);
+        if (D - 0.6 - doorZone >= 2.1 && W >= 2.4) P("dine", cU(1.9), 0.9 + Math.max(0, (D - 0.9 - doorZone - 1.9) / 2));
+        else P("desk", cU(Math.min(1.6, W - 0.6)), 0.9, 0, { w: Math.min(1.6, W - 0.6), label: "стол" });
+        break; }
+      case "wcv": P("wc", 0.9, 0.05); P("sink", W - 0.6, Math.min(1.2, D - 1.5), 90);
+        if (W >= 3.6) { P("cubicle", W - 1.3, 0.05); P("wc", W - 0.9, 0.1); } break;
+      case "wcs": P("wc", Math.min(0.6, W - 0.5), 0.05); P("sink", W - 0.5, Math.min(1.0, D - 1.3), 90); break;
+      case "kui": case "server": case "archive": P("shelf", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 3)) });
+        if (T.key === "archive" && D >= 2.6 && W >= 2) P("shelf", 0.05, 0.6, 90, { w: Math.min(D - 1.6, 3) }); break;
+      case "elec": P("cab", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 1.8)), label: "щиты" }); break;
+      case "security": case "cashier": P("desk", 0.15, 0.1, 0, { w: Math.min(1.6, W - 0.4) }); P("chairO", 0.6, 0.95, 180);
+        if (T.key === "cashier") P("safe", W - 0.6, 0.05); break;
+      case "wardrobe": P("shelf", 0.1, 0.05, 0, { w: W - 0.2, label: "вешала" }); if (D >= 2.4) P("bench", cU(1.2), D - 1.3); break;
+      case "reception": {
+        const sw = Math.min(3, W - 0.6); P("recep", cU(sw), Math.max(0.9, D - 1.2), 0, { w: sw }); P("chairO", W / 2 - 0.3, Math.max(0.1, D - 2.0));
+        if (W >= 4) P("cab", 0.1, 0.05); break; }
+      case "lounge": {
+        const gw = 2.4, gh = 3.1, nx = Math.max(1, Math.floor((W + 0.4) / (gw + 0.6))), ny = Math.max(1, Math.floor((D + 0.3) / (gh + 0.5)));
+        if (W < 2.4 || D < 2.9) { P("sofa3", cU(2.2), 0.1); if (D >= 1.8) P("ctab", cU(1.2), 1.1); break; }
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) P("lounge", (W - nx * gw - (nx - 1) * 0.6) / 2 + i * (gw + 0.6), (D - ny * gh - (ny - 1) * 0.5) / 2 + j * (gh + 0.5));
+        if (W >= 3) P("plant", W - 0.65, 0.05); break; }
+      case "maket": {
+        const M = [["6x4", 6, 4], ["5x3", 5, 3], ["3x2", 3, 2], ["2x1.5", 2, 1.5]];
+        const pick = M.find(m => m[1] + 2.0 <= W && m[2] + 2.0 <= D) || M.find(m => m[1] + 1.2 <= W && m[2] + 1.2 <= D) || M[3];
+        P("model", cU(pick[1]), (D - pick[2]) / 2, 0, { w: pick[1], h: pick[2], label: "макет " + pick[0].replace("x", "×") });
+        if (D - pick[2] >= 2.6) P("stand", cU(1.2), 0.05); out._note = "макет " + pick[0]; break; }
+      case "kids": P("kidmat", 0.2, 0.2, 0, { w: Math.min(2, W - 0.4), h: Math.min(2, D - 0.4) });
+        if (W >= 3.2 && D >= 1.2) P("kidtab", W - 1.2, D - 0.8); break;
+      case "cafe": { const bw = Math.min(3, W - 0.4); P("bar", cU(bw), 0.1, 0, { w: bw }); const ns = Math.max(1, Math.floor(bw / 0.75));
+        for (let i = 0; i < ns; i++) P("stool", cU(bw) + 0.15 + i * (bw - 0.45) / Math.max(1, ns - 1), 0.9);
+        if (D >= 4) P("cafe4", cU(1.9), D - 2.1); P("cooler", W - 0.45, 0.1); break; }
+      case "media": P("media", cU(Math.min(4, W - 0.4)), 0.02, 0, { w: Math.min(4, W - 0.4) }); if (D >= 2.8) P("sofa3", cU(2.2), Math.min(D - 1.0, 2.4), 180); break;
+      case "showroom": { const n = Math.max(1, Math.floor((W - 0.4) / 1.3)); for (let i = 0; i < n; i++) P("stand", 0.2 + i * 1.3, 0.05);
+        if (D >= 3) P("ctab", cU(1.2), Math.min(D - 1.8, 1.5), 0, { label: "образцы" }); break; }
+      case "hall": P("plant", 0.2, 0.2); P("plant", W - 0.8, 0.2); break;
+      default: break;
+    }
+    // обрезаем то, что вылезло за помещение (кроме дверей)
+    const bad = out.filter(i => !isDoorK(i.k) && (() => { const a = aabbOf(i); return a.x < r.x - 0.02 || a.y < r.y - 0.02 || a.x + a.w > r.x + r.w + 0.02 || a.y + a.h > r.y + r.h + 0.02; })());
+    const res = out.filter(i => !bad.includes(i)); res._note = [out._note, bad.length ? `не поместилось предметов: ${bad.length}` : ""].filter(Boolean).join(", "); res._face = face;
+    return res;
+  };
+
+  /* ---------- свободное место */
+  KB.findSpace = function (S, o = {}) {
+    const b = S.b, lv = o.lv || 0, w = +o.w, h = +o.h, m = o.margin == null ? 0.3 : +o.margin, step = o.step || 0.2, t = 0.3;
+    if (!(w > 0 && h > 0)) throw new Error("find_space: нужны w и h (м).");
+    const within = o.within ? findEl(S, o.within, "room") : null;
+    const blocks = S.items.filter(i => lvOf(i) === lv && i !== within && (i.t === "item" ? true : i.t === "room" ? !isHall(i) && !(within && i.sub && !inside(i, within)) : false)).map(i => i.t === "wall" ? null : aabbOf(i)).filter(Boolean);
+    const box = within ? { x: within.x, y: within.y, w: within.w, h: within.h } : { x: t, y: t, w: b.w - 2 * t, h: b.d - 2 * t };
+    const res = [];
+    for (let y = box.y; y + h <= box.y + box.h + 1e-6; y += step) for (let x = box.x; x + w <= box.x + box.w + 1e-6; x += step) {
+      const a = { x, y, w, h }; if (blocks.some(c => overlap(a, c, within ? 0 : m) && !(c.w >= b.w - 1 && c.h >= b.d - 1))) continue;
+      if (lv === 1 && !S.items.some(i => i.t === "room" && i.lv === 1 && !i.sub && inside(a, i))) continue; // на антресоли — только над перекрытием
+      const cy = y + h / 2, cx = x + w / 2;
+      const pref = o.near === "facade" ? b.d - cy : o.near === "back" ? cy : o.near === "left" ? cx : o.near === "right" ? b.w - cx : o.near === "center" ? Math.hypot(cx - b.w / 2, cy - b.d / 2) : cy * 0 + cx * 0.001;
+      res.push({ x: r3(x), y: r3(y), w, h, score: pref });
+    }
+    res.sort((a, c) => a.score - c.score);
+    const picked = []; for (const r of res) { if (picked.every(p => !overlap(p, r, 0.5))) picked.push(r); if (picked.length >= (o.limit || 5)) break; }
+    return picked.map(({ score, ...r }) => r);
+  };
+
+  /* ---------- команды */
+  const num = (v, name) => { const n = +v; if (!isFinite(n)) throw new Error(`Параметр ${name} должен быть числом (м).`); return n; };
+  KB.OPS = {
+    building(S, a) { for (const k of ["w", "d", "h", "mz"]) if (a[k] != null) S.b[k] = num(a[k], k); if (a.name) S.name = String(a.name); if (a.notes != null) S.notes = String(a.notes);
+      return { msg: `Здание ${S.b.w}×${S.b.d}×${S.b.h} м` }; },
+    add_room(S, a) {
+      const T = KB.roomType(a.name) || {}, sz = T.size || [3, 3];
+      const w = a.w != null ? num(a.w, "w") : sz[0], h = a.h != null ? num(a.h, "h") : sz[1];
+      let x = a.x, y = a.y;
+      if (x == null || y == null) { const sp = KB.findSpace(S, { w, h, lv: a.lv || 0, near: a.near || (T.cat === "client" ? "facade" : "back"), limit: 1 })[0];
+        if (!sp) throw new Error(`Нет свободного места ${w}×${h} м для «${a.name}». Уменьшите размер или освободите место.`); x = sp.x; y = sp.y; }
+      const cat = a.cat || T.cat || "client";
+      const r = room(String(a.name || "Помещение"), num(x, "x"), num(y, "y"), w, h, cat, a.border || T.border || "wall",
+        { lv: a.lv || 0, sub: a.sub != null ? !!a.sub : !!T.zone && !/^(hall|corridor)$/.test(T.key), color: a.color || T.color || (KB.CAT[cat] || KB.CAT.client).c });
+      S.items.push(r); const ids = [r.id]; let note = "";
+      if (a.furnish !== false) { const f = KB.furnishRoom(S, r); S.items.push(...f); ids.push(...f.map(i => i.id)); note = f._note ? ` (${f._note})` : ""; }
+      return { msg: `Добавлено «${r.name}» ${r.w}×${r.h} м = ${(r.w * r.h).toFixed(1)} м² в (${r.x}; ${r.y}), id ${r.id}${a.furnish !== false ? ", мебель расставлена" : ""}${note}`, ids };
+    },
+    update(S, a) {
+      const it = findEl(S, a.id || a.name || a.ref); const was = { ...it };
+      const kids = it.t === "room" && a.move_contents !== false ? KB.contents(S, it) : [];
+      if (it.t === "wall") { for (const k of ["x1", "y1", "x2", "y2"]) if (a[k] != null) it[k] = num(a[k], k); if (a.kind) it.kind = a.kind;
+        if (a.dx || a.dy) { it.x1 += +a.dx || 0; it.x2 += +a.dx || 0; it.y1 += +a.dy || 0; it.y2 += +a.dy || 0; } return { msg: "Стена изменена", ids: [it.id] }; }
+      for (const k of ["x", "y", "w", "h"]) if (a[k] != null) it[k] = r3(num(a[k], k));
+      if (a.dx) it.x = r3(it.x + +a.dx); if (a.dy) it.y = r3(it.y + +a.dy);
+      if (a.new_name != null) it.name = String(a.new_name); if (a.label != null) it.label = String(a.label);
+      for (const k of ["cat", "border", "color"]) if (a[k] != null) it[k] = a[k];
+      if (a.cat && !a.color && KB.CAT[a.cat]) it.color = KB.CAT[a.cat].c;
+      if (a.sub != null) it.sub = !!a.sub; if (a.lv != null) it.lv = +a.lv; if (a.rot != null && it.t === "item") it.rot = ((+a.rot % 360) + 360) % 360; if (a.flip != null) it.flip = !!a.flip;
+      const dx = it.x - was.x, dy = it.y - was.y;
+      if ((dx || dy) && kids.length) for (const c of kids) { c.x = r3(c.x + dx); c.y = r3(c.y + dy); }
+      let note = "";
+      if (it.t === "room" && (a.w != null || a.h != null) && a.refurnish !== false && kids.some(c => c.t === "item")) {
+        S.items = S.items.filter(i => !(kids.includes(i) && i.t === "item")); const f = KB.furnishRoom(S, it); S.items.push(...f); note = ", мебель переставлена";
+      }
+      return { msg: `«${it.t === "room" ? it.name : it.k}»: ${it.w}×${it.h} в (${it.x}; ${it.y})${kids.length && (dx || dy) ? `, перенесено вместе с содержимым (${kids.length})` : ""}${note}`, ids: [it.id] };
+    },
+    delete(S, a) {
+      const it = findEl(S, a.id || a.name || a.ref); const kids = it.t === "room" && a.with_contents !== false ? KB.contents(S, it) : [];
+      const gone = new Set([it, ...kids]); S.items = S.items.filter(i => !gone.has(i));
+      return { msg: `Удалено «${it.t === "room" ? it.name : it.k}»${kids.length ? ` и ${kids.length} предметов внутри` : ""}` };
+    },
+    add_item(S, a) {
+      const f = KB.FK[a.k]; if (!f) throw new Error(`Нет предмета «${a.k}» в каталоге. Список — list_catalog.`);
+      let x = a.x, y = a.y, lv = a.lv || 0;
+      const w = a.w != null ? num(a.w, "w") : f.w, h = a.h != null ? num(a.h, "h") : f.h, rot = ((+a.rot || 0) % 360 + 360) % 360;
+      const aw = rot % 180 ? h : w, ah = rot % 180 ? w : h;
+      if (a.room) { const r = findEl(S, a.room, "room"); lv = lvOf(r);
+        if (x == null || y == null) { const sp = KB.findSpace(S, { w: aw, h: ah, lv, within: r.id, near: a.near || "back", margin: 0.1, limit: 1 })[0];
+          if (!sp) throw new Error(`В «${r.name}» нет места для ${f.n} ${aw}×${ah} м.`); x = sp.x; y = sp.y; } }
+      if (x == null || y == null) { const sp = KB.findSpace(S, { w: aw, h: ah, lv, near: a.near || "center", limit: 1 })[0]; if (!sp) throw new Error("Нет свободного места."); x = sp.x; y = sp.y; }
+      const n = Math.max(1, Math.min(40, +a.count || 1)), ids = [], gap = a.gap != null ? +a.gap : 0.2, dir = a.dir === "y" ? "y" : "x";
+      for (let i = 0; i < n; i++) { const it = { id: uid(), t: "item", lv, k: a.k, x: r3(num(x, "x") + (dir === "x" ? i * (aw + gap) : 0)), y: r3(num(y, "y") + (dir === "y" ? i * (ah + gap) : 0)), w, h, rot, flip: !!a.flip, label: a.label || "" };
+        if (/^door|^slide|^auto|^win/.test(a.k)) { const d = f.d; if (d === "door") it.h = r3(it.w + 0.3); if (d === "door2") it.h = r3(it.w / 2 + 0.3); }
+        S.items.push(it); ids.push(it.id); }
+      return { msg: `Добавлено: ${f.n} ×${n} в (${r3(+x)}; ${r3(+y)})`, ids };
+    },
+    furnish(S, a) {
+      const r = findEl(S, a.room || a.id || a.name, "room");
+      if (a.replace !== false) { const drop = new Set(KB.contents(S, r).filter(i => i.t === "item" && (a.keep_doors === false || !isDoorK(i.k)))); S.items = S.items.filter(i => !drop.has(i)); }
+      const hasDoor = KB.contents(S, r).some(i => i.t === "item" && isDoorK(i.k));
+      const f = KB.furnishRoom(S, r, { door: !hasDoor, face: a.face, seats: a.seats }); S.items.push(...f);
+      return { msg: `«${r.name}»: расставлено ${f.length} предметов, лицевая сторона ${f._face}${f._note ? `, ${f._note}` : ""}`, ids: f.map(i => i.id) };
+    },
+    clear(S, a) { const r = findEl(S, a.room || a.id || a.name, "room"); const drop = new Set(KB.contents(S, r).filter(i => i.t === "item" && (a.doors || !isDoorK(i.k))));
+      S.items = S.items.filter(i => !drop.has(i)); return { msg: `«${r.name}»: убрано предметов ${drop.size}` }; },
+    add_door(S, a) {
+      const r = findEl(S, a.room || a.id || a.name, "room"); const side = a.side || KB.doorSide(S, r), w = +a.width || 0.9;
+      const along = side === "n" || side === "s" ? r.w : r.h, off = a.offset != null ? +a.offset : Math.max(0.05, Math.min(0.3, along - w - 0.05));
+      const d = a.type === "slide" ? slideDoor(r, side, off) : door(r, side, off, w, a.inward !== false, { label: a.label || "" });
+      S.items.push(d); return { msg: `Дверь ${Math.round(w * 1000)} в «${r.name}», сторона ${side}`, ids: [d.id] };
+    },
+    add_wall(S, a) { const kind = a.kind || "part", TH = { ext: 0.3, block: 0.2, part: 0.1, glass: 0.1, vitrage: 0.15, rail: 0.05 };
+      if (!TH[kind]) throw new Error("kind: ext|block|part|glass|vitrage|rail");
+      const wl = { id: uid(), t: "wall", lv: a.lv || 0, kind, x1: num(a.x1, "x1"), y1: num(a.y1, "y1"), x2: num(a.x2, "x2"), y2: num(a.y2, "y2"), th: TH[kind] };
+      S.items.push(wl); return { msg: `Стена ${kind} ${Math.hypot(wl.x2 - wl.x1, wl.y2 - wl.y1).toFixed(2)} м`, ids: [wl.id] }; },
+    floor(S, a) { const r = findEl(S, a.room || a.id || a.name, "room"); r.color = a.color; return { msg: `Пол «${r.name}» → ${a.color}` }; },
+    generate(S, a) { const g = KB.generateFor(a); Object.keys(S).forEach(k => delete S[k]); Object.assign(S, g.project);
+      return { msg: `Сгенерирован план «${S.name}» ${S.b.w}×${S.b.d}×${S.b.h} м${g.mezz ? " с антресолью" : ""}. ${g.warnings.length ? "Предупреждения: " + g.warnings.join(" ") : "Без предупреждений."}` }; },
+  };
+  // Генерация по пакету: размеры здания, если не заданы, подбираются по площади
+  KB.generateFor = function (a) {
+    const p = Object.assign({}, a);
+    if (p.pkg) { p.pkg = String(p.pkg).toUpperCase(); if (!KB.PACKAGES[p.pkg]) throw new Error("Пакет: S, M или L");
+      p.area = +p.area || KB.PACKAGES[p.pkg].A; const b = KB.suggestBuilding(p.pkg, p.area); for (const q of ["w", "d", "h"]) if (p[q] == null) p[q] = b[q]; }
+    return KB.generate(p);
+  };
+  KB.OP_ALIASES = { move: "update", resize: "update", edit: "update", remove: "delete", furnish_room: "furnish", add_furniture: "add_item", set_building: "building", new_office: "generate", set_floor: "floor", clear_room: "clear" };
+  KB.apply = function (S, op) {
+    const name = KB.OP_ALIASES[op.op] || op.op, fn = KB.OPS[name];
+    if (!fn) throw new Error(`Неизвестная команда «${op.op}». Есть: ${Object.keys(KB.OPS).join(", ")}.`);
+    const r = fn(S, op) || {}; return Object.assign({ ok: true, op: name }, r);
+  };
+  // Пакет команд: выполняются по очереди; ошибка одной не отменяет остальные (если не atomic)
+  KB.applyAll = function (S, ops, atomic) {
+    const snap = atomic ? JSON.stringify(S) : null, res = [];
+    for (const op of ops || []) { try { res.push(KB.apply(S, op)); } catch (e) { res.push({ ok: false, op: op.op, msg: e.message });
+      if (atomic) { const back = JSON.parse(snap); Object.keys(S).forEach(k => delete S[k]); Object.assign(S, back); res.push({ ok: false, msg: "Откат: пакет не применён целиком." }); break; } } }
+    return res;
+  };
+
+  /* ---------- текстовое описание плана для Claude */
+  KB.describe = function (S, o = {}) {
+    const b = S.b, L = [], rooms = S.items.filter(i => i.t === "room");
+    L.push(`Проект «${S.name}». Здание ${b.w}×${b.d} м (X вдоль дороги 0→${b.w}, Y вглубь 0→${b.d}; витраж/вход — сторона Y=${b.d}), высота ${b.h} м${b.mz ? `, отметка антресоли +${b.mz}` : ""}. Наружные стены 0,3 м.`);
+    for (const lv of [0, 1]) {
+      const rs = rooms.filter(r => lvOf(r) === lv).sort((a, c) => (a.y - c.y) || (a.x - c.x)); if (!rs.length) continue;
+      const tot = rs.filter(r => !r.sub).reduce((s, r) => s + r.w * r.h, 0);
+      L.push(`\n${lv ? "АНТРЕСОЛЬ" : "1 ЭТАЖ"} — помещений ${rs.length}, сумма (без зон внутри) ${tot.toFixed(1)} м²:`);
+      for (const r of rs) {
+        const its = KB.contents(S, r).filter(i => i.t === "item"), cnt = {};
+        for (const i of its) { const n = KB.FK[i.k] ? KB.FK[i.k].n : i.k; cnt[n] = (cnt[n] || 0) + 1; }
+        L.push(`  [${r.id}] ${r.name}${r.sub ? " (зона)" : ""} — x ${r.x}, y ${r.y}, ${r.w}×${r.h} = ${(r.w * r.h).toFixed(1)} м², ${KB.CAT[r.cat] ? KB.CAT[r.cat].n : r.cat}, ${r.border === "none" ? "без стен" : r.border === "glass" ? "стекло" : "стены"}` +
+          (o.items === false ? "" : its.length ? `; внутри: ${Object.entries(cnt).map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(", ")}` : "; пусто"));
+      }
+    }
+    const free = S.items.filter(i => i.t === "item" && !rooms.some(r => lvOf(r) === lvOf(i) && !isHall(r) && inside(aabbOf(i), r, 0.35)));
+    if (free.length && o.items !== false) { const cnt = {}; for (const i of free) { const n = KB.FK[i.k] ? KB.FK[i.k].n : i.k; cnt[n] = (cnt[n] || 0) + 1; }
+      L.push(`\nПредметы в общем зале / вне помещений: ${Object.entries(cnt).map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(", ")}`); }
+    const walls = S.items.filter(i => i.t === "wall"); if (walls.length) L.push(`Стен/перегородок отдельных: ${walls.length}`);
+    if (o.ascii !== false) { L.push("\nСХЕМА 1 этажа (1 символ = 0,5 м; буквы — помещения из списка ниже, · — свободно, # — мебель):"); L.push(KB.ascii(S, 0)); }
+    if (o.checks !== false) { L.push(""); L.push(KB.summary(S).split("\n").slice(1).join("\n")); }
+    return L.join("\n");
+  };
+  KB.ascii = function (S, lv = 0, cell = 0.5) {
+    const b = S.b, cols = Math.ceil(b.w / cell), rowsN = Math.ceil(b.d / cell), G = Array.from({ length: rowsN }, () => Array(cols).fill("·"));
+    const rs = S.items.filter(i => i.t === "room" && lvOf(i) === lv).sort((a, c) => c.w * c.h - a.w * a.h);
+    const sym = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", legend = [];
+    rs.forEach((r, n) => { const s = sym[n % sym.length]; legend.push(`${s}=${r.name}`);
+      for (let j = Math.floor(r.y / cell); j < Math.min(rowsN, Math.ceil((r.y + r.h) / cell)); j++) for (let i = Math.floor(r.x / cell); i < Math.min(cols, Math.ceil((r.x + r.w) / cell)); i++) if (j >= 0 && i >= 0) G[j][i] = s; });
+    for (const it of S.items.filter(i => i.t === "item" && lvOf(i) === lv && !isDoorK(i.k))) { const a = aabbOf(it);
+      for (let j = Math.floor((a.y + 0.1) / cell); j < Math.min(rowsN, Math.ceil((a.y + a.h - 0.1) / cell)); j++) for (let i = Math.floor((a.x + 0.1) / cell); i < Math.min(cols, Math.ceil((a.x + a.w - 0.1) / cell)); i++) if (j >= 0 && i >= 0) G[j][i] = "#"; }
+    return G.map(r => r.join("")).join("\n") + `\n(низ схемы — фасад с витражом)\nЛегенда: ${legend.join(", ")}`;
+  };
+  KB.catalogText = function (group) {
+    const g = {}; for (const f of KB.FURN) { if (group && !norm(f[2]).includes(norm(group))) continue; (g[f[2]] = g[f[2]] || []).push(`${f[0]} — ${f[1]} ${f[3]}×${f[4]} м`); }
+    const rt = KB.ROOM_TYPES.map(t => `${t.key}: ${t.size.join("×")} м, ${KB.CAT[t.cat].n}, ${t.border === "none" ? "зона без стен" : t.border === "glass" ? "стекло" : "стены"}`);
+    return Object.entries(g).map(([k, v]) => `${k}:\n  ${v.join("\n  ")}`).join("\n") + (group ? "" : `\n\nТипы помещений (распознаются по названию, задают мебель и размер по умолчанию):\n  ${rt.join("\n  ")}\nЦвета пола: ${KB.FLOORS.map(f => `${f[0]} ${f[1]}`).join("; ")}`);
+  };
+  KB.FLOORS = [["Керамогранит светлый", "#EDE8DE"], ["Керамогранит серый", "#C9C9C4"], ["Мрамор", "#F2F0EA"], ["Бетон / микроцемент", "#BDBAB2"], ["Ламинат дуб", "#D9B98E"], ["Паркет орех", "#A8784E"], ["Ковролин серый", "#9EA3A6"], ["Ковролин синий", "#5F7390"], ["Плитка санузла", "#CFE8E6"], ["Резиновое покрытие (детская)", "#F4D36B"], ["Тёмный керамогранит", "#5B5854"], ["Белый глянец", "#FAFAF7"]];
+
   /* ------------------------------------------------------------ описание для ИИ-помощника */
   KB.PARAM_SCHEMA_TEXT = `{"name":string,"w":число м (длина вдоль дороги),"d":число м (глубина),"h":число м (высота),"M":менеджеров на смене,"B":сотрудников бэк-офиса,"maket":"3x2"|"5x3"|"6x4","kids":bool,"cafe":bool,"wardrobe":bool,"bank":bool,"cashier":bool,"media":bool,"showroom":bool,"director":bool,"mezz":"auto"|"yes"|"no"}`;
 
@@ -838,44 +1250,7 @@ const ROOMS = [
   ["С/у посетителей",3.2,5,"wc","wall","","#CFE8E6"],["С/у МГН",2.2,2.2,"wc","wall","","#CFE8E6"],["С/у персонала",1.8,2.5,"wc","wall","","#CFE8E6"],
 ];
 // мебель и оборудование: key, название, группа, w, h (глубина), z (высота 3D), тип символа, цвет 3D
-const FURN = [
-  // проёмы
-  ["door9","Дверь 900","Двери и окна",.9,1.2,2.1,"door","#9a7b56"],["door10","Дверь 1000","Двери и окна",1,1.3,2.1,"door","#9a7b56"],
-  ["door18","Дверь двустворчатая 1800","Двери и окна",1.8,1.2,2.4,"door2","#9a7b56"],["slide","Дверь раздвижная 1000","Двери и окна",1,.3,2.4,"slide","#a9d3ee"],
-  ["auto","Автоматическая дверь 2000","Двери и окна",2,.3,2.6,"auto","#a9d3ee"],["win","Окно 1500","Двери и окна",1.5,.3,1.5,"win","#a9d3ee"],
-  // клиентская зона
-  ["recep","Стойка ресепшен","Клиентская зона",3,.8,1.1,"recep","#d9c19a"],["recepL","Стойка ресепшен угловая","Клиентская зона",2.6,1.8,1.1,"recepL","#d9c19a"],
-  ["model","Стол макета ЖК 5×3","Клиентская зона",5,3,.9,"model","#e9e2d2"],["modelS","Стол макета 3×2","Клиентская зона",3,2,.9,"model","#e9e2d2"],
-  ["lounge","Мягкая зона (диван+2 кресла)","Клиентская зона",2.2,2.9,.8,"lounge","#c9c4bb"],
-  ["sofa2","Диван 2-местный","Клиентская зона",1.6,.9,.8,"sofa","#b9b2a6"],["sofa3","Диван 3-местный","Клиентская зона",2.2,.9,.8,"sofa","#b9b2a6"],
-  ["arm","Кресло","Клиентская зона",.8,.8,.8,"arm","#b9b2a6"],["ctab","Журнальный столик","Клиентская зона",1.2,.6,.45,"table","#e0d6c6"],
-  ["bench","Банкетка","Клиентская зона",1.2,.45,.45,"table","#b9b2a6"],["cafe4","Стол кафе на 4","Клиентская зона",1.9,1.9,.75,"cafe4","#e0d6c6"],
-  ["led","LED-экран / ТВ","Клиентская зона",2,.2,1.2,"screen","#2b2f33"],["media","Медиастена 4 м","Клиентская зона",4,.3,2.5,"screen","#2b2f33"],
-  ["stand","Стенд с планировками","Клиентская зона",1.2,.4,2,"stand","#f1efe9"],["plant","Растение в кашпо","Клиентская зона",.6,.6,1.4,"plant","#5d8c4e"],
-  ["cooler","Кулер","Клиентская зона",.35,.35,1.1,"cooler","#e6eef3"],["kidtab","Детский столик","Клиентская зона",1,.6,.5,"kidtab","#f2b76a"],
-  ["kidmat","Игровой коврик","Клиентская зона",2,2,.05,"mat","#f4d36b"],
-  // кабинеты
-  ["work3","Рабочее место менеджера + 2 гостя","Офисная мебель",1.6,2.3,.75,"work3","#e8e2d6"],["desk","Стол менеджера 1600","Офисная мебель",1.6,.8,.75,"table","#e8e2d6"],
-  ["deskB","Стол руководителя 1800","Офисная мебель",1.8,.9,.75,"table","#8c6a4a"],["os1","Рабочее место open-space","Офисная мебель",1.4,1.3,.75,"os1","#e8e2d6"],
-  ["os4","Блок open-space на 4","Офисная мебель",2.8,2.6,.75,"os4","#e8e2d6"],["chairO","Кресло офисное","Офисная мебель",.6,.6,1,"chair","#3c4146"],
-  ["chairV","Стул посетителя","Офисная мебель",.5,.5,.85,"chair","#6b7075"],["cab","Шкаф для документов","Офисная мебель",.9,.45,2,"cab","#dcd6cb"],
-  ["shelf","Стеллаж архивный","Офисная мебель",1,.4,2.2,"shelf","#c9c4ba"],["safe","Сейф","Офисная мебель",.5,.5,1.2,"safe","#55595c"],
-  ["mfp","МФУ / принтер","Офисная мебель",.6,.5,1,"mfp","#d8dbdd"],
-  // переговоры
-  ["meet6","Стол переговоров на 6","Переговорные",2.4,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
-  ["meet10","Стол переговоров на 10","Переговорные",4,2.2,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
-  // кухня и бар
-  ["kitch","Кухонный гарнитур 2.4 м","Кухня и бар",2.4,.6,.9,"kitch","#e9e6df"],["fridge","Холодильник","Кухня и бар",.7,.7,1.9,"fridge","#e9ecee"],
-  ["bar","Барная стойка 3 м","Кухня и бар",3,.6,1.1,"bar","#c8a877"],["stool","Барный стул","Кухня и бар",.45,.45,.75,"stool","#555"],
-  ["dine","Обеденный стол на 4","Кухня и бар",1.9,1.9,.75,"cafe4","#e0d6c6"],
-  // сантехника
-  ["wc","Унитаз","Сантехника",.4,.7,.8,"toilet","#f4f4f2"],["sink","Раковина","Сантехника",.55,.45,.85,"sink","#f4f4f2"],
-  ["urinal","Писсуар","Сантехника",.4,.35,1,"urinal","#f4f4f2"],["shower","Душевой поддон","Сантехника",.9,.9,2,"shower","#dbe9f0"],
-  ["cubicle","Кабина с/у 1.2×1.8","Сантехника",1.2,1.8,2.1,"cubicle","#c7d7da"],
-  // конструкции
-  ["col","Колонна 400×400","Конструкции",.4,.4,"H","col","#8f928d"],["col3","Колонна 300×300","Конструкции",.3,.3,"H","col","#8f928d"],
-  ["stair2","Лестница двухмаршевая","Конструкции",2.6,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
-];
+const FURN = OfficeKB.FURN;   // каталог мебели — в ядре (src/office-kb.js), общий с Claude/MCP
 const FK = Object.fromEntries(FURN.map(f=>[f[0],{k:f[0],n:f[1],g:f[2],w:f[3],h:f[4],z:f[5],d:f[6],c:f[7]}]));
 const FIXH = {door:(w)=>w+.3, door2:(w)=>w/2+.3, slide:()=>.3, auto:()=>.3, win:()=>.3};
 
@@ -976,7 +1351,7 @@ function wallH(kind){ const h=WALLS[kind].h; return h==="H" ? S.b.h : h; }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
 
 function pushUndo(){ undo.push(JSON.stringify(S)); if(undo.length>120) undo.shift(); redo.length=0; }
-function commit(){ hasUserEdit = true; dirty = true; render(); scheduleSave(); }
+function commit(){ hasUserEdit = true; dirty = true; render(); scheduleSave(); if(typeof livePush==="function") livePush(); }
 function doUndo(){ if(!undo.length) return; redo.push(JSON.stringify(S)); S=JSON.parse(undo.pop()); if(sel&&!byId(sel)) sel=null; commit(); }
 function doRedo(){ if(!redo.length) return; undo.push(JSON.stringify(S)); S=JSON.parse(redo.pop()); if(sel&&!byId(sel)) sel=null; commit(); }
 
@@ -1802,12 +2177,89 @@ function packageEditor(k0){
 }
 
 
+/* ============================================================ Claude: управление планом
+ * 1) Claude на компьютере (Desktop / Code) через MCP-сервер office-planner — как Blender MCP: живая синхронизация по SSE.
+ * 2) Помощник прямо здесь (в claude.ai): текст → команды OfficeKB.OPS → план. */
+const LIVE={base:null, es:null, client:"b"+uid(), pushT:null, applying:false, on:false};
+function setLive(on){ LIVE.on=on; const b=$("#bClaude"); if(b){ b.classList.toggle("live",!!on); b.textContent=on?"● Claude":"Claude"; b.title=on?"Claude подключён: изменения синхронизируются":"Подключить Claude"; } }
+async function livePing(base){ try{ const c=new AbortController(); const t=setTimeout(()=>c.abort(),1500); const r=await fetch(base+"/api/ping",{signal:c.signal}); clearTimeout(t); const j=await r.json(); return j&&j.name==="office-planner"; }catch(e){ return false; } }
+async function liveFind(){ if(location.protocol.startsWith("http")&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&await livePing(location.origin)) return location.origin;
+  for(let p=8765;p<=8775;p++){ const b="http://127.0.0.1:"+p; if(await livePing(b)) return b; } return null; }
+function liveConnect(base, pushFirst){
+  if(LIVE.es) LIVE.es.close(); LIVE.base=base;
+  const start=()=>{ const es=LIVE.es=new EventSource(base+"/api/events?client="+LIVE.client);
+    es.addEventListener("state",e=>{ const m=JSON.parse(e.data); setLive(true); if(m.src===LIVE.client) return;
+      if(JSON.stringify(m.project)===JSON.stringify(S)) return;
+      LIVE.applying=true; try{ pushUndo(); S=m.project; if(sel&&!byId(sel)) sel=null; if(level===1&&!S.items.some(i=>i.lv===1)) level=0; render(); scheduleSave(); }finally{ LIVE.applying=false; }
+      if(m.src!=="server") setStatus("Claude изменил план · "+new Date().toLocaleTimeString("ru",{hour:"2-digit",minute:"2-digit",second:"2-digit"})); });
+    es.addEventListener("render",async e=>{ const m=JSON.parse(e.data); let png=null; try{ png=await snapshotPNG(m); }catch(err){ console.warn(err); }
+      fetch(base+"/api/render",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({req:m.req,png})}).catch(()=>{}); });
+    es.onerror=()=>setLive(false); };
+  if(pushFirst) fetch(base+"/api/state",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({client:LIVE.client,project:S})}).then(start,start); else start();
+}
+function livePush(){ if(!LIVE.base||LIVE.applying||!LIVE.on) return; clearTimeout(LIVE.pushT);
+  LIVE.pushT=setTimeout(()=>fetch(LIVE.base+"/api/state",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({client:LIVE.client,project:S})}).catch(()=>setLive(false)),300); }
+// картинка плана для Claude: 2D — лист с экспликацией, 3D — снимок сцены
+async function snapshotPNG(m){
+  if(m.view==="3d"){ const was=view; setView("3d"); build3D(); if(!R3) return null; resize3D(); camReset(m.cam||"iso"); const url=R3.renderer.domElement.toDataURL("image/png"); if(was!=="3d") setView(was); return url; }
+  const svgTxt=exportSVG(), vb=svgTxt.match(/viewBox='0 0 ([\d.]+) ([\d.]+)'/); const W=+vb[1], H=+vb[2], px=Math.min(1800, Math.max(1100, W*32)), sc=px/W;
+  const img=new Image(); const url=URL.createObjectURL(new Blob([svgTxt],{type:"image/svg+xml"}));
+  await new Promise((ok,no)=>{ img.onload=ok; img.onerror=no; img.src=url; });
+  const c=document.createElement("canvas"); c.width=Math.round(W*sc); c.height=Math.round(H*sc); const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+  return c.toDataURL("image/png");
+}
+
+const AI_SYS=()=>`Ты — архитектор-планировщик офисов продаж девелопера и управляешь «Планировщиком офиса продаж» командами.
+Координаты в метрах: X вдоль дороги (0 — левый торец), Y вглубь (0 — глухая задняя стена, Y=${S.b.d} — фасад с витражом и входом). Наружные стены 0,3 м.
+Логика: публичная зона у витража и входа (тамбур, ресепшен видно от входа, ожидание, макет, кофе, детская); вдоль глухой стены — кабинеты менеджеров 3,0×3,2 (стекло в зал), переговорные 4,5×3,2; сделочная/VIP, ипотека ближе к служебному блоку; служебные (с/у, кухня, КУИ, щитовая) в торце; бэк-офис — в торце или на антресоли (lv 1). Клиент не ходит через служебные. Проходы ≥ 1,5 м, ось входа свободна. Не накладывай помещения друг на друга (кроме зон sub внутри зала).
+Команды (массив ops, выполняются по порядку):
+{"op":"add_room","name":"Кабинет менеджера","x":..,"y":..,"w":3,"h":3.2,"lv":0,"border":"none|wall|glass","furnish":true} — тип и мебель по названию; без x/y место найдётся само (near: facade|back|left|right|center)
+{"op":"update","id":"<id или название>","x":..,"y":..,"w":..,"h":..,"dx":..,"dy":..,"new_name":"..","border":"..","color":"#RRGGBB","rot":90} — помещение двигается с мебелью
+{"op":"delete","id":"<id или название>"}
+{"op":"add_item","k":"<ключ>","x":..,"y":..,"rot":0,"room":"<помещение>","count":1,"dir":"x|y"} — ключи: ${OfficeKB.FURN.filter(f=>!/Конструкции/.test(f[2])).map(f=>f[0]+" "+f[3]+"×"+f[4]).join(", ")}
+{"op":"furnish","room":"<помещение>"} — расставить мебель по типу; {"op":"clear","room":".."}
+{"op":"add_door","room":"..","side":"n|s|e|w","width":0.9}; {"op":"add_wall","kind":"part|glass|block|rail","x1":..,"y1":..,"x2":..,"y2":..}
+{"op":"generate","pkg":"S|M|L","area":м²} — собрать офис заново по пакету (S до 150, M 200–320, L 350–600 м²); {"op":"building","w":..,"d":..,"h":..}
+Верни ТОЛЬКО JSON: {"say":"коротко по-русски, что сделал и что посоветуешь","ops":[...]}. Если просьба непонятна или невыполнима — ops пустой, say с вопросом.`;
+async function aiRun(txt, out){
+  const plan=OfficeKB.describe(S,{ascii:true});
+  out.innerHTML=`<p class="note">Думаю…</p>`;
+  let res; try{ res=await sampleCap.json(AI_SYS()+`\n\nТЕКУЩИЙ ПЛАН:\n${plan}\n\nЗАДАЧА ПОЛЬЗОВАТЕЛЯ: """${txt}"""`); }catch(e){ out.innerHTML=`<p class="note">Не получилось связаться с Claude: ${esc(e.message||e)}</p>`; return; }
+  const ops=Array.isArray(res&&res.ops)?res.ops:[]; pushUndo(); const r=OfficeKB.applyAll(S,ops); if(level===1&&!S.items.some(i=>i.lv===1)) level=0; fit(); commit();
+  const ch=OfficeKB.checks(S), red=ch.filter(c=>c.level==="red").length;
+  out.innerHTML=`<p>${esc(res&&res.say||"Готово.")}</p>${r.length?`<ul class="ailog">${r.map(x=>`<li class="${x.ok?"":"bad"}">${esc(x.msg)}</li>`).join("")}</ul>`:""}<p class="note">Проверки: ${red} важных, ${ch.length-red} прочих. Отменить всё — ↶ (Ctrl+Z).</p>`;
+}
+function claudeDialog(){
+  const m=document.createElement("div"); m.className="modal"; const $m=id=>m.querySelector("#"+id);
+  const dl=location.protocol.startsWith("http")?"":"https://graceprojects.github.io/Allprojects_Claude/";
+  m.innerHTML=`<div class="dlg" role="dialog" aria-label="Claude" style="max-width:640px"><h3>Claude управляет планом</h3>
+  ${sampleCap?`<h5>Помощник здесь</h5><p class="note">Напишите, что сделать — Claude сам расставит помещения и мебель по логике офиса продаж.</p>
+  <textarea id="ai_t" rows="3" style="width:100%" placeholder="Например: добавь вторую переговорную на 8 человек рядом с VIP, а детскую перенеси подальше от входа"></textarea>
+  <div class="actions"><button class="btn primary" id="ai_go">Выполнить</button><span class="spacer"></span></div><div id="ai_out"></div>`:""}
+  <h5>Claude на компьютере (как Blender)</h5>
+  <p class="note" id="lv_st">${LIVE.on?"● Подключено: "+esc(LIVE.base)+". Всё, что делает Claude, сразу появляется здесь, а ваши правки видит Claude.":"Не подключено."}</p>
+  <div class="actions"><button class="btn primary" id="lv_go">${LIVE.on?"Переподключить":"Подключить"}</button>${LIVE.on?`<button class="btn" id="lv_off">Отключить</button>`:""}<span class="spacer"></span><button class="btn" id="lv_close">Закрыть</button></div>
+  <details><summary>Как установить (один раз)</summary><ol class="note">
+  <li>Скачайте <a href="${dl}office-planner-mcp.zip" target="_blank" rel="noopener">office-planner-mcp.zip</a> и распакуйте (например, в Документы). Нужен Node.js 18+ (nodejs.org) — или установите <a href="${dl}office-planner.mcpb" target="_blank" rel="noopener">office-planner.mcpb</a> двойным щелчком в Claude Desktop (Node не нужен).</li>
+  <li>Claude Desktop → Настройки → Developer → Edit Config, добавьте:<br><code>{"mcpServers":{"office-planner":{"command":"node","args":["ПУТЬ\\office-planner-mcp\\server.js"]}}}</code><br>Claude Code: <code>claude mcp add office-planner -- node ПУТЬ/server.js</code></li>
+  <li>Перезапустите Claude и напишите: «Открой планировщик и собери офис продаж на 280 м²». Claude откроет http://localhost:8765 — там всё видно вживую. Этот сайт тоже можно подключить кнопкой «Подключить».</li></ol></details></div>`;
+  document.body.appendChild(m); const close=()=>m.remove();
+  m.addEventListener("click",async e=>{ const t=e.target; if(t===m||t.id==="lv_close") return close();
+    if(t.id==="lv_off"){ if(LIVE.es) LIVE.es.close(); LIVE.base=null; setLive(false); close(); }
+    if(t.id==="lv_go"){ $m("lv_st").textContent="Ищу Claude на этом компьютере (порты 8765–8775)…"; const b=await liveFind();
+      if(!b){ $m("lv_st").innerHTML="Не нашёл. Проверьте, что MCP-сервер office-planner подключён в Claude и Claude запущен (см. «Как установить»). Safari может блокировать связь с сайта — откройте http://localhost:8765."; return; }
+      const same=b===location.origin; liveConnect(b, !same); $m("lv_st").textContent="● Подключено: "+b+(same?"":". Текущий план отправлен Claude."); }
+    if(t.id==="ai_go"){ const txt=$m("ai_t").value.trim(); if(!txt) return; t.disabled=true; await aiRun(txt,$m("ai_out")); t.disabled=false; } });
+}
+$("#bClaude").onclick=claudeDialog;
+
 /* ============================================================ запуск */
 S = OfficeKB.generate({name:"Офис продаж 40×12 (пример)"}).project;
 try{ const last=JSON.parse(localStorage.getItem("op.projects")||"{}"); const ids=Object.keys(last).sort((a,b)=>last[b].updatedAt-last[a].updatedAt); if(ids[0]){ S=JSON.parse(last[ids[0]].json); projectId=ids[0]; } }catch(e){}
 renderLib(); fit(); render(); setStatus(projectId?"Открыт последний проект":"Пример — изменения сохранятся автоматически");
 (async()=>{
-  if(!window.claude||!window.claude.use) { setStatus("Сохранение в этом браузере"); return; }
+  if(location.protocol.startsWith("http")&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&await livePing(location.origin)) liveConnect(location.origin,false);
+  if(!window.claude||!window.claude.use) { if(!LIVE.base) setStatus("Сохранение в этом браузере"); return; }
   try{ downloads=await claude.use("downloads"); }catch(e){}
   try{ store=await claude.use("db"); }catch(e){ store=null; }
   try{ sampleCap=await claude.use("sample"); }catch(e){ sampleCap=null; }

@@ -31,4 +31,21 @@ open(os.path.join(site, '.nojekyll'), 'w').write('')
 skill = os.path.join(ROOT, '.claude', 'skills', 'sales-office-planning', 'scripts')
 if os.path.isdir(skill):
     shutil.copy(os.path.join(HERE, 'src', 'office-kb.js'), os.path.join(skill, 'office-kb.js'))
+# MCP-сервер: Claude Desktop / Code управляет планировщиком (zip и .mcpb для установки)
+import zipfile
+mcp = os.path.join(HERE, 'mcp')
+refs = os.path.join(ROOT, '.claude', 'skills', 'sales-office-planning', 'references')
+def mcp_bundle(path):
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
+        for f in ['server.js', 'manifest.json', 'package.json', 'README.md']:
+            z.write(os.path.join(mcp, f), f)
+        z.write(os.path.join(HERE, 'src', 'office-kb.js'), 'office-kb.js')
+        z.write(os.path.join(HERE, 'local', 'index.html'), 'app/index.html')
+        z.write(os.path.join(HERE, 'local', 'three.min.js'), 'app/three.min.js')
+        if os.path.isdir(refs):
+            for f in sorted(os.listdir(refs)):
+                if f.endswith('.md'): z.write(os.path.join(refs, f), 'guide/' + f)
+if os.path.isdir(mcp):
+    mcp_bundle(os.path.join(site, 'office-planner-mcp.zip'))
+    mcp_bundle(os.path.join(site, 'office-planner.mcpb'))
 print('built')

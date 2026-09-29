@@ -56,6 +56,13 @@ node scripts/check_project.js office.json
 - Правки (добавить помещение, передвинуть) → меняй JSON по `references/planner-format.md`, сохраняй стандартные названия помещений (по ним считается «цель/факт»), затем прогоняй `check_project.js`.
 - Не выдумывай нормы: если пункта нет в `references/norms.md`, пиши «сверить с проектировщиком».
 
+## Если подключён MCP-сервер office-planner (Claude управляет планировщиком вживую)
+
+Если доступны инструменты `open_planner`, `describe_plan`, `add_room` … — работай через них, а не через файлы:
+`open_planner` → `describe_plan` → (новый офис: `package_program` → `new_office`) → правки `batch` / `add_room` / `update_element` / `furnish_room` → `check_plan` → `view_plan` (посмотри картинку и исправь наложения) → коротко расскажи пользователю итог и замечания.
+Те же команды есть в ядре: `KB.apply(S, {op:"add_room", …})`, `KB.applyAll`, `KB.furnishRoom`, `KB.findSpace`, `KB.describe` — ими можно править JSON и через Node.
+Установка сервера — `office-planner/mcp/README.md` (zip и `.mcpb` публикуются на сайте рядом с планировщиком).
+
 ## Где живёт планировщик
 
 `office-planner/` в репозитории: `index.html` (версия для claude.ai с сохранением проектов и ИИ-мастером), `Планировщик-офиса.html` (один файл для работы офлайн), `src/office-kb.js` (ядро), `build.py` (встраивает ядро во все версии и в этот скилл). Меняешь логику — правь `src/office-kb.js` и запускай `python3 office-planner/build.py`.

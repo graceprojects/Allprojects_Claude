@@ -1,0 +1,1 @@
+{ "name": "office-planner-mcp", "version": "1.0.0", "description": "MCP-сервер Планировщика офиса продаж", "main": "server.js", "bin": { "office-planner-mcp": "server.js" }, "license": "UNLICENSED", "private": true }

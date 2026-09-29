@@ -24,11 +24,13 @@ html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:13px;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 .app{height:100%;display:grid;grid-template-rows:auto 1fr;grid-template-columns:250px 1fr 310px;grid-template-areas:"top top top" "lib main side"}
-.top{grid-area:top;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.top{grid-area:top;display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.top>*{flex:0 0 auto} .top .status{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px}
+@media (max-width:1300px){ .brand{font-size:0;gap:0} .top .status{max-width:130px} }
 .brand{font-weight:700;letter-spacing:.01em;display:flex;align-items:center;gap:8px;margin-right:6px}
 .brand i{display:inline-block;width:18px;height:18px;border:2px solid var(--accent);border-radius:2px;position:relative}
 .brand i:after{content:"";position:absolute;left:5px;top:-2px;width:2px;height:10px;background:var(--accent)}
-.pname{border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:6px;min-width:140px;max-width:260px;font-weight:600}
+.pname{border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:6px;min-width:110px;max-width:240px;flex:0 1 200px!important;font-weight:600;text-overflow:ellipsis}
 .pname:hover,.pname:focus{border-color:var(--line);background:var(--paper);outline:none}
 .grp{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
 .grp button{border:0;background:transparent;padding:6px 10px;cursor:pointer;white-space:nowrap}
@@ -59,7 +61,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 #plan{width:100%;height:100%;display:block;touch-action:none;user-select:none;cursor:default}
 #plan.pan{cursor:grab}#plan.panning{cursor:grabbing}#plan.draw{cursor:crosshair}
 #three{position:absolute;inset:0}
-.hud{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hud{position:absolute;left:12px;right:180px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;pointer-events:none} .hud>*{pointer-events:auto}
 .hud .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:6px 12px;border-radius:8px;font-size:12px;max-width:90%;text-align:center}
 .side{grid-area:side;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
@@ -113,6 +115,25 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
 .opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:2px 10px}
 .aibox{border:1px dashed var(--accent);border-radius:8px;padding:10px 12px;margin:8px 0 4px;background:var(--accent-soft)}
 .aibox textarea{width:100%;min-height:58px;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
+.selbar{position:absolute;z-index:5;display:flex;gap:2px;padding:3px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.selbar button{width:32px;height:30px;border:0;background:transparent;border-radius:7px;cursor:pointer;font-size:16px;color:var(--ink)}
+.selbar button:hover{background:var(--accent-soft)} .selbar button.danger:hover{background:#f6dcd2}
+.selbar select{height:30px;max-width:180px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);font-size:12px;padding:0 4px}
+.zoombar{position:absolute;right:12px;bottom:12px;display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:4}
+.zoombar button{width:36px;height:34px;border:0;background:transparent;cursor:pointer;font-size:17px;color:var(--ink)} .zoombar button:hover{background:var(--accent-soft)}
+.ctx{position:fixed;z-index:40;min-width:220px;max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.ctx button{display:flex;gap:10px;align-items:center;width:100%;border:0;background:transparent;text-align:left;padding:7px 10px;border-radius:6px;cursor:pointer;color:var(--ink);font:inherit;font-size:13px}
+.ctx button:hover{background:var(--accent-soft)} .ctx button span{width:18px;text-align:center} .ctx button.danger{color:var(--warn)}
+.ctxh{font-size:11px;color:var(--muted);padding:6px 10px 2px;text-transform:uppercase;letter-spacing:.04em}
+.pv{display:grid;grid-template-columns:1fr 1fr;gap:8px} .pv figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.pv img,.pv svg{width:100%;height:120px;object-fit:contain} .pv figcaption{font-size:11px;color:#777}
+.pv svg{--paper:#fff;--ink:#222;--muted:#777;--wall:#3a3f3b;--glass:#9fd3f0;--glass-edge:#2a78b8}
+.libtip{position:fixed;z-index:30;width:290px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);pointer-events:none;display:flex;flex-direction:column;gap:6px}
+.libtip small{color:var(--muted);font-size:11.5px;line-height:1.4}
+details.lg{border-bottom:1px solid var(--line)} details.lg>summary{cursor:pointer;list-style:none;padding:10px 12px 8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+details.lg>summary::-webkit-details-marker{display:none} details.lg>summary::before{content:"▸";margin-right:6px} details.lg[open]>summary::before{content:"▾"}
+details.lg>summary span{font-weight:400}
+table.keys{width:100%;border-collapse:collapse;font-size:13px} table.keys td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top} table.keys td:first-child{white-space:nowrap;color:var(--muted);padding-right:14px}
 .nv{max-width:1080px}
 .vcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
 .vc{text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:4px;color:var(--ink);font:inherit}
@@ -124,6 +145,7 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
 .chip.good{color:var(--ok);border-color:var(--ok)} .chip.warn{color:var(--warn);border-color:var(--warn)}
 .nvsum{align-self:end;font-size:13px}.nvlog{margin-top:8px;font-size:12.5px}.nvlog ol{margin:4px 0;padding-left:18px}
 @media (max-width:820px){.vcards{grid-template-columns:1fr}}
+@media (max-width:700px){ .hud .chip:not(.chk){display:none} .hud{right:170px} .selbar select{max-width:110px} }
 .pks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .pk{text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:3px}
 .pk b{font-size:15px} .pk span{font-family:var(--font-mono);font-size:12px;color:var(--accent)} .pk small{font-size:11.5px;color:var(--muted);line-height:1.35}
@@ -176,6 +198,8 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     <div id="three" hidden></div>
     <div class="hint" id="hint" hidden></div>
     <div class="hud" id="hud"></div>
+    <div class="selbar" id="selbar" hidden role="toolbar" aria-label="Действия с выделенным"></div>
+    <div class="zoombar" id="zoombar" role="toolbar" aria-label="Масштаб"><button data-z="out" title="Уменьшить (−)" aria-label="Уменьшить">−</button><button data-z="fit" title="Весь план (F)" aria-label="Весь план">⤢</button><button data-z="in" title="Увеличить (+)" aria-label="Увеличить">+</button><button data-z="help" title="Справка по управлению (?)" aria-label="Справка">?</button></div>
   </main>
 
   <aside class="side">
@@ -185,6 +209,7 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     <div class="pane" id="pane"></div>
   </aside>
 </div>
+<div class="ctx" id="ctx" hidden role="menu"></div><div class="libtip" id="libtip" hidden></div>
 <input type="file" id="fileIn" accept=".json,application/json" hidden>
 
 <script src="three.min.js"></script>
@@ -237,6 +262,9 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     ["stand","Стенд с планировками","Клиентская зона",1.2,.4,2,"stand","#f1efe9"],["plant","Растение в кашпо","Клиентская зона",.6,.6,1.4,"plant","#5d8c4e"],
     ["cooler","Кулер","Клиентская зона",.35,.35,1.1,"cooler","#e6eef3"],["kidtab","Детский столик","Клиентская зона",1,.6,.5,"kidtab","#f2b76a"],
     ["kidmat","Игровой коврик","Клиентская зона",2,2,.05,"mat","#f4d36b"],
+    ["sofaL","Диван угловой","Клиентская зона",2.4,1.6,.8,"sofaL","#b9b2a6"],["pouf","Пуф","Клиентская зона",.5,.5,.45,"stool","#c9b79c"],
+    ["rug","Ковёр","Клиентская зона",2,3,.02,"rug","#b8a98f"],["tv","Телевизор / панель","Клиентская зона",1.45,.1,.85,"screen","#2b2f33"],
+    ["kiosk","Тач-стол / интерактивный киоск","Клиентская зона",.8,.6,1.1,"kiosk","#2b2f33"],["coat","Вешалка напольная","Клиентская зона",.5,.5,1.8,"coat","#8c6a4a"],
     // кабинеты
     ["work3","Рабочее место менеджера + 2 гостя","Офисная мебель",1.6,2.3,.75,"work3","#e8e2d6"],["desk","Стол менеджера 1600","Офисная мебель",1.6,.8,.75,"table","#e8e2d6"],
     ["deskB","Стол руководителя 1800","Офисная мебель",1.8,.9,.75,"table","#8c6a4a"],["os1","Рабочее место open-space","Офисная мебель",1.4,1.3,.75,"os1","#e8e2d6"],
@@ -244,21 +272,80 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     ["chairV","Стул посетителя","Офисная мебель",.5,.5,.85,"chair","#6b7075"],["cab","Шкаф для документов","Офисная мебель",.9,.45,2,"cab","#dcd6cb"],
     ["shelf","Стеллаж архивный","Офисная мебель",1,.4,2.2,"shelf","#c9c4ba"],["safe","Сейф","Офисная мебель",.5,.5,1.2,"safe","#55595c"],
     ["mfp","МФУ / принтер","Офисная мебель",.6,.5,1,"mfp","#d8dbdd"],
+    ["deskL","Стол угловой","Офисная мебель",1.6,1.6,.75,"deskL","#e8e2d6"],["locker","Шкафчики персонала","Офисная мебель",.9,.5,1.9,"cab","#c9ccd0"],
+    ["wardrobe","Шкаф-купе","Офисная мебель",1.8,.6,2.4,"cab","#dcd6cb"],
     // переговоры
     ["meet6","Стол переговоров на 6","Переговорные",2.4,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
     ["meet10","Стол переговоров на 10","Переговорные",4,2.2,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
+    ["roundT","Стол круглый со стульями","Переговорные",1.5,1.5,.75,"round","#d8cdb8"],["flip","Флипчарт","Переговорные",.7,.5,1.8,"flip","#f1efe9"],
     // кухня и бар
     ["kitch","Кухонный гарнитур 2.4 м","Кухня и бар",2.4,.6,.9,"kitch","#e9e6df"],["fridge","Холодильник","Кухня и бар",.7,.7,1.9,"fridge","#e9ecee"],
     ["bar","Барная стойка 3 м","Кухня и бар",3,.6,1.1,"bar","#c8a877"],["stool","Барный стул","Кухня и бар",.45,.45,.75,"stool","#555"],
     ["dine","Обеденный стол на 4","Кухня и бар",1.9,1.9,.75,"cafe4","#e0d6c6"],
+    ["kitchL","Кухня угловая","Кухня и бар",2.4,1.8,.9,"kitchL","#e9e6df"],["coffee","Кофемашина на тумбе","Кухня и бар",.6,.5,1.4,"cooler","#6b5a4a"],
     // сантехника
     ["wc","Унитаз","Сантехника",.4,.7,.8,"toilet","#f4f4f2"],["sink","Раковина","Сантехника",.55,.45,.85,"sink","#f4f4f2"],
     ["urinal","Писсуар","Сантехника",.4,.35,1,"urinal","#f4f4f2"],["shower","Душевой поддон","Сантехника",.9,.9,2,"shower","#dbe9f0"],
     ["cubicle","Кабина с/у 1.2×1.8","Сантехника",1.2,1.8,2.1,"cubicle","#c7d7da"],
+    ["wcset","С/у МГН — комплект (СП 59)","Сантехника",2.2,2.25,.9,"wcset","#f4f4f2"],
     // конструкции
     ["col","Колонна 400×400","Конструкции",.4,.4,"H","col","#8f928d"],["col3","Колонна 300×300","Конструкции",.3,.3,"H","col","#8f928d"],
     ["stair2","Лестница двухмаршевая","Конструкции",2.6,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
   ];
+  // Типоразмеры по реальным стандартам (ГОСТ 13025 / 16371, каталоги офисной мебели, СП 59 для МГН): [название, ширина, глубина] в м
+  const S_ = (...a) => a;
+  KB.SIZES = {
+    door9: S_(["700 (санузел)", .7, 1.0], ["800", .8, 1.1], ["900", .9, 1.2], ["1000 (МГН)", 1.0, 1.3], ["1200 (полуторная)", 1.2, 1.5]),
+    door10: S_(["900", .9, 1.2], ["1000 (МГН)", 1.0, 1.3], ["1200 (полуторная)", 1.2, 1.5]),
+    door18: S_(["1500", 1.5, 1.05], ["1800", 1.8, 1.2], ["2000", 2.0, 1.3]),
+    slide: S_(["900", .9, .3], ["1000", 1.0, .3], ["1200", 1.2, .3], ["1600 (двойная)", 1.6, .3]),
+    auto: S_(["1400", 1.4, .3], ["1600", 1.6, .3], ["2000", 2.0, .3], ["2400", 2.4, .3]),
+    win: S_(["600", .6, .3], ["900", .9, .3], ["1200", 1.2, .3], ["1500", 1.5, .3], ["1800", 1.8, .3], ["2400", 2.4, .3]),
+    recep: S_(["на 1 чел. 1800", 1.8, .8], ["на 2 чел. 2400", 2.4, .8], ["на 2 чел. 3000", 3.0, .8], ["на 3 чел. 3600", 3.6, .8]),
+    recepL: S_(["2000×1600", 2.0, 1.6], ["2600×1800", 2.6, 1.8], ["3200×2000", 3.2, 2.0]),
+    model: S_(["2×1,5 м", 2, 1.5], ["3×2 м", 3, 2], ["4×3 м", 4, 3], ["5×3 м", 5, 3], ["6×4 м", 6, 4], ["6×5 м", 6, 5], ["8×5 м", 8, 5]),
+    modelS: S_(["2×1,5 м", 2, 1.5], ["3×2 м", 3, 2], ["4×3 м", 4, 3]),
+    sofa2: S_(["2-местный 1400", 1.4, .85], ["2-местный 1600", 1.6, .9], ["2-местный 1800", 1.8, .95]),
+    sofa3: S_(["3-местный 2000", 2.0, .9], ["3-местный 2200", 2.2, .9], ["4-местный 2600", 2.6, .95], ["4-местный 2800", 2.8, 1.0]),
+    sofaL: S_(["2200×1500", 2.2, 1.5], ["2400×1600", 2.4, 1.6], ["2800×1800", 2.8, 1.8], ["3200×2000", 3.2, 2.0]),
+    arm: S_(["лёгкое 650", .65, .7], ["800", .8, .8], ["900 (лаунж)", .9, .85]),
+    ctab: S_(["600×600", .6, .6], ["800×800", .8, .8], ["1000×500", 1.0, .5], ["1200×600", 1.2, .6]),
+    bench: S_(["1000", 1.0, .4], ["1200", 1.2, .45], ["1600", 1.6, .45]),
+    cafe4: S_(["на 2 (Ø700)", 1.4, 1.4], ["на 4 (Ø900)", 1.9, 1.9]),
+    round4: S_(["на 4 (Ø900)", 1.9, 1.9], ["на 5 (Ø1100)", 2.1, 2.1]),
+    roundT: S_(["на 2 (Ø600)", 1.4, 1.4], ["на 3 (Ø800)", 1.7, 1.7], ["на 4 (Ø1000)", 2.0, 2.0], ["на 6 (Ø1200)", 2.3, 2.3], ["на 8 (Ø1500)", 2.6, 2.6]),
+    led: S_(["55\" 1230", 1.25, .1], ["65\" 1450", 1.45, .1], ["75\" 1680", 1.7, .1], ["86\" 1920", 1.95, .1], ["LED 2000", 2.0, .2]),
+    tv: S_(["55\" 1230", 1.25, .1], ["65\" 1450", 1.45, .1], ["75\" 1680", 1.7, .1], ["86\" 1920", 1.95, .1]),
+    media: S_(["2 м", 2, .3], ["3 м", 3, .3], ["4 м", 4, .3], ["6 м", 6, .3]),
+    stand: S_(["800", .8, .4], ["1200", 1.2, .4], ["1600", 1.6, .4], ["2400", 2.4, .4]),
+    plant: S_(["малое Ø400", .4, .4], ["среднее Ø600", .6, .6], ["большое Ø900", .9, .9]),
+    kidmat: S_(["1,5×1,5 м", 1.5, 1.5], ["2×2 м", 2, 2], ["3×3 м", 3, 3], ["4×4 м", 4, 4]),
+    rug: S_(["1,6×2,3 м", 1.6, 2.3], ["2×3 м", 2, 3], ["2,5×3,5 м", 2.5, 3.5], ["3×4 м", 3, 4]),
+    work3: S_(["стол 1400", 1.4, 2.3], ["стол 1600", 1.6, 2.3], ["стол 1800", 1.8, 2.4]),
+    desk: S_(["1200×600", 1.2, .6], ["1400×700", 1.4, .7], ["1600×800", 1.6, .8], ["1800×900", 1.8, .9]),
+    deskB: S_(["1600×800", 1.6, .8], ["1800×900", 1.8, .9], ["2000×1000", 2.0, 1.0]),
+    deskL: S_(["1400×1400", 1.4, 1.4], ["1600×1600", 1.6, 1.6], ["1800×1600", 1.8, 1.6]),
+    os1: S_(["стол 1200", 1.2, 1.3], ["стол 1400", 1.4, 1.3], ["стол 1600", 1.6, 1.3]),
+    os4: S_(["бенч на 2", 1.4, 2.6], ["бенч на 4", 2.8, 2.6], ["бенч на 6", 4.2, 2.6], ["бенч на 8", 5.6, 2.6]),
+    cab: S_(["400×450", .4, .45], ["800×450", .8, .45], ["900×450", .9, .45], ["1200×600", 1.2, .6]),
+    shelf: S_(["800×400", .8, .4], ["1000×400", 1.0, .4], ["1200×600", 1.2, .6]),
+    wardrobe: S_(["1200", 1.2, .6], ["1800", 1.8, .6], ["2400", 2.4, .6]),
+    locker: S_(["2 секции 600", .6, .5], ["3 секции 900", .9, .5], ["4 секции 1200", 1.2, .5]),
+    meet6: S_(["на 4 · стол 1400×900", 2.2, 2.0], ["на 6 · стол 1800×1000", 2.6, 2.1], ["на 8 · стол 2400×1100", 3.2, 2.2], ["на 10 · стол 3000×1200", 3.8, 2.3], ["на 12 · стол 3600×1200", 4.4, 2.3], ["на 16 · стол 4800×1400", 5.6, 2.5]),
+    meet8: S_(["на 8 · стол 2400×1100", 3.2, 2.2], ["на 10 · стол 3000×1200", 3.8, 2.3]),
+    meet10: S_(["на 10 · стол 3000×1200", 3.8, 2.3], ["на 12 · стол 3600×1200", 4.4, 2.3], ["на 16 · стол 4800×1400", 5.6, 2.5]),
+    kitch: S_(["1200", 1.2, .6], ["1800", 1.8, .6], ["2400", 2.4, .6], ["3000", 3.0, .6], ["3600", 3.6, .6]),
+    kitchL: S_(["1800×1500", 1.8, 1.5], ["2400×1800", 2.4, 1.8], ["3000×2000", 3.0, 2.0]),
+    bar: S_(["2000", 2.0, .6], ["3000", 3.0, .6], ["4000", 4.0, .6], ["5000", 5.0, .7]),
+    dine: S_(["на 2 · 700×700", 1.4, 1.5], ["на 4 · 1200×800", 1.9, 1.9]),
+    fridge: S_(["600", .6, .65], ["700", .7, .7], ["двухдверный 900", .9, .75]),
+    cubicle: S_(["900×1500", .9, 1.5], ["1000×1600", 1.0, 1.6], ["1200×1800", 1.2, 1.8]),
+    wcset: S_(["2200×2250 (минимум СП 59)", 2.2, 2.25], ["2500×2500", 2.5, 2.5]),
+    stair2: S_(["2400×4000", 2.4, 4.0], ["2600×4500", 2.6, 4.5], ["3000×5000", 3.0, 5.0]),
+    stair1: S_(["1000×5700", 1.0, 5.7], ["1200×5700", 1.2, 5.7], ["1500×6000", 1.5, 6.0]),
+    col: S_(["300×300", .3, .3], ["400×400", .4, .4], ["500×500", .5, .5], ["600×600", .6, .6]),
+    shower: S_(["800×800", .8, .8], ["900×900", .9, .9], ["1200×900 (МГН)", 1.2, .9]),
+  };
   KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {
@@ -1228,7 +1315,8 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     add_item(S, a) {
       const f = KB.FK[a.k]; if (!f) throw new Error(`Нет предмета «${a.k}» в каталоге. Список — list_catalog.`);
       let x = a.x, y = a.y, lv = a.lv || 0;
-      const w = a.w != null ? num(a.w, "w") : f.w, h = a.h != null ? num(a.h, "h") : f.h, rot = ((+a.rot || 0) % 360 + 360) % 360;
+      const szl = KB.SIZES[a.k] || [], sz = a.size == null ? null : (szl[+a.size] || szl.find(s => norm(s[0]).includes(norm(a.size))));
+      const w = a.w != null ? num(a.w, "w") : sz ? sz[1] : f.w, h = a.h != null ? num(a.h, "h") : sz ? sz[2] : f.h, rot = ((+a.rot || 0) % 360 + 360) % 360;
       const aw = rot % 180 ? h : w, ah = rot % 180 ? w : h;
       if (a.room) { const r = findEl(S, a.room, "room"); lv = lvOf(r);
         if (x == null || y == null) { const sp = KB.findSpace(S, { w: aw, h: ah, lv, within: r.id, near: a.near || "back", margin: 0.1, limit: 1 })[0];
@@ -1321,7 +1409,7 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
     return G.map(r => r.join("")).join("\n") + `\n(низ схемы — фасад с витражом)\nЛегенда: ${legend.join(", ")}`;
   };
   KB.catalogText = function (group) {
-    const g = {}; for (const f of KB.FURN) { if (group && !norm(f[2]).includes(norm(group))) continue; (g[f[2]] = g[f[2]] || []).push(`${f[0]} — ${f[1]} ${f[3]}×${f[4]} м`); }
+    const g = {}; for (const f of KB.FURN) { if (group && !norm(f[2]).includes(norm(group))) continue; (g[f[2]] = g[f[2]] || []).push(`${f[0]} — ${f[1]} ${f[3]}×${f[4]} м${KB.SIZES[f[0]] ? ` [size: ${KB.SIZES[f[0]].map((s, i) => `${i}=${s[0]}`).join("; ")}]` : ""}`); }
     const rt = KB.ROOM_TYPES.map(t => `${t.key}: ${t.size.join("×")} м, ${KB.CAT[t.cat].n}, ${t.border === "none" ? "зона без стен" : t.border === "glass" ? "стекло" : "стены"}`);
     return Object.entries(g).map(([k, v]) => `${k}:\n  ${v.join("\n  ")}`).join("\n") + (group ? "" : `\n\nТипы помещений (распознаются по названию, задают мебель и размер по умолчанию):\n  ${rt.join("\n  ")}\nЦвета пола: ${KB.FLOORS.map(f => `${f[0]} ${f[1]}`).join("; ")}`);
   };
@@ -1740,8 +1828,22 @@ function sym(it, forCard){
       return s+chair(.2,h/2,.4,270)+chair(w-.2,h/2,.4,90); }
     case "work3": return chair(w/2,.3,.55,0)+R(0,.65,w,.8)+chair(w/2-.4,h-.25,.45,180)+chair(w/2+.4,h-.25,.45,180);
     case "os1": return R(0,0,w,.7)+`<rect x='${w*.15}' y='.05' width='${w*.3}' height='.06' fill='var(--ink)' opacity='.5'/>`+chair(w/2,1.0,.55,180);
-    case "os4": { let s=R(0,.6,w/2,.7)+R(w/2,.6,w/2,.7)+R(0,1.3,w/2,.7)+R(w/2,1.3,w/2,.7);
-      return s+chair(w/4,.3,.5,0)+chair(w*.75,.3,.5,0)+chair(w/4,h-.3,.5,180)+chair(w*.75,h-.3,.5,180); }
+    case "os4": { const n=Math.max(1,Math.round(w/1.4)), cw=w/n; let s="";
+      for(let i=0;i<n;i++){ s+=R(cw*i,.6,cw,.7)+R(cw*i,1.3,cw,.7)+chair(cw*(i+.5),.3,.5,0)+chair(cw*(i+.5),h-.3,.5,180); } return s+`<line x1='0' y1='1.3' x2='${w}' y2='1.3' stroke='var(--ink)' stroke-width='1.2' ${k}/>`; }
+    case "sofaL": { const d=Math.min(.9,h*.55); return `<path d='M0 0 H${w} V${d} H${d} V${h} H0 Z' ${st}/><path d='M0 0 H${w} V${d*.25} H${d*.25} V${h} H0 Z' fill='var(--ink)' opacity='.25'/>`+[.5,.75].map(f=>`<line x1='${d+(w-d)*f}' y1='${d*.25}' x2='${d+(w-d)*f}' y2='${d}' ${lt}/>`).join("")+`<line x1='${d*.25}' y1='${d+(h-d)*.5}' x2='${d}' y2='${d+(h-d)*.5}' ${lt}/>`; }
+    case "rug": return `<rect x='0' y='0' width='${w}' height='${h}' rx='.08' fill='#d9cdb5' opacity='.75' stroke='#9c8d70' stroke-width='.6' ${k}/><rect x='.15' y='.15' width='${Math.max(0,w-.3)}' height='${Math.max(0,h-.3)}' fill='none' stroke='#9c8d70' stroke-width='.4' stroke-dasharray='3 2' ${k}/>`;
+    case "kiosk": return R(0,0,w,h)+R(w*.12,h*.15,w*.76,h*.55,"fill='#2b2f33' stroke='none'");
+    case "coat": return `<circle cx='${w/2}' cy='${h/2}' r='${Math.min(w,h)/2}' fill='none' stroke='var(--ink)' stroke-width='.6' ${k}/><path d='M${w/2} 0 V${h} M0 ${h/2} H${w}' ${lt}/><circle cx='${w/2}' cy='${h/2}' r='.05' fill='var(--ink)'/>`;
+    case "round": { const D=Math.max(.5,Math.min(w,h)-1.0), n=D<.7?2:D<.9?3:D<1.1?4:D<1.35?6:8; let s=`<circle cx='${w/2}' cy='${h/2}' r='${D/2}' ${st}/>`;
+      for(let i=0;i<n;i++){ const a=i*2*Math.PI/n-Math.PI/2; s+=chair(w/2+Math.cos(a)*(D/2+.28),h/2+Math.sin(a)*(D/2+.28),.42,a*180/Math.PI+90); } return s; }
+    case "deskL": { const d=Math.min(.8,Math.min(w,h)*.5); return `<path d='M0 0 H${w} V${d} H${d} V${h} H0 Z' ${st}/>`+chair(d+.45,d+.4,.55,180); }
+    case "flip": return `<path d='M${w*.1} ${h} L${w/2} 0 L${w*.9} ${h}' ${lt}/>`+R(0,h*.35,w,.06,"fill='var(--ink)' stroke='none'");
+    case "kitchL": { const d=Math.min(.6,h*.4); return `<path d='M0 0 H${w} V${d} H${d} V${h} H0 Z' ${st}/><ellipse cx='${Math.min(w-.4,1.2)}' cy='${d/2}' rx='.22' ry='.16' ${lt}/>`+[0,1].map(i=>`<circle cx='${d/2}' cy='${d+.35+i*.4}' r='.1' ${lt}/>`).join(""); }
+    case "wcset": { const bar=`fill='none' stroke='#2a78b8' stroke-width='1.4' ${k}`;
+      return `<circle cx='${w*.55}' cy='${h*.55}' r='.75' fill='none' stroke='#2a78b8' stroke-width='.6' stroke-dasharray='4 3' ${k}/>`+
+        `<g transform='translate(.15 .02)'>${R(.05,0,.38,.2)}<ellipse cx='.24' cy='.46' rx='.19' ry='.27' ${st}/></g>`+
+        `<path d='M.02 .15 V.95 M.75 .15 V.95' ${bar}/>`+R(w-.6,h-.55,.55,.45)+`<ellipse cx='${w-.325}' cy='${h-.3}' rx='.17' ry='.13' ${lt}/>`+
+        `<text x='${w*.55}' y='${h*.55+.05}' font-size='.18' text-anchor='middle' fill='#2a78b8'>Ø1500</text>`; }
     case "recep": return R(0,0,w,h,"fill='#d9c19a' stroke='var(--ink)' stroke-width='.8' "+k)+`<line x1='.1' y1='${h*.35}' x2='${w-.1}' y2='${h*.35}' ${lt}/>`;
     case "recepL": return `<path d='M0 0 H${w} V.8 H.8 V${h} H0 Z' fill='#d9c19a' stroke='var(--ink)' stroke-width='.8' ${k}/>`;
     case "model": { let s=R(0,0,w,h,"fill='#e9e2d2' stroke='#8a7d62' stroke-width='1' "+k)+R(w*.08,h*.1,w*.84,h*.8,"fill='var(--paper)' stroke='#8a7d62' stroke-width='.6' "+k);
@@ -1836,11 +1938,14 @@ function planMarkup(lv, opt={}){
   out.push(`</g>`);
   // подписи помещений
   for(const r of ordered){
-    const fs = Math.max(.16, Math.min(.34, r.w/12, r.h/5));
+    let fs = Math.max(.12, Math.min(.34, r.w/10, r.h/4));
     const cx=r.x+r.w/2, cy=r.y+r.h/2, num=nums[r.id];
     const area = r.w*r.h;
     const name = r.sub ? r.name : `${num}. ${r.name}`;
-    const words = wrapText(name, r.w, fs);
+    let words = wrapText(name, r.w, fs);
+    // подпись вписывается в помещение: уменьшаем шрифт, в крошечных — только номер и площадь
+    for(let g=0; g<6 && ((words.length+1)*fs*1.2 > r.h*.9 || Math.max(...words.map(x=>x.length))*fs*.62 > r.w*.95); g++){ fs*=.85; words=wrapText(name, r.w, fs); }
+    if(fs < .1 || (words.length+1)*fs*1.2 > r.h*.95){ fs=Math.max(.1,Math.min(.2,r.w/6,r.h/3)); words=[r.sub?"":String(num)].filter(Boolean); }
     const lines = [...words, `${m2(area)} м²`];
     const y0 = cy - (lines.length-1)*fs*1.2/2;
     out.push(`<text font-size='${fs}' text-anchor='middle' fill='${exp?"#222":"var(--ink)"}' pointer-events='none' style='paint-order:stroke;stroke:${hx(r.color,.8)};stroke-width:${fs*.25}px'>`+
@@ -1848,7 +1953,7 @@ function planMarkup(lv, opt={}){
   }
   return out.join("");
 }
-function wrapText(s, w, fs){ const max=Math.max(6, Math.floor(w/(fs*.55))); const words=s.split(" "); const lines=[]; let cur="";
+function wrapText(s, w, fs){ const max=Math.max(4, Math.floor(w*.9/(fs*.62))); const words=s.split(" "); const lines=[]; let cur="";
   for(const wd of words){ if((cur+" "+wd).trim().length>max && cur){ lines.push(cur); cur=wd; } else cur=(cur+" "+wd).trim(); }
   if(cur) lines.push(cur); return lines.slice(0,3); }
 
@@ -1917,6 +2022,7 @@ function renderPlan(){
   o += `<rect x='${b.w/2-3*z}' y='${-z}' width='${6*z}' height='${2*z}' rx='${z}' fill='var(--accent)' data-bh='n' style='cursor:ns-resize'><title>Тяните, чтобы изменить глубину здания</title></rect>`;
   o += `</g>`;
   svg.innerHTML = o;
+  if(typeof updateSelbar==="function") updateSelbar();
 }
 function clearances(a){
   const {b}=S, t=.3; let o="";
@@ -2001,7 +2107,7 @@ function endDrag(){
 svg.addEventListener("pointerup", endDrag); svg.addEventListener("pointercancel", endDrag);
 svg.addEventListener("wheel", ev=>{ ev.preventDefault(); const r=svg.getBoundingClientRect(), mx=ev.clientX-r.left, my=ev.clientY-r.top;
   const k=Math.exp(-ev.deltaY*.0015), ns=Math.min(400,Math.max(4,V.s*k)); V.tx=mx-(mx-V.tx)*ns/V.s; V.ty=my-(my-V.ty)*ns/V.s; V.s=ns; renderPlan(); },{passive:false});
-svg.addEventListener("contextmenu", e=>e.preventDefault());
+svg.addEventListener("contextmenu", e=>ctxMenu(e));
 svg.addEventListener("dragover", e=>e.preventDefault());
 svg.addEventListener("drop", e=>{ e.preventDefault(); const key=e.dataTransfer.getData("text/plain"); if(!key) return; addFromLib(key, toWorld(e)); });
 function fit(){ const r=svg.getBoundingClientRect(); if(!r.width) return; const pad=70; V.s=Math.min((r.width-2*pad)/S.b.w,(r.height-2*pad-60)/(S.b.d+4)); V.tx=(r.width-S.b.w*V.s)/2; V.ty=(r.height-(S.b.d+4)*V.s)/2+30; }
@@ -2014,6 +2120,7 @@ function libCardIcon(kind, key){
   const f=FK[key]; const it={k:key,w:f.w,h:f.h}; const sc=Math.min(56/f.w,32/f.h);
   return `<svg viewBox='-2 -2 64 40'><g transform='translate(${30-f.w*sc/2} ${18-f.h*sc/2}) scale(${sc})'>${sym(it,true)}</g></svg>`;
 }
+const libOpen=new Set(["Клиентская зона"]);
 function renderLib(){
   const q=$("#q").value.trim().toLowerCase(); const m=s=>!q||s.toLowerCase().includes(q);
   let o="";
@@ -2023,7 +2130,8 @@ function renderLib(){
   if(walls.length){ o+=`<h4>Стены и витражи — рисуются мышкой</h4><div class="cards">`+walls.map(([k,W])=>`<button class="card ${tool&&tool.type==="wall"&&tool.kind===k?"on":""}" data-tool="${k}">${libCardIcon("wall",k)}<b>${W.n}</b><small>${Math.round(W.th*1000)} мм · h ${W.h==="H"?"на всю высоту":fmt(W.h,1)+" м"}</small></button>`).join("")+`</div>`; }
   const groups=[...new Set(FURN.map(f=>f[2]))];
   for(const g of groups){ const list=FURN.filter(f=>f[2]===g && (m(f[1])||m(g))); if(!list.length) continue;
-    o+=`<h4>${g}</h4><div class="cards">`+list.map(f=>`<button class="card" draggable="true" data-add="item:${f[0]}" title="Перетащите на план или нажмите">${libCardIcon("item",f[0])}<b>${esc(f[1])}</b><small>${Math.round(f[3]*1000)}×${Math.round(f[4]*1000)}</small></button>`).join("")+`</div>`; }
+    o+=`<details class="lg" ${q||libOpen.has(g)?"open":""} data-g="${esc(g)}"><summary>${g} <span>${list.length}</span></summary><div class="cards">`+list.map(f=>{ const n=(OfficeKB.SIZES[f[0]]||[]).length;
+      return `<button class="card" draggable="true" data-add="item:${f[0]}" aria-label="${esc(f[1])}">${libCardIcon("item",f[0])}<b>${esc(f[1])}</b><small>${Math.round(f[3]*1000)}×${Math.round(f[4]*1000)}${n>1?` · ${n} размеров`:""}</small></button>`; }).join("")+`</div></details>`; }
   $("#lib").innerHTML = o || `<p class="note">Ничего не найдено. Попробуйте «диван», «переговорная» или «витраж».</p>`;
 }
 $("#lib").addEventListener("dragstart", e=>{ const c=e.target.closest("[data-add]"); if(c) e.dataTransfer.setData("text/plain", c.dataset.add); });
@@ -2034,6 +2142,7 @@ $("#lib").addEventListener("click", e=>{ const c=e.target.closest("[data-add],[d
   const r=svg.getBoundingClientRect(); addFromLib(c.dataset.add, {x:(r.width/2-V.tx)/V.s, y:(r.height/2-V.ty)/V.s}); });
 
 $("#q").addEventListener("input", renderLib);
+$("#lib").addEventListener("toggle", e=>{ const d=e.target; if(d.dataset&&d.dataset.g){ d.open?libOpen.add(d.dataset.g):libOpen.delete(d.dataset.g); } }, true);
 function addFromLib(key, p){
   const [kind,k]=key.split(":"); pushUndo(); let it;
   if(kind==="room"){ const pr=ROOMS[+k]; it=room(pr[0],snap(p.x-pr[1]/2),snap(p.y-pr[2]/2),pr[1],pr[2],pr[3],pr[4],{lv:level,sub:!!pr[5],color:pr[6]||CAT[pr[3]].c}); }
@@ -2067,7 +2176,7 @@ function renderPane(){
     <h5>Покрытие пола</h5><div class="sw">${FLOORS.map(([n,c])=>`<button data-floor="${c}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join("")}</div>
     <div class="row"><label class="f">Свой цвет<input type="color" id="pC" value="${it.color}"></label><label class="f">Высота перегородок, м<input type="number" id="pPH" value="${it.ph??3}" step=".1"></label></div>
     <label class="c"><input type="checkbox" id="pSub" ${it.sub?"checked":""}> Зона внутри другого помещения (не суммируется в итог)</label>
-    <div class="actions"><button class="btn" id="aDup">Копия</button><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`;
+    <div class="actions"><button class="btn" id="aDup">Копия</button><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`+previewHTML(it);
   } else if(it.t==="wall"){
     const L=Math.hypot(it.x2-it.x1,it.y2-it.y1);
     P.innerHTML=`<h3>${WALLS[it.kind].n}</h3>
@@ -2078,12 +2187,14 @@ function renderPane(){
     <div class="actions"><button class="btn" id="aDup">Копия</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`;
   } else {
     const f=FK[it.k];
+    const szo=sizeOptions(it);
     P.innerHTML=`<h3>${esc(f.n)}</h3><p class="note">${esc(f.g)} · стандарт ${Math.round(f.w*1000)}×${Math.round(f.h*1000)} мм</p>
+    ${szo?`<div class="row one"><label class="f">Типоразмер (по стандартам)<select id="pSz">${szo}</select></label></div>`:""}
     <div class="row one"><label class="f">Подпись на плане<input id="pLb" value="${esc(it.label)}" placeholder="например: «Служебный вход»"></label></div>
     <div class="row four">${num("pX","X, м",it.x)}${num("pY","Y, м",it.y)}${num("pW","Ширина",it.w)}${num("pH","Глубина",it.h)}</div>
     <div class="row"><label class="f">Поворот<select id="pR">${[0,90,180,270].map(a=>`<option value="${a}" ${a===(it.rot||0)?"selected":""}>${a}°</option>`).join("")}</select></label>
     <label class="f">Высота в 3D, м<input disabled value="${f.z==="H"?fmt(S.b.h,1):fmt(f.z,2)}"></label></div>
-    <div class="actions"><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aFlip">Отразить</button><button class="btn" id="aStd">Стандартный размер</button><button class="btn" id="aDup">Копия</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`;
+    <div class="actions"><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aFlip">Отразить</button><button class="btn" id="aStd">Стандартный размер</button><button class="btn" id="aDup">Копия</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`+previewHTML(it);
   }
   bindProps(it);
 }
@@ -2097,7 +2208,7 @@ function bindProps(it){
   ch("pK",el=>{ it.kind=el.value; it.th=WALLS[el.value].th; }); ch("pT",el=>it.th=Math.max(.02,n(el)));
   ch("pX1",el=>it.x1=n(el)); ch("pY1",el=>it.y1=n(el)); ch("pX2",el=>it.x2=n(el)); ch("pY2",el=>it.y2=n(el));
   ch("pL",el=>{ const L=Math.hypot(it.x2-it.x1,it.y2-it.y1)||1, k=n(el)/L; it.x2=it.x1+(it.x2-it.x1)*k; it.y2=it.y1+(it.y2-it.y1)*k; });
-  ch("pLb",el=>it.label=el.value); ch("pR",el=>it.rot=+el.value);
+  ch("pLb",el=>it.label=el.value); ch("pR",el=>it.rot=+el.value); ch("pSz",el=>{ if(+el.value>=0) applySize(it,+el.value); });
   document.querySelectorAll("[data-floor]").forEach(b=>b.onclick=()=>{ pushUndo(); it.color=b.dataset.floor; commit(); });
   const act=(id,fn)=>{ const el=$("#"+id); if(el) el.onclick=()=>{ pushUndo(); fn(); commit(); }; };
   act("aDel",()=>{ S.items=S.items.filter(i=>i.id!==it.id); sel=null; });
@@ -2170,6 +2281,10 @@ document.addEventListener("keydown", e=>{
   if(ctrl&&(k==="y"||k==="н")){ e.preventDefault(); doRedo(); return; }
   if(e.key==="Escape"){ if(drag&&(drag.mode==="move"||drag.mode==="resize"||drag.mode==="wend"||drag.mode==="bres")&&undo.length){ S=JSON.parse(undo.pop()); }
     drag=null; guides=[]; tool=null; setToolUI(); sel=null; drawPreview=null; render(); return; }
+  if(e.key==="?"||(e.shiftKey&&e.code==="Slash")){ e.preventDefault(); helpDialog(); return; }
+  if(!ctrl&&(k==="f"||k==="а")&&view==="2d"){ fit(); renderPlan(); return; }
+  if(!ctrl&&(e.key==="+"||e.key==="=")&&view==="2d"){ zoomBy(1.25); return; }
+  if(!ctrl&&(e.key==="-"||e.key==="_")&&view==="2d"){ zoomBy(.8); return; }
   if(!it) return;
   if(e.key==="Delete"||e.key==="Backspace"){ e.preventDefault(); pushUndo(); S.items=S.items.filter(i=>i.id!==sel); sel=null; commit(); return; }
   if(ctrl&&(k==="d"||k==="в")){ e.preventDefault(); pushUndo(); dup(it); commit(); return; }
@@ -2262,28 +2377,52 @@ function build3D(){
   }
   resize3D();
 }
-function item3D(it,base,box,H){
+function item3D(it,base,box,H,root=R3&&R3.root){
   const f=FK[it.k], a=aabb(it), cx=a.x+a.w/2, cz=a.y+a.h/2, z=f.z==="H"?H:f.z, ry=-(it.rot||0)*Math.PI/180;
   const W=it.w, D=it.h; const local=(lx,lz)=>{ const c=Math.cos(-ry), s=Math.sin(-ry); const x=lx*(it.flip?-1:1); return [cx+x*c-lz*s, cz+x*s+lz*c]; };
   const part=(w,h,d,lx,y,lz,c,o=1)=>{ const [px,pz]=local(lx,lz); return box(w,h,d,px,base+y,pz,c,o,ry); };
+  // столы на ножках и офисные столы с боковыми опорами
+  const legs=(w,d,y,lx=0,lz=0,c="#8a8a88")=>{ for(const sx of [-1,1]) for(const sz of [-1,1]) part(.05,y,.05,lx+sx*(w/2-.06),y/2,lz+sz*(d/2-.06),c); };
+  const tbl=(w,d,y,lx,lz,c)=>{ part(w,.04,d,lx,y-.02,lz,c); legs(w,d,y-.04,lx,lz); };
+  const pdesk=(w,d,y,lx,lz,c)=>{ part(w,.04,d,lx,y-.02,lz,c); for(const sx of [-1,1]) part(.04,y-.04,d*.9,lx+sx*(w/2-.03),(y-.04)/2,lz,"#9a9a96"); part(w-.1,.3,.02,lx,y-.22,lz-d/2+.12,"#9a9a96"); };
+  const seat=(w,d,lx,lz,c,arms=true)=>{ part(w,.42,d,lx,.21,lz,c); part(w,.4,Math.min(.22,d*.25),lx,.62,lz-d/2+Math.min(.11,d*.125),c); if(arms) for(const sx of [-1,1]) part(.14,.6,d,lx+sx*(w/2-.07),.3,lz,c); };
   switch(f.d){
     case "door": case "door2": part(W,z,.06,0,z/2,-D/2+.15,"#9a7b56"); break;
     case "slide": case "auto": part(W,z,.05,0,z/2,0,"#a9d3ee",.35); break;
-    case "win": break;
+    case "win": part(W,1.5,.05,0,1.65,0,"#a9d3ee",.4); part(W,.06,D,0,.87,0,"#8f928d"); break;
     case "chair": part(W*.9,.45,D*.9,0,.225,0,f.c); part(W*.9,.5,.08,0,.7,-D*.42,f.c); break;
-    case "arm": case "sofa": part(W,.42,D,0,.21,0,f.c); part(W,.4,D*.22,0,.62,-D*.39,f.c); break;
+    case "arm": case "sofa": seat(W,D,0,0,f.c); break;
     case "lounge": part(W,.42,.9,0,.21,D/2-.45,f.c); part(W,.4,.2,0,.62,D/2-.1,f.c); part(1.2,.4,.6,0,.2,-.0,"#e0d6c6"); for(const x of [-.55,.55]){ part(.8,.42,.8,x,.21,-D/2+.4,f.c); part(.8,.4,.16,x,.62,-D/2+.08,f.c); } break;
-    case "table": case "recep": case "bar": case "kitch": case "model": part(W,z,D,0,z/2,0,f.c); if(f.d==="model") for(const [x,zz,w,d,h] of [[-.25,-.2,.18,.25,.9],[-.05,-.25,.12,.35,1.3],[.2,-.1,.22,.2,.6],[-.2,.25,.25,.2,.7],[.1,.25,.12,.25,1.1],[.3,.2,.12,.3,.5]]) part(W*w,h*.4,D*d,W*x,z+h*.2,D*zz,"#f4f1ea"); break;
+    case "table": if(/^desk/.test(it.k)) pdesk(W,D,z,0,0,f.c); else if(it.k==="bench") { part(W,.08,D,0,z-.04,0,f.c); legs(W,D,z-.08); } else tbl(W,D,z,0,0,f.c); break;
+    case "recep": part(W,1.0,D*.85,0,.5,D*.07,f.c); part(W+.04,.05,D,0,1.08,0,"#efe6d4"); part(W*.9,.04,D*.45,0,.74,-D*.2,"#efe6d4"); break;
+    case "bar": part(W,1.0,D*.8,0,.5,0,f.c); part(W+.04,.05,D,0,1.08,0,"#e7d3ad"); break;
+    case "kitch": part(W,.86,D,0,.43,0,f.c); part(W,.04,D+.02,0,.88,0,"#d8d4cc"); part(W,.7,.35,0,1.85,-D/2+.18,f.c); break;
+    case "model": part(W,z,D,0,z/2,0,f.c); if(f.d==="model") for(const [x,zz,w,d,h] of [[-.25,-.2,.18,.25,.9],[-.05,-.25,.12,.35,1.3],[.2,-.1,.22,.2,.6],[-.2,.25,.25,.2,.7],[.1,.25,.12,.25,1.1],[.3,.2,.12,.3,.5]]) part(W*w,h*.4,D*d,W*x,z+h*.2,D*zz,"#f4f1ea"); break;
     case "recepL": part(W,z,.8,0,z/2,-D/2+.4,f.c); part(.8,z,D-.8,-W/2+.4,z/2,.4,f.c); break;
-    case "cafe4": { const [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.CylinderGeometry(Math.min(W,D)*.23,Math.min(W,D)*.23,.04,24),new THREE.MeshStandardMaterial({color:f.c})); m.position.set(px,base+.74,pz); m.castShadow=true; R3.root.add(m);
+    case "cafe4": { const [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.CylinderGeometry(Math.min(W,D)*.23,Math.min(W,D)*.23,.04,24),new THREE.MeshStandardMaterial({color:f.c})); m.position.set(px,base+.74,pz); m.castShadow=true; root.add(m);
       part(.08,.72,.08,0,.36,0,"#555"); for(const [x,zz] of [[0,-D*.37],[0,D*.37],[-W*.37,0],[W*.37,0]]) part(.42,.45,.42,x,.225,zz,"#6b7075"); break; }
     case "meet": { const tw=W-.8, n=Math.max(2,Math.round(tw/.75)); part(tw,.04,D-1.1,0,.74,0,f.c); part(tw*.6,.7,.3,0,.36,0,"#777");
       for(let i=0;i<n;i++){ const x=-tw/2+tw*(i+.5)/n; part(.45,.45,.45,x,.225,-D/2+.25,"#3c4146"); part(.45,.45,.45,x,.225,D/2-.25,"#3c4146"); } break; }
-    case "work3": part(W,.04,.8,0,.74,-D/2+1.05,f.c); part(W*.9,.7,.05,0,.36,-D/2+.7,"#999"); part(.55,.5,.55,0,.25,-D/2+.3,"#3c4146"); part(.45,.45,.45,-.4,.225,D/2-.25,"#6b7075"); part(.45,.45,.45,.4,.225,D/2-.25,"#6b7075"); break;
-    case "os1": part(W,.04,.7,0,.74,-D/2+.35,f.c); part(.55,.5,.55,0,.25,D/2-.3,"#3c4146"); part(.6,.4,.03,0,.95,-D/2+.1,"#222"); break;
-    case "os4": part(W,.04,1.4,0,.74,0,f.c); part(W,.35,.03,0,.95,0,"#b9c7cf"); for(const x of [-W/4,W/4]){ part(.5,.5,.5,x,.25,-D/2+.3,"#3c4146"); part(.5,.5,.5,x,.25,D/2-.3,"#3c4146"); } break;
-    case "plant": part(W*.6,.45,D*.6,0,.225,0,"#e9e4da"); { const [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.SphereGeometry(Math.min(W,D)*.5,12,10),new THREE.MeshStandardMaterial({color:"#5d8c4e",roughness:.9})); m.position.set(px,base+.45+Math.min(W,D)*.55,pz); m.scale.y=1.4; m.castShadow=true; R3.root.add(m); } break;
-    case "stool": part(W*.8,.05,D*.8,0,.75,0,f.c); part(.06,.75,.06,0,.37,0,"#333"); break;
+    case "work3": pdesk(W,.8,.75,0,-D/2+1.05,f.c); part(.55,.5,.55,0,.25,-D/2+.3,"#3c4146"); part(.45,.45,.45,-.4,.225,D/2-.25,"#6b7075"); part(.45,.45,.45,.4,.225,D/2-.25,"#6b7075"); break;
+    case "os1": pdesk(W,.7,.75,0,-D/2+.35,f.c); part(.55,.5,.55,0,.25,D/2-.3,"#3c4146"); part(.6,.4,.03,0,.95,-D/2+.1,"#222"); break;
+    case "os4": { const n=Math.max(1,Math.round(W/1.4)), cw=W/n; part(W,.04,1.4,0,.74,0,f.c); part(W,.35,.03,0,.95,0,"#b9c7cf");
+      for(let i=0;i<n;i++){ const x=-W/2+cw*(i+.5); part(.5,.5,.5,x,.25,-D/2+.3,"#3c4146"); part(.5,.5,.5,x,.25,D/2-.3,"#3c4146"); } break; }
+    case "sofaL": { const d=Math.min(.9,D*.55); part(W,.42,d,0,.21,-D/2+d/2,f.c); part(W,.4,.2,0,.62,-D/2+.1,f.c); part(d,.42,D-d,-W/2+d/2,.21,d/2,f.c); part(.2,.4,D-d,-W/2+.1,.62,d/2,f.c); break; }
+    case "rug": part(W,.015,D,0,.008,0,f.c); break;
+    case "kiosk": part(W,.8,D,0,.4,0,"#d9dcde"); part(W*.8,.04,D*.7,0,.84,0,"#1f2326"); break;
+    case "coat": part(.05,1.8,.05,0,.9,0,f.c); part(W*.8,.04,D*.8,0,.02,0,f.c); break;
+    case "round": { const Dm=Math.max(.5,Math.min(W,D)-1.0), n=Dm<.7?2:Dm<.9?3:Dm<1.1?4:Dm<1.35?6:8, [px,pz]=local(0,0);
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(Dm/2,Dm/2,.04,32),new THREE.MeshStandardMaterial({color:f.c})); m.position.set(px,base+.74,pz); m.castShadow=true; root.add(m);
+      part(.08,.72,.08,0,.36,0,"#555"); for(let i=0;i<n;i++){ const a=i*2*Math.PI/n; part(.42,.45,.42,Math.cos(a)*(Dm/2+.28),.225,Math.sin(a)*(Dm/2+.28),"#6b7075"); } break; }
+    case "deskL": { const d=Math.min(.8,Math.min(W,D)*.5); part(W,.04,d,0,.74,-D/2+d/2,f.c); part(d,.04,D-d,-W/2+d/2,.74,d/2,f.c); part(.55,.5,.55,-W/2+d+.45,.25,-D/2+d+.4,"#3c4146"); break; }
+    case "flip": part(W,.9,.03,0,1.25,0,"#f7f6f2"); part(.04,1.8,.04,0,.9,D*.3,"#777"); break;
+    case "kitchL": { const d=Math.min(.6,D*.4); part(W,.9,d,0,.45,-D/2+d/2,f.c); part(d,.9,D-d,-W/2+d/2,.45,d/2,f.c); part(W,.7,.35,0,1.85,-D/2+.18,f.c); break; }
+    case "wcset": part(.38,.4,.6,-W/2+.4,.2,-D/2+.35,"#f4f4f2"); part(.55,.12,.45,W/2-.33,.85,D/2-.3,"#f4f4f2"); part(.03,.03,.8,-W/2+.04,.75,-D/2+.55,"#2a78b8"); part(.03,.03,.8,-W/2+.77,.75,-D/2+.55,"#2a78b8"); break;
+    case "plant": part(W*.6,.45,D*.6,0,.225,0,"#e9e4da"); { const [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.SphereGeometry(Math.min(W,D)*.5,12,10),new THREE.MeshStandardMaterial({color:"#5d8c4e",roughness:.9})); m.position.set(px,base+.45+Math.min(W,D)*.55,pz); m.scale.y=1.4; m.castShadow=true; root.add(m); } break;
+    case "stool": if(it.k==="pouf"){ part(W*.9,.42,D*.9,0,.21,0,f.c); break; } part(W*.8,.05,D*.8,0,.75,0,f.c); part(.06,.75,.06,0,.37,0,"#333"); break;
+    case "toilet": part(W*.8,.4,D*.62,0,.2,D*.12,f.c); part(W,.38,D*.26,0,.6,-D*.37,f.c); break;
+    case "sink": part(W,.14,D,0,.8,0,f.c); part(.08,.66,.08,0,.33,-D*.3,"#d0d0cc"); break;
+    case "urinal": part(W,.6,D,0,.9,0,f.c); break;
     case "mat": part(W,.03,D,0,.015,0,f.c); break;
     case "screen": part(W,Math.min(z,H-1),D,0,.9+Math.min(z,H-1)/2,0,f.c); break;
     case "stair2": case "stair1": { if(base) break;
@@ -2296,6 +2435,111 @@ function item3D(it,base,box,H){
     default: part(W,z,D,0,z/2,0,f.c);
   }
 }
+
+/* ============================================================ превью: вид сверху и изометрия */
+const MINI={r:null,scene:null,cam:null,root:null,cache:new Map()};
+function miniInit(){ if(MINI.r) return true; if(typeof THREE==="undefined") return false;
+  try{ const c=document.createElement("canvas"); const r=new THREE.WebGLRenderer({canvas:c,antialias:true,preserveDrawingBuffer:true,alpha:true}); r.setPixelRatio(1); r.setSize(360,270,false);
+    const sc=new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff,0xb0b0a8,1.0)); const sun=new THREE.DirectionalLight(0xffffff,.55); sun.position.set(-6,12,9); sc.add(sun);
+    const root=new THREE.Group(); sc.add(root); Object.assign(MINI,{r,scene:sc,root,cam:new THREE.OrthographicCamera(-1,1,1,-1,.01,500)}); return true; }catch(e){ return false; } }
+function miniBox(root){ const mats={}; const M=(c,o)=>{ const k=c+"|"+o; return mats[k]||(mats[k]=new THREE.MeshStandardMaterial({color:c,roughness:.85,transparent:o<1,opacity:o,depthWrite:o>=1})); };
+  const edgeM=new THREE.LineBasicMaterial({color:0x7a7a74,transparent:true,opacity:.7});
+  return (w,h,d,x,y,z,c,o=1,ry=0)=>{ const g=new THREE.BoxGeometry(Math.max(w,.005),Math.max(h,.005),Math.max(d,.005)), m=new THREE.Mesh(g,M(c,o)); m.position.set(x,y,z); m.rotation.y=ry; root.add(m);
+    if(w>.02&&h>.02&&d>.02){ const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeM); e.position.copy(m.position); e.rotation.y=ry; root.add(e); } return m; }; }
+// изометрия группы предметов: bb — рамка в координатах плана {x,y,w,h}; o.floor — цвет пола, o.walls — "wall"|"glass" (срез на 1,1 м)
+function isoPNG(items, bb, o={}){
+  const key=o.key; if(key&&MINI.cache.has(key)) return MINI.cache.get(key);
+  if(!miniInit()) return null; const {r,scene,root,cam}=MINI;
+  while(root.children.length){ const c=root.children.pop(); c.geometry&&c.geometry.dispose(); }
+  const box=miniBox(root), H=o.H||Math.max(3,S.b.h||3); let top=.9;
+  if(o.floor) box(bb.w,.05,bb.h,bb.x+bb.w/2,-.025,bb.y+bb.h/2,o.floor);
+  if(o.walls&&o.walls!=="none"){ const gl=o.walls==="glass", c=gl?"#a9d3ee":"#efece5", op=gl?.35:1, t=gl?.06:.1, h=1.1; top=Math.max(top,h);
+    box(bb.w,h,t,bb.x+bb.w/2,h/2,bb.y,c,op); box(t,h,bb.h,bb.x,h/2,bb.y+bb.h/2,c,op); box(t,h,bb.h,bb.x+bb.w,h/2,bb.y+bb.h/2,c,op); }
+  for(const it of items){ try{ item3D(it,0,box,H,root); const f=FK[it.k]; if(f) top=Math.max(top,f.z==="H"?2.8:Math.min(+f.z||0,2.8)); }catch(e){} }
+  const az=-0.75, el=0.62, cx=bb.x+bb.w/2, cz=bb.y+bb.h/2, dist=60;
+  cam.position.set(cx+Math.sin(az)*Math.cos(el)*dist, Math.sin(el)*dist, cz+Math.cos(az)*Math.cos(el)*dist); cam.up.set(0,1,0); cam.lookAt(cx, top*.35, cz);
+  cam.updateMatrixWorld(); let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; const v=new THREE.Vector3();
+  for(const X of [bb.x,bb.x+bb.w]) for(const Y of [0,top]) for(const Z of [bb.y,bb.y+bb.h]){ v.set(X,Y,Z).applyMatrix4(cam.matrixWorldInverse); x0=Math.min(x0,v.x); x1=Math.max(x1,v.x); y0=Math.min(y0,v.y); y1=Math.max(y1,v.y); }
+  const asp=360/270, mx=(x0+x1)/2, my=(y0+y1)/2, half=Math.max((x1-x0)/2/asp,(y1-y0)/2)*1.1+.05;
+  Object.assign(cam,{left:mx-half*asp,right:mx+half*asp,top:my+half,bottom:my-half}); cam.updateProjectionMatrix();
+  r.render(scene,cam); const url=r.domElement.toDataURL("image/png"); if(key){ MINI.cache.set(key,url); if(MINI.cache.size>300) MINI.cache.delete(MINI.cache.keys().next().value); } return url;
+}
+function itemIso(k,w,h){ const f=FK[k]; if(!f) return null; const it={id:"_p",t:"item",lv:0,k,x:0,y:0,w,h,rot:0,flip:false}; return isoPNG([it],{x:0,y:0,w,h},{key:`i:${k}:${w}:${h}`}); }
+function itemPlanSVG(k,w,h){ const it={k,w,h}; const p=.35; return `<svg viewBox='${-p} ${-p} ${w+2*p} ${h+2*p+.25}' class='pv2d'>${sym(it)}<text x='${w/2}' y='${h+p+.12}' font-size='${Math.max(.12,Math.min(.24,(w+h)/14))}' text-anchor='middle' fill='var(--muted)'>${mm(w)} × ${mm(h)}</text></svg>`; }
+function roomIso(r){ const kids=S.items.filter(i=>i.t==="item"&&(i.lv||0)===(r.lv||0)&&(()=>{ const a=aabb(i), cx=a.x+a.w/2, cy=a.y+a.h/2; return cx>=r.x-.3&&cx<=r.x+r.w+.3&&cy>=r.y-.3&&cy<=r.y+r.h+.3; })());
+  const key="r:"+JSON.stringify([r.x,r.y,r.w,r.h,r.color,r.border,kids.map(i=>[i.k,i.x,i.y,i.w,i.h,i.rot,i.flip])]);
+  return isoPNG(kids,{x:r.x,y:r.y,w:r.w,h:r.h},{floor:r.color,walls:r.sub?"none":r.border,key}); }
+function roomPlanSVG(r){ return `<svg viewBox='${r.x-.4} ${r.y-.4} ${r.w+.8} ${r.h+.8}' class='pv2d'>${planMarkup(r.lv||0,{export:true})}</svg>`; }
+function previewHTML(it){
+  if(it.t==="wall") return "";
+  const iso = it.t==="room" ? roomIso(it) : itemIso(it.k,it.w,it.h);
+  const plan = it.t==="room" ? roomPlanSVG(it) : itemPlanSVG(it.k,it.w,it.h);
+  return `<h5>Вид</h5><div class="pv"><figure>${plan}<figcaption>сверху</figcaption></figure><figure>${iso?`<img src="${iso}" alt="Изометрия">`:`<p class="note">3D недоступно</p>`}<figcaption>изометрия</figcaption></figure></div>`;
+}
+// подсказка при наведении на карточку библиотеки
+let libTipT=null;
+function libTip(card){ const tip=$("#libtip"); if(!card){ tip.hidden=true; return; }
+  const key=card.dataset.add; if(!key||!key.startsWith("item:")){ tip.hidden=true; return; } const k=key.slice(5), f=FK[k]; if(!f){ tip.hidden=true; return; }
+  const sz=OfficeKB.SIZES[k]||[];
+  tip.innerHTML=`<b>${esc(f.n)}</b><div class="pv">${`<figure>${itemPlanSVG(k,f.w,f.h)}<figcaption>сверху</figcaption></figure>`}<figure><img src="${itemIso(k,f.w,f.h)||""}" alt=""><figcaption>изометрия</figcaption></figure></div>`+
+    (sz.length?`<small>Типоразмеры: ${sz.map(s=>esc(s[0])).join(" · ")}</small>`:`<small>${mm(f.w)} × ${mm(f.h)} мм · h ${f.z==="H"?"до потолка":mm(+f.z)}</small>`);
+  const r=card.getBoundingClientRect(); tip.style.left=Math.min(innerWidth-300,r.right+8)+"px"; tip.style.top=Math.max(8,Math.min(innerHeight-300,r.top-20))+"px"; tip.hidden=false; }
+$("#lib").addEventListener("mouseover",e=>{ const c=e.target.closest(".card"); clearTimeout(libTipT); libTipT=setTimeout(()=>libTip(c),220); });
+$("#lib").addEventListener("mouseleave",()=>{ clearTimeout(libTipT); libTip(null); });
+
+/* ============================================================ управление: панель у выделения, меню, масштаб, справка */
+function sizeOptions(it){ const sz=OfficeKB.SIZES[it.k]; if(!sz) return "";
+  const cur=sz.findIndex(s=>Math.abs(s[1]-it.w)<.005&&Math.abs(s[2]-it.h)<.005);
+  return sz.map((s,i)=>`<option value="${i}" ${i===cur?"selected":""}>${esc(s[0])}</option>`).join("")+(cur<0?`<option value="-1" selected>свой: ${mm(it.w)}×${mm(it.h)}</option>`:""); }
+function applySize(it,i){ const s=(OfficeKB.SIZES[it.k]||[])[i]; if(!s) return; const a=aabb(it), cx=a.x+a.w/2, cy=a.y+a.h/2; it.w=s[1]; it.h=s[2]; fixDoor(it); const b=aabb(it); it.x=+(cx-b.w/2).toFixed(3); it.y=+(cy-b.h/2).toFixed(3); }
+const ACTIONS={
+  rot:{t:"Повернуть на 90° (R)",i:"↻",f:it=>rot(it)}, flip:{t:"Отразить",i:"⇋",f:it=>{ it.flip=!it.flip; },only:"item"},
+  dup:{t:"Копия (Ctrl+D)",i:"⧉",f:it=>dup(it)}, lv:{t:"Перенести на другой уровень",i:"⇅",f:it=>{ it.lv=it.lv?0:1; level=it.lv; }},
+  std:{t:"Стандартный размер",i:"▭",f:it=>{ const f=FK[it.k]; it.w=f.w; it.h=f.h; fixDoor(it); },only:"item"},
+  del:{t:"Удалить (Del)",i:"🗑",f:it=>{ S.items=S.items.filter(i=>i.id!==it.id); sel=null; },cls:"danger"},
+};
+function runAction(a){ const it=sel&&byId(sel); if(!it||!ACTIONS[a]) return; pushUndo(); ACTIONS[a].f(it); commit(); }
+function updateSelbar(){ const bar=$("#selbar"); const it=sel&&byId(sel);
+  if(!it||view!=="2d"||(it.lv||0)!==level||(drag&&drag.mode!=="pan")){ bar.hidden=true; return; }
+  let a; if(it.t==="wall") a={x:Math.min(it.x1,it.x2),y:Math.min(it.y1,it.y2),w:Math.abs(it.x2-it.x1),h:Math.abs(it.y2-it.y1)}; else a=aabb(it);
+  const sx=V.tx+(a.x+a.w/2)*V.s, sy=V.ty+a.y*V.s;
+  const acts=Object.entries(ACTIONS).filter(([k,A])=>!A.only||A.only===it.t).filter(([k])=>!(k==="rot"&&it.t==="wall"));
+  const sz=it.t==="item"?sizeOptions(it):"";
+  bar.innerHTML=(sz?`<select id="sbSize" title="Типоразмер" aria-label="Типоразмер">${sz}</select>`:"")+acts.map(([k,A])=>`<button data-act="${k}" title="${A.t}" aria-label="${A.t}" class="${A.cls||""}">${A.i}</button>`).join("");
+  const r=$(".main").getBoundingClientRect(); bar.hidden=false; const bw=bar.offsetWidth, bh=bar.offsetHeight;
+  let x=sx-bw/2, y=sy-bh-26; if(y<8) y=V.ty+(a.y+a.h)*V.s+30; x=Math.max(8,Math.min(r.width-bw-8,x)); y=Math.max(8,Math.min(r.height-bh-60,y));
+  bar.style.left=x+"px"; bar.style.top=y+"px";
+}
+$("#selbar").addEventListener("pointerdown",e=>e.stopPropagation());
+$("#selbar").addEventListener("click",e=>{ const b=e.target.closest("[data-act]"); if(b) runAction(b.dataset.act); });
+$("#selbar").addEventListener("change",e=>{ if(e.target.id==="sbSize"){ const it=byId(sel); if(!it) return; pushUndo(); applySize(it,+e.target.value); commit(); } });
+// меню по правой кнопке
+function ctxMenu(ev){ ev.preventDefault(); const d=ev.target.closest("[data-id]"); const m=$("#ctx");
+  if(!d){ m.hidden=true; return; } sel=d.dataset.id; tab="props"; setTabs(); render(); const it=byId(sel);
+  const acts=Object.entries(ACTIONS).filter(([k,A])=>!A.only||A.only===it.t);
+  const sz=it.t==="item"?OfficeKB.SIZES[it.k]||[]:[];
+  m.innerHTML=`<div class="ctxh">${esc(it.t==="room"?it.name:(FK[it.k]||{}).n||"")}</div>`+acts.map(([k,A])=>`<button data-act="${k}" class="${A.cls||""}"><span>${A.i}</span>${A.t}</button>`).join("")+
+    (sz.length?`<div class="ctxh">Типоразмер</div>`+sz.map((s,i)=>`<button data-size="${i}"><span>▫</span>${esc(s[0])}</button>`).join(""):"");
+  m.hidden=false; const W=m.offsetWidth, H=m.offsetHeight; m.style.left=Math.min(innerWidth-W-6,ev.clientX)+"px"; m.style.top=Math.min(innerHeight-H-6,ev.clientY)+"px"; }
+$("#ctx").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; $("#ctx").hidden=true;
+  if(b.dataset.act) runAction(b.dataset.act); if(b.dataset.size!=null){ const it=byId(sel); if(it){ pushUndo(); applySize(it,+b.dataset.size); commit(); } } });
+document.addEventListener("pointerdown",e=>{ if(!e.target.closest("#ctx")) $("#ctx").hidden=true; });
+function zoomBy(k){ const r=svg.getBoundingClientRect(), mx=r.width/2, my=r.height/2, ns=Math.min(400,Math.max(4,V.s*k)); V.tx=mx-(mx-V.tx)*ns/V.s; V.ty=my-(my-V.ty)*ns/V.s; V.s=ns; renderPlan(); }
+$("#zoombar").addEventListener("click",e=>{ const b=e.target.closest("[data-z]"); if(!b) return; const z=b.dataset.z;
+  if(z==="in") zoomBy(1.25); if(z==="out") zoomBy(.8); if(z==="fit"){ fit(); renderPlan(); } if(z==="help") helpDialog(); });
+function helpDialog(){ const m=document.createElement("div"); m.className="modal";
+  const K=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
+  m.innerHTML=`<div class="dlg" role="dialog" aria-label="Справка"><h3>Как управлять</h3><table class="keys">
+  ${K("Добавить","перетащите карточку из библиотеки на план или щёлкните по ней")}
+  ${K("Выделить / двигать","щелчок по предмету и перетаскивание; <kbd>Alt</kbd> — копия, <kbd>Ctrl</kbd> — без магнита")}
+  ${K("Размер","тяните за квадратики по краям; типоразмер — в панели над предметом или справа")}
+  ${K("Быстрые действия","панель над выделением или правая кнопка мыши")}
+  ${K("<kbd>R</kbd>","повернуть на 90°")}${K("<kbd>Ctrl</kbd>+<kbd>D</kbd>","копия")}${K("<kbd>Del</kbd>","удалить")}
+  ${K("Стрелки","сдвиг на шаг сетки (с <kbd>Shift</kbd> — ×10)")}${K("<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>","отменить / вернуть")}
+  ${K("Масштаб","колесо мыши, <kbd>+</kbd> / <kbd>−</kbd>, <kbd>F</kbd> — весь план")}${K("Сдвиг плана","тяните пустое место или зажмите <kbd>Пробел</kbd>")}
+  ${K("<kbd>Esc</kbd>","снять выделение / выйти из рисования")}${K("<kbd>?</kbd>","эта справка")}</table>
+  <div class="actions"><span class="spacer"></span><button class="btn primary" id="hClose">Понятно</button></div></div>`;
+  document.body.appendChild(m); m.addEventListener("click",e=>{ if(e.target===m||e.target.id==="hClose") m.remove(); }); }
 
 /* ============================================================ сохранение (db или браузер) */
 const statusEl=$("#status"); let saveTimer=null;
@@ -2368,6 +2612,19 @@ function briefHTML(){
 function csv(){ const rows=[["Уровень","№","Помещение","Категория","Ширина, м","Глубина, м","Площадь, м²","В составе другого"]];
   for(const g of explRows()) for(const r of g.rooms){ const it=byId(r.id); rows.push([g.lv?"Антресоль":"1 этаж",r.num,r.name,CAT[r.cat].n,fmt(it.w),fmt(it.h),fmt(r.area),r.sub?"да":""]); }
   return "﻿"+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(";")).join("\r\n"); }
+// лист презентации: план с экспликацией сверху, изометрия снизу
+async function sheetPNG(){
+  const plan=await snapshotPNG({view:"2d"}), iso=await snapshotPNG({view:"3d",cam:"iso"});
+  const load=u=>new Promise((ok,no)=>{ if(!u) return ok(null); const i=new Image(); i.onload=()=>ok(i); i.onerror=no; i.src=u; });
+  const [a,b]=await Promise.all([load(plan),load(iso)]); const W=1800, pad=40;
+  const ha=a?Math.round(a.height*(W-2*pad)/a.width):0, hb=b?Math.round(b.height*(W-2*pad)/b.width):0;
+  const c=document.createElement("canvas"); c.width=W; c.height=pad*2+60+ha+(b?50+hb:0); const g=c.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.fillStyle="#222"; g.font="600 30px Arial"; g.fillText(S.name||"Офис продаж",pad,pad+26);
+  g.font="16px Arial"; g.fillStyle="#666"; g.fillText(`${fmt(S.b.w,1)} × ${fmt(S.b.d,1)} м · высота ${fmt(S.b.h,1)} м · ${new Date().toLocaleDateString("ru")}`,pad,pad+52);
+  let y=pad+70; if(a){ g.drawImage(a,pad,y,W-2*pad,ha); y+=ha+20; }
+  if(b){ g.fillStyle="#222"; g.font="600 20px Arial"; g.fillText("Изометрия",pad,y+18); g.drawImage(b,pad,y+30,W-2*pad,hb); }
+  return await new Promise(r=>c.toBlob(r,"image/png"));
+}
 async function doExport(kind){
   const base=(S.name||"проект").replace(/[\\/:*?"<>|]+/g," ").trim();
   let data, filename;
@@ -2375,6 +2632,7 @@ async function doExport(kind){
   else if(kind==="svg"){ data=exportSVG(); filename=base+" — план.svg"; }
   else if(kind==="csv"){ data=csv(); filename=base+" — экспликация.csv"; }
   else if(kind==="brief"){ data=briefHTML(); filename=base+" — задание проектировщику.html"; }
+  else if(kind==="sheet"){ toast("Собираю лист: план и изометрия…"); data=await sheetPNG(); filename=base+" — план и изометрия.png"; }
   else if(kind==="png"){ if(!R3) return; draw3D(); data=await new Promise(r=>R3.renderer.domElement.toBlob(r,"image/png")); filename=base+" — 3D.png"; }
   if(!downloads){ // локальный запуск: обычное скачивание браузером
     const blob = data instanceof Blob ? data : new Blob([data],{type:filename.endsWith(".html")?"text/html":filename.endsWith(".svg")?"image/svg+xml":filename.endsWith(".csv")?"text/csv":"application/json"});
@@ -2385,6 +2643,7 @@ async function doExport(kind){
 $("#bExport").onclick=()=>{ const m=document.createElement("div"); m.className="modal";
   m.innerHTML=`<div class="dlg"><h3>Выгрузить</h3><div class="plist">
   <div class="pitem"><div><b>Задание проектировщику</b><small>HTML-страница: пожелания, план обоих уровней, экспликация, спецификация мебели</small></div><button class="btn primary" data-exp="brief">Выгрузить</button></div>
+  <div class="pitem"><div><b>Лист «план + изометрия»</b><small>PNG для презентации заказчику: план с экспликацией и изометрический вид всего офиса</small></div><button class="btn" data-exp="sheet">Выгрузить</button></div>
   <div class="pitem"><div><b>План в SVG, масштаб 1:100</b><small>Открывается в браузере, Illustrator, CorelDRAW, импортируется в AutoCAD</small></div><button class="btn" data-exp="svg">Выгрузить</button></div>
   <div class="pitem"><div><b>Экспликация для Excel</b><small>CSV с площадями всех помещений</small></div><button class="btn" data-exp="csv">Выгрузить</button></div>
   <div class="pitem"><div><b>Файл проекта</b><small>Чтобы продолжить работу на другом компьютере или передать коллеге</small></div><button class="btn" data-exp="json">Выгрузить</button></div>
@@ -2638,7 +2897,7 @@ const AI_SYS=()=>`Ты — архитектор-планировщик офис�
 {"op":"add_room","name":"Кабинет менеджера","x":..,"y":..,"w":3,"h":3.2,"lv":0,"border":"none|wall|glass","furnish":true} — тип и мебель по названию; без x/y место найдётся само (near: facade|back|left|right|center)
 {"op":"update","id":"<id или название>","x":..,"y":..,"w":..,"h":..,"dx":..,"dy":..,"new_name":"..","border":"..","color":"#RRGGBB","rot":90} — помещение двигается с мебелью
 {"op":"delete","id":"<id или название>"}
-{"op":"add_item","k":"<ключ>","x":..,"y":..,"rot":0,"room":"<помещение>","count":1,"dir":"x|y"} — ключи: ${OfficeKB.FURN.filter(f=>!/Конструкции/.test(f[2])).map(f=>f[0]+" "+f[3]+"×"+f[4]).join(", ")}
+{"op":"add_item","k":"<ключ>","size":"<типоразмер, напр. «на 8»>","x":..,"y":..,"rot":0,"room":"<помещение>","count":1,"dir":"x|y"} — ключи: ${OfficeKB.FURN.filter(f=>!/Конструкции/.test(f[2])).map(f=>f[0]+" "+f[3]+"×"+f[4]).join(", ")}
 {"op":"furnish","room":"<помещение>"} — расставить мебель по типу; {"op":"clear","room":".."}
 {"op":"add_door","room":"..","side":"n|s|e|w","width":0.9}; {"op":"add_wall","kind":"part|glass|block|rail","x1":..,"y1":..,"x2":..,"y2":..}
 {"op":"auto","pkg":"S|M|L","w":..,"d":..,"h":..} — собрать зонирование заново по размерам и варианту наполнения (S Базовый — максимум мест продаж, M Стандарт, L Премиум); {"op":"building","w":..,"d":..,"h":..}

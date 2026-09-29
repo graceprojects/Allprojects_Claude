@@ -108,7 +108,7 @@ const OP_PROPS = {
   delete: { id: REF, with_contents: bo("удалить и мебель внутри (да)") },
   add_item: { k: s("ключ предмета из list_catalog, например work3, meet6, sofa3, lounge, model, recep, kitch, wc, plant"), x: n("X левого-верхнего угла"), y: n("Y"),
     room: s("поставить внутрь помещения (id/название) — место найдётся само"), rot: n("0|90|180|270"), w: n("ширина (растянуть)"), h: n("глубина"),
-    count: n("сколько штук в ряд"), dir: s("x|y — направление ряда"), gap: n("зазор в ряду, м"), label: s("подпись"), lv: n("уровень"), near: s("facade|back|left|right|center") },
+    size: s("типоразмер: номер или название из list_catalog, например «на 8» или «3-местный 2200»"), count: n("сколько штук в ряд"), dir: s("x|y — направление ряда"), gap: n("зазор в ряду, м"), label: s("подпись"), lv: n("уровень"), near: s("facade|back|left|right|center") },
   furnish: { room: REF, replace: bo("убрать старую мебель (да)"), face: s("n|s|e|w — лицевая сторона (дверь/обзор); по умолчанию определяется сама"), seats: n("бэк-офис: сколько рабочих мест") },
   clear: { room: REF, doors: bo("убрать и двери") },
   add_door: { room: REF, side: s("n|s|e|w (по умолчанию — к проходу)"), offset: n("от угла, м"), width: n("ширина, м (0.9, 1.0, 1.8)"), type: s("swing|slide"), inward: bo("внутрь"), label: s("подпись, напр. «Вход»") },

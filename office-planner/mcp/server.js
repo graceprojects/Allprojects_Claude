@@ -33,7 +33,9 @@ load();
 /* ------------------------------------------------------------ HTTP: планировщик + синхронизация */
 const clients = new Set(); const pending = new Map(); let port = 0;
 const APP = [path.join(HERE, "app"), path.join(HERE, "..", "local")].find(d => fs.existsSync(path.join(d, "index.html")));
-const ALLOWED = /^(https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?|https:\/\/[a-z0-9-]+\.github\.io|https:\/\/([a-z0-9-]+\.)*claude(usercontent)?\.(ai|com)|null)$/i;
+// кому можно читать и менять план: localhost, сайт планировщика и claude.ai. Чужие *.github.io и «null» (песочницы) — нет.
+// Офлайн-файл (file://) шлёт Origin: null — разрешите его явно: OFFICE_PLANNER_ALLOW_FILE=1.
+const ALLOWED = new RegExp("^(https?://(localhost|127\\.0\\.0\\.1)(:\\d+)?|https://graceprojects\\.github\\.io|https://([a-z0-9-]+\\.)*claude(usercontent)?\\.(ai|com)" + (process.env.OFFICE_PLANNER_ALLOW_FILE === "1" ? "|null" : "") + ")$", "i");
 function cors(req, res) {
   const o = req.headers.origin; if (o && ALLOWED.test(o)) { res.setHeader("Access-Control-Allow-Origin", o); res.setHeader("Vary", "Origin"); }
   res.setHeader("Access-Control-Allow-Private-Network", "true"); res.setHeader("Access-Control-Allow-Headers", "content-type"); res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -45,6 +47,7 @@ const server = http.createServer(async (req, res) => {
   const okOrigin = cors(req, res); const u = new URL(req.url, "http://x");
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
   if (!okOrigin) { res.writeHead(403); return res.end("origin"); }
+  if (req.method === "POST" && !/^application\/json/i.test(req.headers["content-type"] || "")) { res.writeHead(415); return res.end("json only"); }   // простой form-POST с чужой страницы не пройдёт
   try {
     if (u.pathname === "/api/events") {
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });

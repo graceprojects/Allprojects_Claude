@@ -50,3 +50,7 @@ open_planner, describe_plan, view_plan (PNG 2D/3D из браузера), packag
 add_room, update_element, delete_element, add_furniture, furnish_room, clear_room, add_door, add_wall,
 set_building, set_floor, batch, find_free_space, check_plan, list_catalog, planning_guide, undo, redo,
 save_project, open_project.
+
+## Безопасность
+
+Сервер слушает только 127.0.0.1 и принимает запросы с localhost, сайта планировщика (graceprojects.github.io) и claude.ai. Офлайн-файл планировщика (file://) по умолчанию не подключится: если он нужен, запустите сервер с `OFFICE_PLANNER_ALLOW_FILE=1`.

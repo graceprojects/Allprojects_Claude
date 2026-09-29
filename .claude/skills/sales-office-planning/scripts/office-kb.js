@@ -58,9 +58,9 @@
     ["deskL","Стол угловой","Офисная мебель",1.6,1.6,.75,"deskL","#e8e2d6"],["locker","Шкафчики персонала","Офисная мебель",.9,.5,1.9,"cab","#c9ccd0"],
     ["wardrobe","Шкаф-купе","Офисная мебель",1.8,.6,2.4,"cab","#dcd6cb"],
     // переговоры
-    ["meet6","Стол переговоров на 6","Переговорные",2.4,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
-    ["meet10","Стол переговоров на 10","Переговорные",4,2.2,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
-    ["roundT","Стол круглый со стульями","Переговорные",1.5,1.5,.75,"round","#d8cdb8"],["flip","Флипчарт","Переговорные",.7,.5,1.8,"flip","#f1efe9"],
+    ["meet6","Стол переговоров на 6","Переговорные",2.6,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
+    ["meet10","Стол переговоров на 10","Переговорные",3.8,2.3,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
+    ["roundT","Стол круглый со стульями","Переговорные",1.4,1.4,.75,"round","#d8cdb8"],["flip","Флипчарт","Переговорные",.7,.5,1.8,"flip","#f1efe9"],
     // кухня и бар
     ["kitch","Кухонный гарнитур 2.4 м","Кухня и бар",2.4,.6,.9,"kitch","#e9e6df"],["fridge","Холодильник","Кухня и бар",.7,.7,1.9,"fridge","#e9ecee"],
     ["bar","Барная стойка 3 м","Кухня и бар",3,.6,1.1,"bar","#c8a877"],["stool","Барный стул","Кухня и бар",.45,.45,.75,"stool","#555"],
@@ -73,7 +73,7 @@
     ["wcset","С/у МГН — комплект (СП 59)","Сантехника",2.2,2.25,.9,"wcset","#f4f4f2"],
     // конструкции
     ["col","Колонна 400×400","Конструкции",.4,.4,"H","col","#8f928d"],["col3","Колонна 300×300","Конструкции",.3,.3,"H","col","#8f928d"],
-    ["stair2","Лестница двухмаршевая","Конструкции",2.6,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
+    ["stair2","Лестница двухмаршевая","Конструкции",2.4,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
   ];
   // Типоразмеры по реальным стандартам (ГОСТ 13025 / 16371, каталоги офисной мебели, СП 59 для МГН): [название, ширина, глубина] в м
   const S_ = (...a) => a;
@@ -642,7 +642,7 @@
       const hit = rooms.filter(r => keys.some(k => norm(r.name).includes(k)) && !(pr.key === "meet" && norm(r.name).includes("vip")));
       const area = hit.reduce((s, r) => s + r.w * r.h, 0), target = pr.n * pr.area;
       return { ...pr, placed: hit.length, factArea: +area.toFixed(1), targetArea: +target.toFixed(1),
-        state: hit.length < pr.n ? (hit.length === 0 ? "red" : "yellow") : (area < target * 0.9 ? "yellow" : "ok") };
+        state: hit.length < pr.n ? (hit.length === 0 ? "red" : "yellow") : hit.length > pr.n && !pr.sub ? "info" : (area < target * 0.9 ? "yellow" : "ok") };   // больше, чем нужно по программе, — пометить
     });
   };
 
@@ -654,9 +654,10 @@
     const area = r => r.w * r.h, has = (r, s) => norm(r.name).includes(s);
     const inner = Math.max(0, (b.w - 0.6) * (b.d - 0.6));
     // МГН санузел
-    const wcv = rooms.filter(r => has(r, "с/у посетит") || has(r, "мгн"));
+    const wcv = rooms.filter(r => has(r, "с/у посетит") || has(r, "мгн") || has(r, "гостев") || has(r, "универсал") || (/^(с\/у|санузел|wc)/i.test(r.name) && !has(r, "персонал")));   // общий «С/у» без пометки «персонала» — тоже для гостей
     if (!wcv.length && rooms.length) add("red", "Нет санузла для посетителей с универсальной кабиной МГН.", "СП 59.13330.2020 п. 6.3.2");
-    for (const r of wcv) if (Math.min(r.w, r.h) < 2.2 || Math.max(r.w, r.h) < 2.25) add("red", `«${r.name}»: меньше 2,20×2,25 м — универсальная кабина МГН не помещается.`, "СП 59.13330.2020 табл. 6.1", r.id);
+    const mgnWc = wcv.filter(r => has(r, "мгн") || has(r, "универсал")), chkWc = mgnWc.length ? mgnWc : wcv.length ? [wcv.slice().sort((x, y) => y.w * y.h - x.w * x.h)[0]] : [];   // размер МГН проверяем у кабины МГН (или у самого большого с/у)
+    for (const r of chkWc) if (Math.min(r.w, r.h) < 2.2 || Math.max(r.w, r.h) < 2.25) add("red", `«${r.name}»: меньше 2,20×2,25 м — универсальная кабина МГН не помещается.`, "СП 59.13330.2020 табл. 6.1", r.id);
     // Тамбур
     for (const r of rooms.filter(r => has(r, "тамбур"))) if (r.h < 2.45) add("yellow", `Тамбур: глубина по ходу движения ${r.h.toFixed(2)} м < 2,45 м.`, "СП 59.13330.2020 п. 6.1.8 (сверить редакцию)", r.id);
     // Антресоль
@@ -709,7 +710,7 @@
     const rooms = (S.items || []).filter(i => i.t === "room" && !i.sub);
     const a0 = rooms.filter(r => !r.lv).reduce((s, r) => s + r.w * r.h, 0), a1 = rooms.filter(r => r.lv === 1).reduce((s, r) => s + r.w * r.h, 0);
     const lines = [`${S.name}: здание ${S.b.w}×${S.b.d}×${S.b.h} м, 1 этаж ${a0.toFixed(1)} м², ${S.b.upper === "floor" ? "2 этаж" : "антресоль"} ${a1.toFixed(1)} м²`];
-    if (S.program) { lines.push("Программа (цель → факт):"); for (const f of KB.programFact(S)) lines.push(`  ${f.state === "ok" ? "✓" : f.state === "yellow" ? "~" : "✗"} ${f.name}: ${f.placed}/${f.n} шт, ${f.factArea}/${f.targetArea} м²`); }
+    if (S.program) { lines.push("Программа (цель → факт):"); for (const f of KB.programFact(S)) lines.push(`  ${f.state === "ok" ? "✓" : f.state === "yellow" ? "~" : f.state === "info" ? "+" : "✗"} ${f.name}: ${f.placed}/${f.n} шт, ${f.factArea}/${f.targetArea} м²`); }
     const ch = KB.checks(S); lines.push(`Проверки: ${ch.filter(c => c.level === "red").length} красных, ${ch.filter(c => c.level === "yellow").length} жёлтых`);
     for (const c of ch) lines.push(`  [${c.level}] ${c.text} (${c.ref})`);
     return lines.join("\n");
@@ -968,7 +969,7 @@
         P("work3", cU(1.6), zone ? Math.max(0.1, (D - 2.3) / 2) : Math.min(0.4, Math.max(0.05, D - 2.3 - 0.9)));
         if (!zone && W >= 3.6) P("cab", W - 0.95, 0.05); break;
       case "meet": case "vip": {
-        const opts = [["meet10", 4, 2.2], ["meet8", 3.2, 2.2], ["meet6", 2.4, 2.1], ["round4", 1.9, 1.9]];
+        const opts = [["meet10", 3.8, 2.3], ["meet8", 3.2, 2.2], ["meet6", 2.6, 2.1], ["round4", 1.9, 1.9]];
         let fitT = opts[3], rl = 0;
         for (const t of (T.key === "vip" ? opts.slice(1) : opts)) { if (t[1] + 1.4 <= W && t[2] + 1.0 <= D) { fitT = t; rl = 0; break; } if (t[2] + 1.0 <= W && t[1] + 1.4 <= D) { fitT = t; rl = 90; break; } }
         const lw = rl ? fitT[2] : fitT[1], lh = rl ? fitT[1] : fitT[2];

@@ -136,7 +136,7 @@
     kids: true, cafe: true, wardrobe: true, bank: true, cashier: false, media: false, showroom: false,
     director: true, mezz: "auto", front: "vitrage",
   };
-  KB.MAKET = { "2x1.5": [2, 1.5], "3x2": [3, 2], "5x3": [5, 3], "6x4": [6, 4] };
+  KB.MAKET = { "2x1.5": [2, 1.5], "3x2": [3, 2], "5x3": [5, 3], "6x4": [6, 4], "6x5": [6, 5] };
 
   /* ------------------------------------------------------------ пакеты офиса продаж по площади
    * Каждый пакет — таблица строк программы. Количество (n) и площадь (area) могут быть формулами.
@@ -724,7 +724,7 @@
   // где помещение стоит в схеме: полоса вдоль глухой стены / публичная зона у витража / служебное ядро
   const GROUP = { cafe: "band", wardrobe: "band", showroom: "band", cabinet: "band", meet: "band", bank: "band", vip: "band", cashier: "band",
     kids: "pub", lounge: "pub", seats: "pub", maket: "pub", media: "pub", reception: "pub", tambour: "pub" };
-  const MAKET_STEPS = ["6x4", "5x3", "3x2", "2x1.5"];
+  const MAKET_STEPS = ["6x5", "6x4", "5x3", "3x2", "2x1.5"];
   KB.autoPlan = function (p0) {
     const pkg = String(p0.pkg || p0.level || "M").toUpperCase(), base = KB.PACKAGES[pkg];
     if (!base) throw new Error("Вариант: S (Базовый), M (Стандарт) или L (Премиум)");
@@ -1306,7 +1306,7 @@
     const lounge = get("lounge"), seats = lounge ? (lounge.seats || Math.round(lounge.area / 1.8)) : 0;
     const G = compact ? { w: 2.4, h: 2.2, seats: 3 } : { w: 2.6, h: 3.3, seats: 4 };
     const groups = lounge ? Math.max(1, Math.ceil(seats / G.seats)) : 0;
-    const mkR = get("maket"), mkS = mkR ? (KB.MAKET[pp.maket] || KB.MAKET["3x2"]) : null, mg = compact ? 1.0 : 1.2;
+    const mkR = get("maket"), mkS = mkR ? (KB.MAKET[pp.maket] || KB.MAKET["3x2"]) : null, mg = Math.min(+p.gap || 1.2, compact ? 1.0 : 1.2);
     const mw = mkS ? mkS[0] + 2 * mg : 0, mh = mkS ? mkS[1] + 2 * mg : 0;
     const kidsR = get("kids"), kw = kidsR ? Math.max(2.4, kidsR.w || 3) : 0, kh = kidsR ? Math.max(2.4, kidsR.h || 3) : 0;
     const medR = get("media"), MW = 3.5, MH = 3.0, recR = get("reception"), tamR = get("tambour");

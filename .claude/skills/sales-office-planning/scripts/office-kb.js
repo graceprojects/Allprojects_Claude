@@ -562,7 +562,7 @@
   /* ------------------------------------------------------------ программа: цель / факт */
   const norm = s => String(s || "").toLowerCase().replace(/ё/g, "е");
   const MATCH = {
-    tambour: ["тамбур"], reception: ["ресепшен", "хостес"], lounge: ["ожидан", "лаунж"], maket: ["макет"], kids: ["детск"],
+    tambour: ["тамбур"], reception: ["ресепшен", "ресепшн", "хостес"], lounge: ["ожидан", "лаунж"], maket: ["макет"], kids: ["детск"],
     cafe: ["кофе", "бар", "кафе"], wardrobe: ["гардероб"], media: ["медиа", "vr"], cabinet: ["кабинет менеджер", "место консультац"], meet: ["переговорн"],
     bank: ["ипотек", "банк"], showroom: ["шоурум"], vip: ["сделочн", "vip"], archive: ["архив"], storage: ["склад"], security: ["охран"], cashier: ["касса"], wcv: ["с/у посетит", "с/у мгн", "санузел посетит", "санузел универсал"], stair: ["лестнич"],
     backoffice: ["бэк-офис", "бэк офис", "back"], director: ["руководител", "роп"], kitchen: ["кухн", "приём пищи", "прием пищи", "отдыха"],
@@ -594,7 +594,9 @@
     for (const r of rooms.filter(r => has(r, "тамбур"))) if (r.h < 2.45) add("yellow", `Тамбур: глубина по ходу движения ${r.h.toFixed(2)} м < 2,45 м.`, "СП 59.13330.2020 п. 6.1.8 (сверить редакцию)", r.id);
     // Антресоль
     const m = R(1).filter(r => !r.sub), mA = m.reduce((s, r) => s + area(r), 0);
-    if (m.length) {
+    if (m.length && b.upper === "floor") {
+      if (!items.some(i => i.t === "item" && /^stair/.test(i.k)) && !items.some(i => i.t === "room" && /лестниц/i.test(i.name))) add("info", "Лестница на 2 этаж в плане не показана (если она снаружи — ок).", "СП 1.13130.2020");
+    } else if (m.length) {
       if (b.h < 4.7) add("red", `Высота зала ${b.h} м < 4,7 м — антресоль невозможна.`, "СП 118.13330.2022 п. 4.26");
       if (b.h - b.mz < 2.2) add("red", `Над антресолью ${(b.h - b.mz).toFixed(2)} м < 2,2 м.`, "СП 118.13330.2022 п. 4.26");
       if (b.mz - 0.3 < 2.2) add("red", `Под антресолью ${(b.mz - 0.3).toFixed(2)} м < 2,2 м.`, "СП 118.13330.2022 п. 4.26");
@@ -639,7 +641,7 @@
   KB.summary = function (S) {
     const rooms = (S.items || []).filter(i => i.t === "room" && !i.sub);
     const a0 = rooms.filter(r => !r.lv).reduce((s, r) => s + r.w * r.h, 0), a1 = rooms.filter(r => r.lv === 1).reduce((s, r) => s + r.w * r.h, 0);
-    const lines = [`${S.name}: здание ${S.b.w}×${S.b.d}×${S.b.h} м, 1 этаж ${a0.toFixed(1)} м², антресоль ${a1.toFixed(1)} м²`];
+    const lines = [`${S.name}: здание ${S.b.w}×${S.b.d}×${S.b.h} м, 1 этаж ${a0.toFixed(1)} м², ${S.b.upper === "floor" ? "2 этаж" : "антресоль"} ${a1.toFixed(1)} м²`];
     if (S.program) { lines.push("Программа (цель → факт):"); for (const f of KB.programFact(S)) lines.push(`  ${f.state === "ok" ? "✓" : f.state === "yellow" ? "~" : "✗"} ${f.name}: ${f.placed}/${f.n} шт, ${f.factArea}/${f.targetArea} м²`); }
     const ch = KB.checks(S); lines.push(`Проверки: ${ch.filter(c => c.level === "red").length} красных, ${ch.filter(c => c.level === "yellow").length} жёлтых`);
     for (const c of ch) lines.push(`  [${c.level}] ${c.text} (${c.ref})`);
@@ -981,7 +983,7 @@
     for (const lv of [0, 1]) {
       const rs = rooms.filter(r => lvOf(r) === lv).sort((a, c) => (a.y - c.y) || (a.x - c.x)); if (!rs.length) continue;
       const tot = rs.filter(r => !r.sub).reduce((s, r) => s + r.w * r.h, 0);
-      L.push(`\n${lv ? "АНТРЕСОЛЬ" : "1 ЭТАЖ"} — помещений ${rs.length}, сумма (без зон внутри) ${tot.toFixed(1)} м²:`);
+      L.push(`\n${lv ? (b.upper === "floor" ? "2 ЭТАЖ" : "АНТРЕСОЛЬ") : "1 ЭТАЖ"} — помещений ${rs.length}, сумма (без зон внутри) ${tot.toFixed(1)} м²:`);
       for (const r of rs) {
         const its = KB.contents(S, r).filter(i => i.t === "item"), cnt = {};
         for (const i of its) { const n = KB.FK[i.k] ? KB.FK[i.k].n : i.k; cnt[n] = (cnt[n] || 0) + 1; }

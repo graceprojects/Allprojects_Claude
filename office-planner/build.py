@@ -5,13 +5,17 @@
   Планировщик-офиса.html      — один файл, всё внутри
   ../.claude/skills/sales-office-planning/scripts/office-kb.js — ядро для скилла Claude
 """
-import os, re, shutil
+import os, re, shutil, json
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 kb = open(os.path.join(HERE, 'src', 'office-kb.js'), encoding='utf-8').read()
 p = os.path.join(HERE, 'index.html')
 s = open(p, encoding='utf-8').read()
 s = re.sub(r'/\* KB:BEGIN \*/\n.*?\n/\* KB:END \*/', lambda m: '/* KB:BEGIN */\n' + kb + '\n/* KB:END */', s, flags=re.S)
+ex = os.path.join(HERE, 'examples', 'chine-house.json')
+if os.path.exists(ex):
+    js = json.dumps(json.load(open(ex, encoding='utf-8')), ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+    s = re.sub(r'/\* EX:chine \*/.*?/\* /EX \*/', lambda m: '/* EX:chine */' + js + '/* /EX */', s, flags=re.S)
 open(p, 'w', encoding='utf-8').write(s)
 CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>'
 head = ('<!doctype html>\n<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'

@@ -36,6 +36,9 @@ open(os.path.join(site, '.nojekyll'), 'w').write('')
 skill = os.path.join(ROOT, '.claude', 'skills', 'sales-office-planning', 'scripts')
 if os.path.isdir(skill):
     shutil.copy(os.path.join(HERE, 'src', 'office-kb.js'), os.path.join(skill, 'office-kb.js'))
+skill2 = os.path.join(ROOT, '.claude', 'skills', 'office-brief-to-plan', 'scripts')
+if os.path.isdir(skill2):
+    shutil.copy(os.path.join(HERE, 'src', 'office-kb.js'), os.path.join(skill2, 'office-kb.js'))
 # MCP-сервер: Claude Desktop / Code управляет планировщиком (zip и .mcpb для установки)
 import zipfile
 mcp = os.path.join(HERE, 'mcp')

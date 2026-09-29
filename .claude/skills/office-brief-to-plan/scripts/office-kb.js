@@ -1,0 +1,1433 @@
+/* Офис продаж: база знаний, генератор планировки и проверки норм.
+ * Один файл для двух потребителей:
+ *   - планировщик (index.html) — встраивается между маркерами KB:BEGIN / KB:END (build.py);
+ *   - скилл Claude (.claude/skills/sales-office-planning/scripts) — через Node: require('./office-kb.js').
+ * Координаты — метры, X вдоль дороги, Y вглубь (Y = D — витражный фасад у дороги).
+ * Площади — в чистоте. Числа — ориентиры для эскиза заказчика, окончательно проверяет проектировщик.
+ */
+(function (root) {
+  "use strict";
+  const KB = { version: "1.1" };
+
+  KB.CAT = {
+    client: { n: "Клиентская зона", c: "#F3E6CF" }, office: { n: "Кабинеты продаж", c: "#DAE8F6" },
+    meet: { n: "Переговорные", c: "#F7D9C2" }, back: { n: "Бэк-офис", c: "#E5DBF2" },
+    staff: { n: "Помещения персонала", c: "#E0ECD8" }, service: { n: "Служебные / технические", c: "#E2E2DC" },
+    wc: { n: "Санузлы", c: "#D3EEEA" }, circ: { n: "Коммуникации", c: "#EDEDE6" },
+  };
+  // Зоны приватности: от входа вглубь и снизу вверх
+  KB.ZONES = { public: "Публичная", semi: "Полупубличная", private: "Закрытая клиентская", service: "Служебная" };
+
+  // Размеры мебели, которую ставит генератор (w × h, м) — совпадают с каталогом планировщика
+  const DIMS = {
+    door9: [.9, 1.2], door18: [1.8, 1.2], slide: [1, .3], recep: [3, .8], model: [5, 3], lounge: [2.2, 2.9],
+    kidtab: [1, .6], kidmat: [2, 2], led: [2, .2], plant: [.6, .6], cooler: [.35, .35], work3: [1.6, 2.3],
+    deskB: [1.8, .9], chairO: [.6, .6], chairV: [.5, .5], os4: [2.8, 2.6], os1: [1.4, 1.3], cab: [.9, .45], shelf: [1, .4],
+    safe: [.5, .5], desk: [1.6, .8], meet6: [2.4, 2.1], meet8: [3.2, 2.2], kitch: [2.4, .6], fridge: [.7, .7],
+    dine: [1.9, 1.9], bar: [3, .6], stool: [.45, .45], wc: [.4, .7], sink: [.55, .45], cubicle: [1.2, 1.8],
+    stair2: [2.6, 4], mfp: [.6, .5], sofa2: [1.6, .9], stand: [1.2, .4],
+  };
+
+  // Каталог мебели и оборудования: key, название, группа, w, h (глубина), z (высота 3D, "H" — до потолка), тип символа, цвет 3D
+  KB.FURN = [
+    // проёмы
+    ["door9","Дверь 900","Двери и окна",.9,1.2,2.1,"door","#9a7b56"],["door10","Дверь 1000","Двери и окна",1,1.3,2.1,"door","#9a7b56"],
+    ["door18","Дверь двустворчатая 1800","Двери и окна",1.8,1.2,2.4,"door2","#9a7b56"],["slide","Дверь раздвижная 1000","Двери и окна",1,.3,2.4,"slide","#a9d3ee"],
+    ["auto","Автоматическая дверь 2000","Двери и окна",2,.3,2.6,"auto","#a9d3ee"],["win","Окно 1500","Двери и окна",1.5,.3,1.5,"win","#a9d3ee"],
+    // клиентская зона
+    ["recep","Стойка ресепшен","Клиентская зона",3,.8,1.1,"recep","#d9c19a"],["recepL","Стойка ресепшен угловая","Клиентская зона",2.6,1.8,1.1,"recepL","#d9c19a"],
+    ["model","Стол макета ЖК 5×3","Клиентская зона",5,3,.9,"model","#e9e2d2"],["modelS","Стол макета 3×2","Клиентская зона",3,2,.9,"model","#e9e2d2"],
+    ["lounge","Мягкая зона (диван+2 кресла)","Клиентская зона",2.2,2.9,.8,"lounge","#c9c4bb"],
+    ["sofa2","Диван 2-местный","Клиентская зона",1.6,.9,.8,"sofa","#b9b2a6"],["sofa3","Диван 3-местный","Клиентская зона",2.2,.9,.8,"sofa","#b9b2a6"],
+    ["arm","Кресло","Клиентская зона",.8,.8,.8,"arm","#b9b2a6"],["ctab","Журнальный столик","Клиентская зона",1.2,.6,.45,"table","#e0d6c6"],
+    ["bench","Банкетка","Клиентская зона",1.2,.45,.45,"table","#b9b2a6"],["cafe4","Стол кафе на 4","Клиентская зона",1.9,1.9,.75,"cafe4","#e0d6c6"],
+    ["led","LED-экран / ТВ","Клиентская зона",2,.2,1.2,"screen","#2b2f33"],["media","Медиастена 4 м","Клиентская зона",4,.3,2.5,"screen","#2b2f33"],
+    ["stand","Стенд с планировками","Клиентская зона",1.2,.4,2,"stand","#f1efe9"],["plant","Растение в кашпо","Клиентская зона",.6,.6,1.4,"plant","#5d8c4e"],
+    ["cooler","Кулер","Клиентская зона",.35,.35,1.1,"cooler","#e6eef3"],["kidtab","Детский столик","Клиентская зона",1,.6,.5,"kidtab","#f2b76a"],
+    ["kidmat","Игровой коврик","Клиентская зона",2,2,.05,"mat","#f4d36b"],
+    ["sofaL","Диван угловой","Клиентская зона",2.4,1.6,.8,"sofaL","#b9b2a6"],["pouf","Пуф","Клиентская зона",.5,.5,.45,"stool","#c9b79c"],
+    ["rug","Ковёр","Клиентская зона",2,3,.02,"rug","#b8a98f"],["tv","Телевизор / панель","Клиентская зона",1.45,.1,.85,"screen","#2b2f33"],
+    ["kiosk","Тач-стол / интерактивный киоск","Клиентская зона",.8,.6,1.1,"kiosk","#2b2f33"],["coat","Вешалка напольная","Клиентская зона",.5,.5,1.8,"coat","#8c6a4a"],
+    // кабинеты
+    ["work3","Рабочее место менеджера + 2 гостя","Офисная мебель",1.6,2.3,.75,"work3","#e8e2d6"],["desk","Стол менеджера 1600","Офисная мебель",1.6,.8,.75,"table","#e8e2d6"],
+    ["deskB","Стол руководителя 1800","Офисная мебель",1.8,.9,.75,"table","#8c6a4a"],["os1","Рабочее место open-space","Офисная мебель",1.4,1.3,.75,"os1","#e8e2d6"],
+    ["os4","Блок open-space на 4","Офисная мебель",2.8,2.6,.75,"os4","#e8e2d6"],["chairO","Кресло офисное","Офисная мебель",.6,.6,1,"chair","#3c4146"],
+    ["chairV","Стул посетителя","Офисная мебель",.5,.5,.85,"chair","#6b7075"],["cab","Шкаф для документов","Офисная мебель",.9,.45,2,"cab","#dcd6cb"],
+    ["shelf","Стеллаж архивный","Офисная мебель",1,.4,2.2,"shelf","#c9c4ba"],["safe","Сейф","Офисная мебель",.5,.5,1.2,"safe","#55595c"],
+    ["mfp","МФУ / принтер","Офисная мебель",.6,.5,1,"mfp","#d8dbdd"],
+    ["deskL","Стол угловой","Офисная мебель",1.6,1.6,.75,"deskL","#e8e2d6"],["locker","Шкафчики персонала","Офисная мебель",.9,.5,1.9,"cab","#c9ccd0"],
+    ["wardrobe","Шкаф-купе","Офисная мебель",1.8,.6,2.4,"cab","#dcd6cb"],
+    // переговоры
+    ["meet6","Стол переговоров на 6","Переговорные",2.4,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
+    ["meet10","Стол переговоров на 10","Переговорные",4,2.2,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
+    ["roundT","Стол круглый со стульями","Переговорные",1.5,1.5,.75,"round","#d8cdb8"],["flip","Флипчарт","Переговорные",.7,.5,1.8,"flip","#f1efe9"],
+    // кухня и бар
+    ["kitch","Кухонный гарнитур 2.4 м","Кухня и бар",2.4,.6,.9,"kitch","#e9e6df"],["fridge","Холодильник","Кухня и бар",.7,.7,1.9,"fridge","#e9ecee"],
+    ["bar","Барная стойка 3 м","Кухня и бар",3,.6,1.1,"bar","#c8a877"],["stool","Барный стул","Кухня и бар",.45,.45,.75,"stool","#555"],
+    ["dine","Обеденный стол на 4","Кухня и бар",1.9,1.9,.75,"cafe4","#e0d6c6"],
+    ["kitchL","Кухня угловая","Кухня и бар",2.4,1.8,.9,"kitchL","#e9e6df"],["coffee","Кофемашина на тумбе","Кухня и бар",.6,.5,1.4,"cooler","#6b5a4a"],
+    // сантехника
+    ["wc","Унитаз","Сантехника",.4,.7,.8,"toilet","#f4f4f2"],["sink","Раковина","Сантехника",.55,.45,.85,"sink","#f4f4f2"],
+    ["urinal","Писсуар","Сантехника",.4,.35,1,"urinal","#f4f4f2"],["shower","Душевой поддон","Сантехника",.9,.9,2,"shower","#dbe9f0"],
+    ["cubicle","Кабина с/у 1.2×1.8","Сантехника",1.2,1.8,2.1,"cubicle","#c7d7da"],
+    ["wcset","С/у МГН — комплект (СП 59)","Сантехника",2.2,2.25,.9,"wcset","#f4f4f2"],
+    // конструкции
+    ["col","Колонна 400×400","Конструкции",.4,.4,"H","col","#8f928d"],["col3","Колонна 300×300","Конструкции",.3,.3,"H","col","#8f928d"],
+    ["stair2","Лестница двухмаршевая","Конструкции",2.6,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
+  ];
+  // Типоразмеры по реальным стандартам (ГОСТ 13025 / 16371, каталоги офисной мебели, СП 59 для МГН): [название, ширина, глубина] в м
+  const S_ = (...a) => a;
+  KB.SIZES = {
+    door9: S_(["700 (санузел)", .7, 1.0], ["800", .8, 1.1], ["900", .9, 1.2], ["1000 (МГН)", 1.0, 1.3], ["1200 (полуторная)", 1.2, 1.5]),
+    door10: S_(["900", .9, 1.2], ["1000 (МГН)", 1.0, 1.3], ["1200 (полуторная)", 1.2, 1.5]),
+    door18: S_(["1500", 1.5, 1.05], ["1800", 1.8, 1.2], ["2000", 2.0, 1.3]),
+    slide: S_(["900", .9, .3], ["1000", 1.0, .3], ["1200", 1.2, .3], ["1600 (двойная)", 1.6, .3]),
+    auto: S_(["1400", 1.4, .3], ["1600", 1.6, .3], ["2000", 2.0, .3], ["2400", 2.4, .3]),
+    win: S_(["600", .6, .3], ["900", .9, .3], ["1200", 1.2, .3], ["1500", 1.5, .3], ["1800", 1.8, .3], ["2400", 2.4, .3]),
+    recep: S_(["на 1 чел. 1800", 1.8, .8], ["на 2 чел. 2400", 2.4, .8], ["на 2 чел. 3000", 3.0, .8], ["на 3 чел. 3600", 3.6, .8]),
+    recepL: S_(["2000×1600", 2.0, 1.6], ["2600×1800", 2.6, 1.8], ["3200×2000", 3.2, 2.0]),
+    model: S_(["2×1,5 м", 2, 1.5], ["3×2 м", 3, 2], ["4×3 м", 4, 3], ["5×3 м", 5, 3], ["6×4 м", 6, 4], ["6×5 м", 6, 5], ["8×5 м", 8, 5]),
+    modelS: S_(["2×1,5 м", 2, 1.5], ["3×2 м", 3, 2], ["4×3 м", 4, 3]),
+    sofa2: S_(["2-местный 1400", 1.4, .85], ["2-местный 1600", 1.6, .9], ["2-местный 1800", 1.8, .95]),
+    sofa3: S_(["3-местный 2000", 2.0, .9], ["3-местный 2200", 2.2, .9], ["4-местный 2600", 2.6, .95], ["4-местный 2800", 2.8, 1.0]),
+    sofaL: S_(["2200×1500", 2.2, 1.5], ["2400×1600", 2.4, 1.6], ["2800×1800", 2.8, 1.8], ["3200×2000", 3.2, 2.0]),
+    arm: S_(["лёгкое 650", .65, .7], ["800", .8, .8], ["900 (лаунж)", .9, .85]),
+    ctab: S_(["600×600", .6, .6], ["800×800", .8, .8], ["1000×500", 1.0, .5], ["1200×600", 1.2, .6]),
+    bench: S_(["1000", 1.0, .4], ["1200", 1.2, .45], ["1600", 1.6, .45]),
+    cafe4: S_(["на 2 (Ø700)", 1.4, 1.4], ["на 4 (Ø900)", 1.9, 1.9]),
+    round4: S_(["на 4 (Ø900)", 1.9, 1.9], ["на 5 (Ø1100)", 2.1, 2.1]),
+    roundT: S_(["на 2 (Ø600)", 1.4, 1.4], ["на 3 (Ø800)", 1.7, 1.7], ["на 4 (Ø1000)", 2.0, 2.0], ["на 6 (Ø1200)", 2.3, 2.3], ["на 8 (Ø1500)", 2.6, 2.6]),
+    led: S_(["55\" 1230", 1.25, .1], ["65\" 1450", 1.45, .1], ["75\" 1680", 1.7, .1], ["86\" 1920", 1.95, .1], ["LED 2000", 2.0, .2]),
+    tv: S_(["55\" 1230", 1.25, .1], ["65\" 1450", 1.45, .1], ["75\" 1680", 1.7, .1], ["86\" 1920", 1.95, .1]),
+    media: S_(["2 м", 2, .3], ["3 м", 3, .3], ["4 м", 4, .3], ["6 м", 6, .3]),
+    stand: S_(["800", .8, .4], ["1200", 1.2, .4], ["1600", 1.6, .4], ["2400", 2.4, .4]),
+    plant: S_(["малое Ø400", .4, .4], ["среднее Ø600", .6, .6], ["большое Ø900", .9, .9]),
+    kidmat: S_(["1,5×1,5 м", 1.5, 1.5], ["2×2 м", 2, 2], ["3×3 м", 3, 3], ["4×4 м", 4, 4]),
+    rug: S_(["1,6×2,3 м", 1.6, 2.3], ["2×3 м", 2, 3], ["2,5×3,5 м", 2.5, 3.5], ["3×4 м", 3, 4]),
+    work3: S_(["стол 1400", 1.4, 2.3], ["стол 1600", 1.6, 2.3], ["стол 1800", 1.8, 2.4]),
+    desk: S_(["1200×600", 1.2, .6], ["1400×700", 1.4, .7], ["1600×800", 1.6, .8], ["1800×900", 1.8, .9]),
+    deskB: S_(["1600×800", 1.6, .8], ["1800×900", 1.8, .9], ["2000×1000", 2.0, 1.0]),
+    deskL: S_(["1400×1400", 1.4, 1.4], ["1600×1600", 1.6, 1.6], ["1800×1600", 1.8, 1.6]),
+    os1: S_(["стол 1200", 1.2, 1.3], ["стол 1400", 1.4, 1.3], ["стол 1600", 1.6, 1.3]),
+    os4: S_(["бенч на 2", 1.4, 2.6], ["бенч на 4", 2.8, 2.6], ["бенч на 6", 4.2, 2.6], ["бенч на 8", 5.6, 2.6]),
+    cab: S_(["400×450", .4, .45], ["800×450", .8, .45], ["900×450", .9, .45], ["1200×600", 1.2, .6]),
+    shelf: S_(["800×400", .8, .4], ["1000×400", 1.0, .4], ["1200×600", 1.2, .6]),
+    wardrobe: S_(["1200", 1.2, .6], ["1800", 1.8, .6], ["2400", 2.4, .6]),
+    locker: S_(["2 секции 600", .6, .5], ["3 секции 900", .9, .5], ["4 секции 1200", 1.2, .5]),
+    meet6: S_(["на 4 · стол 1400×900", 2.2, 2.0], ["на 6 · стол 1800×1000", 2.6, 2.1], ["на 8 · стол 2400×1100", 3.2, 2.2], ["на 10 · стол 3000×1200", 3.8, 2.3], ["на 12 · стол 3600×1200", 4.4, 2.3], ["на 16 · стол 4800×1400", 5.6, 2.5]),
+    meet8: S_(["на 8 · стол 2400×1100", 3.2, 2.2], ["на 10 · стол 3000×1200", 3.8, 2.3]),
+    meet10: S_(["на 10 · стол 3000×1200", 3.8, 2.3], ["на 12 · стол 3600×1200", 4.4, 2.3], ["на 16 · стол 4800×1400", 5.6, 2.5]),
+    kitch: S_(["1200", 1.2, .6], ["1800", 1.8, .6], ["2400", 2.4, .6], ["3000", 3.0, .6], ["3600", 3.6, .6]),
+    kitchL: S_(["1800×1500", 1.8, 1.5], ["2400×1800", 2.4, 1.8], ["3000×2000", 3.0, 2.0]),
+    bar: S_(["2000", 2.0, .6], ["3000", 3.0, .6], ["4000", 4.0, .6], ["5000", 5.0, .7]),
+    dine: S_(["на 2 · 700×700", 1.4, 1.5], ["на 4 · 1200×800", 1.9, 1.9]),
+    fridge: S_(["600", .6, .65], ["700", .7, .7], ["двухдверный 900", .9, .75]),
+    cubicle: S_(["900×1500", .9, 1.5], ["1000×1600", 1.0, 1.6], ["1200×1800", 1.2, 1.8]),
+    wcset: S_(["2200×2250 (минимум СП 59)", 2.2, 2.25], ["2500×2500", 2.5, 2.5]),
+    stair2: S_(["2400×4000", 2.4, 4.0], ["2600×4500", 2.6, 4.5], ["3000×5000", 3.0, 5.0]),
+    stair1: S_(["1000×5700", 1.0, 5.7], ["1200×5700", 1.2, 5.7], ["1500×6000", 1.5, 6.0]),
+    col: S_(["300×300", .3, .3], ["400×400", .4, .4], ["500×500", .5, .5], ["600×600", .6, .6]),
+    shower: S_(["800×800", .8, .8], ["900×900", .9, .9], ["1200×900 (МГН)", 1.2, .9]),
+  };
+  KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
+
+  KB.DEFAULTS = {
+    name: "Офис продаж", w: 40, d: 12, h: 7, M: 6, B: 6, maket: "5x3",
+    kids: true, cafe: true, wardrobe: true, bank: true, cashier: false, media: false, showroom: false,
+    director: true, mezz: "auto", front: "vitrage",
+  };
+  KB.MAKET = { "2x1.5": [2, 1.5], "3x2": [3, 2], "5x3": [5, 3], "6x4": [6, 4], "6x5": [6, 5] };
+
+  /* ------------------------------------------------------------ пакеты офиса продаж по площади
+   * Каждый пакет — таблица строк программы. Количество (n) и площадь (area) могут быть формулами.
+   * Переменные формул: A — площадь офиса (м², внутри стен), M — менеджеров (мест консультаций), B — бэк-офис,
+   * seats — мест ожидания; функции: min, max, round, ceil, floor, clamp(x, a, b).
+   * status: «обязательно» — всегда; «желательно» — включено, можно выключить; «опция» — выключено, можно включить.
+   */
+  KB.PACKAGES = {
+    S: { name: "Базовый", sub: "максимум мест продаж", min: 60, max: 1500, A: 150, k: 1.3, depth: 10, h: 4, gap: 1.0, open: true,
+      vars: { M: "clamp(round(A / 34), 2, 20)", B: "clamp(round(M * 0.25), 1, 6)", seats: "max(4, M)", maket: "A < 160 ? '2x1.5' : (A < 380 ? '3x2' : '5x3')" },
+      about: "Продажи в приоритете: открытые столы менеджеров в зале, сделочные по числу менеджеров, компактное ожидание и кофе-корнер. Минимум сервисных «впечатлений».",
+      maketMin: "2x1.5", minN: { cabinet: 2 }, grow: ["cabinet", "seats"], shrink: ["kids", "cafe", "wardrobe", "seats", "maket", "cabinet", "vip"],
+      rows: [
+        { key: "tambour", name: "Тамбур", zone: "public", cat: "circ", n: "A >= 150 ? 1 : 0", w: 2.6, h: 2.5, border: "glass", rule: "до 150 м² — тепловая завеса; глубина по ходу ≥ 2,45 м", sub: true },
+        { key: "reception", name: "Ресепшен / хостес", zone: "public", cat: "client", n: "1", w: "A < 200 ? 2.2 : 3.6", h: "A < 200 ? 1.8 : 2.2", border: "none", sub: true, rule: "стойка у входа, видна с порога" },
+        { key: "lounge", name: "Зона ожидания", zone: "public", cat: "client", n: "1", area: "max(6, seats * 1.8)", border: "none", sub: true, rule: "1 место на менеджера × 1,8 м² (СП 118: 2 м² до 10 чел.)" },
+        { key: "cafe", name: "Кофе-корнер", zone: "public", cat: "client", n: "1", w: 2.4, h: 2, border: "none", status: "желательно", color: "#D9B98E", rule: "кофемашина, кулер" },
+        { key: "maket", name: "Зона макета / экран", zone: "public", cat: "client", n: "1", area: "maketArea", border: "none", sub: true, rule: "стол + обход 1,0 м; виден с улицы" },
+        { key: "kids", name: "Детский уголок", zone: "public", cat: "client", n: "A >= 200 ? 1 : 0", w: 2.5, h: 2.5, border: "none", sub: true, status: "желательно", color: "#F4D36B", rule: "в поле зрения родителей" },
+        { key: "cabinet", name: "Место консультации", zone: "semi", cat: "office", n: "M", w: 2.8, h: 2.6, border: "none", color: "#DAE8F6", rule: "открытый стол + 2 кресла, 7,3 м²" },
+        { key: "vip", name: "Сделочная", zone: "private", cat: "meet", n: "max(1, ceil(M / 8))", area: "A < 200 ? 9 : 12", border: "glass", color: "#A8784E", rule: "переговорная-сделочная, 1 на 8 мест продаж" },
+        { key: "wcv", name: "С/у универсальный (МГН)", zone: "public", cat: "wc", n: "1", area: "5", color: "#CFE8E6", rule: "общий, ≥ 2,20×2,25 м" },
+        { key: "wcs", name: "С/у персонала", zone: "service", cat: "wc", n: "M + B > 10 ? 1 : 0", w: 1.5, h: 2.2, color: "#CFE8E6" },
+        { key: "kitchen", name: "Мини-кухня", zone: "service", cat: "staff", n: "1", area: "M + B <= 8 ? 6 : M + B + 2", rule: "6 м² до 10 человек, далее 1 м² на человека" },
+        { key: "backoffice", name: "Бэк-офис", zone: "service", cat: "back", n: "1", area: "max(6, B * 6)", rule: "6 м² на место (СП 118)" },
+        { key: "kui", name: "КУИ", zone: "service", cat: "service", n: "1", area: "max(2, A * 0.008)", rule: "0,8 м² на 100 м², ≥ 2 м² (СП 118)" },
+        { key: "elec", name: "Электрощит / слаботочка", zone: "service", cat: "service", n: "1", w: 1.4, h: 1.8 },
+      ] },
+    M: { name: "Стандарт", sub: "баланс продаж и сервиса", min: 60, max: 1500, A: 300, k: 1.35, depth: 12, h: 4.5, gap: 1.2,
+      vars: { M: "clamp(round(A / 48), 2, 16)", B: "clamp(round(M * 0.4), 1, 8)", seats: "max(6, round(1.5 * M))", maket: "A < 200 ? '2x1.5' : (A < 450 ? '3x2' : '5x3')" },
+      about: "Кабинеты менеджеров со стеклом в зал, переговорная и сделочная, банк, детский уголок, кофе-поинт, бэк-офис и кухня.",
+      maketMin: "3x2", minN: { cabinet: 2 }, grow: ["cabinet", "seats", "meet"], shrink: ["wardrobe", "server", "cafe", "bank", "director", "seats", "maket", "kids", "meet", "cabinet", "vip"],
+      rows: [
+        { key: "tambour", name: "Тамбур", zone: "public", cat: "circ", n: "1", w: 2.6, h: 2.5, border: "glass", rule: "глубина по ходу ≥ 2,45 м, двери наружу", sub: true },
+        { key: "reception", name: "Ресепшен", zone: "public", cat: "client", n: "1", w: 4.2, h: 2.4, border: "none", sub: true, rule: "стойка 2,4–3 м, видна от входа" },
+        { key: "wardrobe", name: "Гардероб посетителей", zone: "public", cat: "client", n: "A >= 280 ? 1 : 0", w: 1.6, h: 3.2, status: "желательно" },
+        { key: "lounge", name: "Зона ожидания", zone: "public", cat: "client", n: "1", area: "seats * 1.8", border: "none", sub: true, rule: "1,5 места на менеджера × 1,8 м²" },
+        { key: "cafe", name: "Кофе-поинт", zone: "public", cat: "client", n: "1", w: 3.2, h: 3.2, border: "none", status: "желательно", color: "#D9B98E", rule: "стойка + 2 стола, мокрая точка" },
+        { key: "maket", name: "Зона макета", zone: "public", cat: "client", n: "1", area: "maketArea", border: "none", sub: true, rule: "стол + обход 1,2 м" },
+        { key: "kids", name: "Детский уголок", zone: "public", cat: "client", n: "A >= 150 ? 1 : 0", w: 3, h: 3, border: "none", sub: true, status: "желательно", color: "#F4D36B", rule: "виден из зоны ожидания, не у входа" },
+        { key: "cabinet", name: "Кабинет менеджера", zone: "semi", cat: "office", n: "M", w: 3, h: 3.2, border: "glass", color: "#9EA3A6", rule: "стекло в зал, 9,6 м²" },
+        { key: "meet", name: "Переговорная на 6", zone: "semi", cat: "meet", n: "max(1, round(M / 4))", w: 4.5, h: 3.2, border: "glass", rule: "1 на 4 менеджера" },
+        { key: "bank", name: "Ипотека / банк-партнёр", zone: "semi", cat: "office", n: "A >= 200 ? (M > 9 ? 2 : 1) : 0", w: 3, h: 3.2, border: "glass", status: "желательно" },
+        { key: "vip", name: "Сделочная / VIP", zone: "private", cat: "meet", n: "A >= 180 ? max(1, ceil(M / 10)) : 0", area: "16", border: "glass", color: "#A8784E", rule: "подписание, 4–6 человек" },
+        { key: "wcv", name: "С/у посетителей", zone: "public", cat: "wc", n: "1", area: "A >= 380 ? 12 : 5.5", color: "#CFE8E6", rule: "МГН; от 380 м² — М/Ж + МГН" },
+        { key: "wcs", name: "С/у персонала", zone: "service", cat: "wc", n: "max(1, ceil((M + B + 2) / 15))", w: 1.5, h: 2.2, color: "#CFE8E6" },
+        { key: "kitchen", name: "Кухня / приём пищи", zone: "service", cat: "staff", n: "1", area: "M + B + 2 <= 10 ? 9 : max(12, M + B + 2)", rule: "СП 44: ≤ 10 чел. — 6–9 м², иначе 1 м² на чел., ≥ 12" },
+        { key: "backoffice", name: "Бэк-офис", zone: "service", cat: "back", n: "1", area: "max(9, B * 6)", rule: "6 м² на место (СП 118)" },
+        { key: "cashier", name: "Касса", zone: "private", cat: "service", n: "1", w: 3, h: 3, status: "опция", rule: "в Узбекистане часто нужна; при эскроу — нет" },
+        { key: "director", name: "Кабинет руководителя (РОП)", zone: "service", cat: "back", n: "A >= 280 ? 1 : 0", w: 3.5, h: 3.5, status: "желательно", color: "#A8784E" },
+        { key: "kui", name: "КУИ", zone: "service", cat: "service", n: "1", w: 1.5, h: 1.8 },
+        { key: "elec", name: "Электрощитовая", zone: "service", cat: "service", n: "1", w: 1.8, h: 2 },
+        { key: "server", name: "Серверная / архив", zone: "service", cat: "service", n: "A >= 220 ? 1 : 0", w: 1.8, h: 2, status: "желательно" },
+      ] },
+    L: { name: "Премиум", sub: "впечатление и сервис", min: 60, max: 1500, A: 500, k: 1.3, depth: 15, h: 7, gap: 1.2,
+      vars: { M: "clamp(round(A / 75), 2, 12)", B: "clamp(round(M * 0.6), 2, 10)", seats: "max(8, round(2 * M))", maket: "A < 250 ? '3x2' : (A < 520 ? '5x3' : '6x4')" },
+      about: "Сценарий «галереи»: бар, большой макет, детская комната, шоурум материалов, медиа-зона, просторные кабинеты, две переговорные и VIP, кабинет РОП.",
+      maketMin: "3x2", minN: { cabinet: 2 }, grow: ["cabinet", "showroom", "media", "seats", "meet"], shrink: ["wardrobe", "storage", "archive", "media", "cashier", "showroom", "seats", "bank", "meet", "cabinet", "maket", "kids", "cafe", "vip"],
+      rows: [
+        { key: "tambour", name: "Тамбур", zone: "public", cat: "circ", n: "1", w: 2.6, h: 2.5, border: "glass", rule: "глубина по ходу ≥ 2,45 м, двери наружу", sub: true },
+        { key: "reception", name: "Ресепшен / хостес", zone: "public", cat: "client", n: "1", w: 4.4, h: 2.4, border: "none", sub: true, rule: "стойка 3 м + зона встречи" },
+        { key: "wardrobe", name: "Гардероб посетителей", zone: "public", cat: "client", n: "A >= 250 ? 1 : 0", w: 2, h: 3.2, status: "желательно" },
+        { key: "lounge", name: "Лаунж / зона ожидания", zone: "public", cat: "client", n: "1", area: "seats * 2", border: "none", sub: true, rule: "2 места на менеджера × 2 м²" },
+        { key: "cafe", name: "Бар / кафе", zone: "public", cat: "client", n: "1", w: "A < 250 ? 3.5 : 5", h: 3.2, border: "none", color: "#D9B98E", rule: "барная стойка (бариста) + столики" },
+        { key: "maket", name: "Зона макета", zone: "public", cat: "client", n: "1", area: "maketArea", border: "none", sub: true, rule: "большой стол + обход 1,2 м, виден с улицы" },
+        { key: "media", name: "Медиа / VR зона", zone: "public", cat: "client", n: "A >= 300 ? 1 : 0", w: 4, h: 3, border: "none", sub: true, status: "желательно" },
+        { key: "kids", name: "Детская комната", zone: "public", cat: "client", n: "1", w: "A < 250 ? 3 : 4", h: "A < 250 ? 3 : 4", border: "none", sub: true, color: "#F4D36B", rule: "видна из лаунжа, не у входа" },
+        { key: "showroom", name: "Шоурум материалов", zone: "semi", cat: "client", n: "A >= 220 ? 1 : 0", w: "A < 400 ? 5 : 7.5", h: 3.2, border: "glass", status: "желательно", rule: "образцы отделки, мокапы" },
+        { key: "cabinet", name: "Кабинет менеджера", zone: "semi", cat: "office", n: "M", w: 3.2, h: 3.2, border: "glass", color: "#9EA3A6", rule: "стекло в зал, 10 м²" },
+        { key: "meet", name: "Переговорная на 6–8", zone: "semi", cat: "meet", n: "max(1, round(M / 3))", w: 4.5, h: 3.2, border: "glass", rule: "1 на 3 менеджера" },
+        { key: "bank", name: "Ипотека / банк-партнёр", zone: "semi", cat: "office", n: "M > 8 ? 2 : 1", w: 3, h: 3.2, border: "glass", rule: "рядом со сделочной" },
+        { key: "vip", name: "Сделочная / VIP", zone: "private", cat: "meet", n: "max(1, ceil(M / 5))", area: "A < 420 ? 16 : 22", border: "glass", color: "#A8784E", rule: "16–25 м²" },
+        { key: "cashier", name: "Касса", zone: "private", cat: "service", n: "1", w: 3, h: 3, status: "опция", rule: "в РФ при эскроу обычно не нужна; в Узбекистане часто нужна (эскроу вводится поэтапно)" },
+        { key: "prayer", name: "Комната для намаза", zone: "service", cat: "staff", n: "1", w: 2, h: 2.5, status: "опция", rule: "по запросу (Узбекистан)" },
+        { key: "director", name: "Кабинет РОП", zone: "service", cat: "back", n: "1", w: 4, h: 4, color: "#A8784E", rule: "руководитель отдела продаж" },
+        { key: "backoffice", name: "Бэк-офис", zone: "service", cat: "back", n: "1", area: "max(12, B * 6)", rule: "6 м² на место" },
+        { key: "kitchen", name: "Кухня / комната отдыха", zone: "service", cat: "staff", n: "1", area: "M + B + 3 <= 10 ? 9 : max(12, M + B + 3)", rule: "СП 44: 1 м² на человека, ≥ 12 м² (≤ 10 чел. — 6–9)" },
+        { key: "wcv", name: "С/у посетителей (М/Ж + МГН)", zone: "public", cat: "wc", n: "1", area: "A >= 250 ? 12 : 5.5", color: "#CFE8E6" },
+        { key: "wcs", name: "С/у персонала", zone: "service", cat: "wc", n: "max(1, ceil((M + B + 3) / 15))", w: 1.6, h: 2.3, color: "#CFE8E6" },
+        { key: "kui", name: "КУИ", zone: "service", cat: "service", n: "1", w: 1.8, h: 2 },
+        { key: "elec", name: "Электрощитовая", zone: "service", cat: "service", n: "1", w: 2, h: 2 },
+        { key: "server", name: "Серверная", zone: "service", cat: "service", n: "1", w: 1.8, h: 2 },
+        { key: "archive", name: "Архив", zone: "service", cat: "service", n: "A >= 300 ? 1 : 0", w: 2.2, h: 2.5, status: "желательно" },
+        { key: "storage", name: "Склад POS-материалов", zone: "service", cat: "service", n: "A >= 400 ? 1 : 0", w: 2, h: 2.5, status: "желательно" },
+      ] },
+  };
+  KB.DEFAULT_PACKAGES = JSON.parse(JSON.stringify(KB.PACKAGES));
+  KB.STATUSES = ["обязательно", "желательно", "опция"];
+
+  // Безопасный калькулятор формул: только числа, переменные, + - * / ( ) ? : < > = ! & | , ' и функции min/max/round/ceil/floor/clamp
+  KB.evalExpr = function (expr, vars) {
+    if (typeof expr === "number") return expr;
+    const src = String(expr == null ? "" : expr).trim().replace(/,(?=\d)/g, ".");
+    if (!src) return 0;
+    if (!/^[\w\s.+\-*/()?:<>=!&|,'"]*$/.test(src)) throw new Error("Недопустимые символы в формуле: " + src);
+    const allowed = new Set(["min", "max", "round", "ceil", "floor", "clamp", ...Object.keys(vars)]);
+    const ids = src.replace(/'[^']*'|"[^"]*"/g, "").match(/[A-Za-z_]\w*/g) || [];
+    for (const id of ids) if (!allowed.has(id)) throw new Error(`Неизвестное имя «${id}» в формуле: ${src}`);
+    const fn = new Function("min", "max", "round", "ceil", "floor", "clamp", ...Object.keys(vars), "return (" + src + ");");
+    return fn(Math.min, Math.max, Math.round, Math.ceil, Math.floor, (x, a, b) => Math.min(b, Math.max(a, x)), ...Object.values(vars));
+  };
+
+  // Программа из пакета: rows с вычисленными n и area; opts[key] включает/выключает строки; counts[key] — ручное количество
+  KB.packageProgram = function (pkgKey, A, opts = {}, counts = {}, pkgDef) {
+    const P = pkgDef || KB.PACKAGES[pkgKey]; if (!P) throw new Error("Нет пакета " + pkgKey);
+    const v = { A: +A || P.A };
+    v.M = Math.max(1, Math.round(KB.evalExpr(P.vars.M, v)));
+    if (counts.cabinet != null) v.M = Math.max(1, +counts.cabinet);
+    v.B = Math.max(0, Math.round(KB.evalExpr(P.vars.B, v)));
+    v.seats = Math.max(1, Math.round(KB.evalExpr(P.vars.seats, v)));
+    const maket = String(KB.evalExpr(P.vars.maket || "'3x2'", v)); const mk = KB.MAKET[maket] || KB.MAKET["3x2"];
+    v.maketArea = +((mk[0] + 2 * (P.gap || 1.2)) * (mk[1] + 2 * (P.gap || 1.2))).toFixed(2);
+    const rows = [];
+    for (const r of P.rows) {
+      const on = r.status === "опция" ? !!opts[r.key] : (r.status === "желательно" ? opts[r.key] !== false : true);
+      if (!on) continue;
+      let n = counts[r.key] != null ? +counts[r.key] : Math.round(KB.evalExpr(r.n ?? "1", v));
+      if (!(n > 0)) continue;
+      let w = +KB.evalExpr(r.w ?? 0, v) || 0, h = +KB.evalExpr(r.h ?? 0, v) || 0, area = r.area != null ? +KB.evalExpr(r.area, v) : w * h;
+      if (r.key === "maket") { w = +(mk[0] + 2 * (P.gap || 1.2)).toFixed(2); h = +(mk[1] + 2 * (P.gap || 1.2)).toFixed(2); area = w * h; }
+      const row = { key: r.key, name: r.name, zone: r.zone, cat: r.cat, n, w, h, area: +area.toFixed(2), border: r.border || "wall", status: r.status || "обязательно", rule: r.rule || "", sub: !!r.sub };
+      if (r.color) row.color = r.color;
+      if (r.key === "lounge") row.seats = v.seats;
+      rows.push(row);
+    }
+    const net = rows.reduce((s, r) => s + r.n * r.area, 0);
+    return { rows, vars: v, maket, net: +net.toFixed(1), need: +(net * (P.k || 1.3)).toFixed(0), k: P.k || 1.3 };
+  };
+
+  // Здание под площадь пакета: глубина из пакета, длина из площади (внутри стен 0,3 м)
+  KB.suggestBuilding = function (pkgKey, A, pkgDef) {
+    const P = pkgDef || KB.PACKAGES[pkgKey]; const d = P.depth || 12, w = +(((+A || P.A) / (d - 0.6)) + 0.6).toFixed(1);
+    return { w, d, h: P.h || 4.5 };
+  };
+
+  /* ------------------------------------------------------------ программа помещений */
+  KB.program = function (p0) {
+    if (p0 && p0.pkg) {
+      const pp = KB.packageProgram(p0.pkg, p0.area, p0.opts || {}, p0.counts || {}, p0.pkgDef);
+      const P = p0.pkgDef || KB.PACKAGES[p0.pkg], v = pp.vars, has = k => pp.rows.some(r => r.key === k);
+      const p = Object.assign({}, KB.DEFAULTS, p0, { M: v.M, B: v.B, maket: pp.maket, compact: !!P.compact, gap: P.gap || 1.2, k: P.k,
+        kids: has("kids"), cafe: has("cafe"), wardrobe: has("wardrobe"), bank: has("bank"), cashier: has("cashier"), media: has("media"), showroom: has("showroom"), director: has("director") });
+      return { params: p, rows: pp.rows, seats: v.seats, staff: v.M + v.B + 1 };
+    }
+    const p = Object.assign({}, KB.DEFAULTS, p0);
+    const M = Math.max(1, Math.round(p.M)), B = Math.max(0, Math.round(p.B));
+    const mk = KB.MAKET[p.maket] || KB.MAKET["5x3"];
+    const seats = Math.max(6, Math.ceil(1.5 * M));
+    const staff = M + B + (p.director ? 1 : 0) + 1; // + хостес
+    const R = [];
+    const add = (key, name, zone, cat, n, w, h, o = {}) =>
+      R.push(Object.assign({ key, name, zone, cat, n, w, h, area: +(w * h).toFixed(2), border: "wall", status: "обязательно", rule: "" }, o));
+    add("tambour", "Тамбур", "public", "circ", 1, 2.6, 2.5, { border: "glass", rule: "глубина по ходу ≥ 2,45 м, двери наружу (СП 59)" });
+    add("reception", "Ресепшен", "public", "client", 1, 4.4, 2.4, { border: "none", sub: true, rule: "стойка 3 м, видна от входа" });
+    add("lounge", "Зона ожидания", "public", "client", 1, 0, 0, { area: +(seats * 1.8).toFixed(1), border: "none", sub: true, seats, rule: `мест max(6; 1,5·M) = ${seats} × 1,8 м²` });
+    add("maket", "Зона макета", "public", "client", 1, +(mk[0] + 2.4).toFixed(2), +(mk[1] + 2.4).toFixed(2), { border: "none", sub: true, rule: `стол ${mk[0]}×${mk[1]} + обход 1,2 м` });
+    if (p.kids) add("kids", "Детская зона", "public", "client", 1, 3.5, 3.5, { border: "none", sub: true, status: "желательно", color: "#F4D36B", rule: "видна из зоны ожидания, не у входа" });
+    if (p.cafe) add("cafe", "Кофе-поинт", "public", "client", 1, 4, 3.2, { border: "none", status: "желательно", color: "#D9B98E", rule: "мокрая точка" });
+    if (p.wardrobe) add("wardrobe", "Гардероб посетителей", "public", "client", 1, 2, 3.2, { border: "wall", status: "желательно" });
+    if (p.media) add("media", "Медиа / VR зона", "public", "client", 1, 4, 3, { border: "none", sub: true, status: "опция" });
+    add("cabinet", "Кабинет менеджера", "semi", "office", M, 3, 3.2, { border: "glass", color: "#9EA3A6", rule: "1 на менеджера, стекло в зал" });
+    add("meet", "Переговорная на 6", "semi", "meet", Math.max(1, Math.round(M * 0.2)), 4.5, 3.2, { border: "glass", rule: "max(1; 0,2·M), акустика Rw ≥ 42 дБ" });
+    if (p.bank) add("bank", "Ипотека / банк-партнёр", "semi", "office", M > 12 ? 2 : 1, 3, 3.2, { border: "glass" });
+    if (p.showroom) add("showroom", "Шоурум отделки", "semi", "client", 1, 5, 3.2, { border: "glass", status: "опция" });
+    add("vip", "Сделочная / VIP", "private", "meet", Math.ceil(M / 6), 0, 0, { area: 22, border: "glass", color: "#A8784E", rule: "ceil(M/6), 18–25 м²" });
+    if (p.cashier) add("cashier", "Касса", "private", "service", 1, 3, 3, { status: "опция", rule: "усиленная дверь, сейф; при эскроу обычно не нужна" });
+    add("wcv", "С/у посетителей", "public", "wc", 1, 0, 0, { area: M >= 6 ? 8.8 : 5, color: "#CFE8E6", rule: "универсальная кабина МГН ≥ 2,20×2,25 (СП 59 табл. 6.1)" });
+    add("backoffice", "Бэк-офис open-space", "service", "back", 1, 0, 0, { area: Math.max(12, B * 6), rule: `B × 6 м² (≥ 4,5 м² на место с ПК)` });
+    if (p.director) add("director", "Кабинет руководителя", "service", "back", 1, 4, 4.5, { status: "желательно", color: "#A8784E", rule: "18 м² (СП 118 п. 5.31, рекомендация)" });
+    add("kitchen", "Кухня / приём пищи", "service", "staff", 1, 0, 0, { area: Math.max(12, staff), rule: `1 м² на человека в смене, ≥ 12 м² (${staff} чел.)` });
+    add("wcs", "С/у персонала", "service", "wc", Math.max(1, Math.ceil(staff / 15)), 1.8, 2.5, { color: "#CFE8E6" });
+    add("kui", "КУИ", "service", "service", 1, 1.8, 2, { rule: "кладовая уборочного инвентаря, с водой" });
+    add("elec", "Электрощитовая", "service", "service", 1, 2, 2.5, { rule: "не под мокрыми помещениями" });
+    add("server", "Серверная / архив", "service", "service", 1, 2, 2.5);
+    return { params: p, rows: R, seats, staff };
+  };
+
+  // Вмещается ли программа: Σ целей × k (коммуникации) против площади внутри наружных стен
+  KB.fit = function (p0) {
+    const pr = KB.program(p0), p = pr.params;
+    const need = pr.rows.reduce((s, r) => s + r.n * r.area, 0), k = p.k || 1.35;
+    const mezzOk = p.mezz === "yes" || (p.mezz === "auto" && p.h >= 6.2);
+    const inner = (p.w - 0.6) * (p.d - 0.6), have = inner + (mezzOk && p.h - 3.3 >= 2.2 ? Math.min(0.38 * inner, 290) : 0);
+    return { need: +(need * k).toFixed(0), net: +need.toFixed(0), have: +have.toFixed(0), k, ratio: +(have / (need * k)).toFixed(2), mezz: mezzOk };
+  };
+
+  /* ------------------------------------------------------------ утилиты модели планировщика */
+  let _n = 0;
+  const uid = () => "g" + (++_n).toString(36) + Math.random().toString(36).slice(2, 7);
+  const r3 = v => Math.round(v * 1000) / 1000;
+  function room(name, x, y, w, h, cat, border, o = {}) {
+    return Object.assign({ id: uid(), t: "room", lv: 0, name, x: r3(x), y: r3(y), w: r3(w), h: r3(h), cat, border, color: KB.CAT[cat].c, sub: false, ph: 3 }, o);
+  }
+  function furn(k, x, y, rot = 0, o = {}) {
+    const d = DIMS[k] || (KB.FK[k] ? [KB.FK[k].w, KB.FK[k].h] : [1, 1]);
+    return Object.assign({ id: uid(), t: "item", lv: 0, k, x: r3(x), y: r3(y), w: d[0], h: d[1], rot, flip: false, label: "" }, o);
+  }
+  // Дверь на стороне помещения: side n|s|e|w, off — от левого/верхнего угла, inward — открывается внутрь
+  function door(r, side, off, w = 0.9, inward = true, o = {}) {
+    const k = w >= 1.6 ? "door18" : "door9", h = k === "door18" ? w / 2 + 0.3 : w + 0.3, t = 0.15;
+    let x, y, rot;
+    if (side === "s") { const ey = r.y + r.h; rot = inward ? 180 : 0; x = r.x + off; y = inward ? ey + t - h : ey - t; }
+    if (side === "n") { const ey = r.y; rot = inward ? 0 : 180; x = r.x + off; y = inward ? ey - t : ey + t - h; }
+    if (side === "w") { const ex = r.x; rot = inward ? 270 : 90; y = r.y + off; x = inward ? ex - t : ex + t - h; }
+    if (side === "e") { const ex = r.x + r.w; rot = inward ? 90 : 270; y = r.y + off; x = inward ? ex + t - h : ex - t; }
+    return Object.assign({ id: uid(), t: "item", lv: r.lv || 0, k, x: r3(x), y: r3(y), w, h: r3(h), rot, flip: false, label: "" }, o);
+  }
+  const center = (r, w, h) => [r.x + (r.w - w) / 2, r.y + (r.h - h) / 2];
+
+  /* ------------------------------------------------------------ генератор планировки */
+  KB.generate = function (p0) {
+    const prog = KB.program(p0), p = prog.params, rows = prog.rows, warn = [];
+    const W = +p.w, D = +p.d, H = +p.h, t = 0.3;
+    const x0 = t, x1 = W - t, y0 = t, y1 = D - t, Din = y1 - y0, Lin = x1 - x0;
+    const get = k => rows.find(r => r.key === k);
+    let mezz = p.mezz === "yes" || (p.mezz === "auto" && H >= 6.2);
+    const mz = 3.3;
+    if (mezz && H - mz < 2.2) { warn.push(`Антресоль не помещается по высоте: над ней остаётся ${(H - mz).toFixed(2)} м < 2,2 м. Антресоль отключена.`); mezz = false; }
+    const I = [], unplaced = [];
+    const sum = a => a.reduce((s, r) => s + r.w, 0);
+    // Схема: задний ряд (глубина 3,2) вдоль глухой стены — сквозной: [кофе, гардероб, кабинеты, переговорные …] … [лестница, с/у, КУИ, щитовая].
+    // Проход 1,8 вдоль ряда — главная коммуникация. Передний ряд у витража в правом торце — сервисный блок: VIP, кухня, (бэк-офис).
+    // Остальная полоса у витража — публичная: детская, ожидание, макет, вход с ресепшен.
+    const cabR = get("cabinet"), openDesks = !!(cabR && cabR.border === "none"), gap = p.gap || 1.2;
+    const baseRow = cabR && !openDesks ? cabR.h : (p.compact ? 2.6 : 3.2);
+    const shallow = D < 11, rowD = shallow ? Math.min(3.0, baseRow) : baseRow, aisle = shallow ? 1.5 : 1.8, yA = y0 + rowD + aisle, df = y1 - yA;
+    const deep = df >= 8.6; // глубокий зал: второй ряд кабинетов и две полосы у витража
+    const dfS = df > 7.4 ? 6.2 : df; // глубина сервисного блока; при глубоком здании зал продолжается вдоль витража
+    if (df < (p.compact ? 3.6 : 4.5)) warn.push(`Глубина здания мала для схемы с проходом: у витража остаётся ${df.toFixed(1)} м.`);
+    const mk0 = (k, w, extra = {}) => { const pr = get(k); w = pr.w || w; return Object.assign({ key: k, name: pr.name, cat: pr.cat, border: pr.border, color: pr.color, w, w0: w }, extra); };
+    const KNOWN = new Set(["tambour", "reception", "lounge", "maket", "kids", "cafe", "wardrobe", "media", "cabinet", "meet", "bank", "showroom", "vip", "cashier", "wcv", "wcs", "backoffice", "director", "kitchen", "kui", "elec", "server"]);
+    // задний ряд: клиентская часть
+    let hallRow = [];
+    if (get("cafe")) hallRow.push(mk0("cafe", 4));
+    if (get("wardrobe")) hallRow.push(mk0("wardrobe", 2));
+    if (cabR) for (let i = 0; i < cabR.n; i++) hallRow.push(mk0("cabinet", 3));
+    if (get("meet")) for (let i = 0; i < get("meet").n; i++) hallRow.push(mk0("meet", 4.5));
+    for (const r of rows) if (!KNOWN.has(r.key) && (r.zone === "semi" || r.zone === "private") && !r.sub) for (let i = 0; i < r.n; i++) hallRow.push({ key: r.key, name: r.name, cat: r.cat, border: r.border, color: r.color, w: r.w || Math.max(2.4, r.area / rowD), w0: r.w || 3 });
+    if (get("bank")) for (let i = 0; i < get("bank").n; i++) hallRow.push(mk0("bank", 3));
+    if (get("showroom")) hallRow.push(mk0("showroom", 5));
+    // задний ряд: служебная часть в правом торце; лестница — у торца, чтобы антресоль была компактной
+    const wcv = get("wcv"), wcs = get("wcs");
+    const svcRow = [];
+    const pw = (r, def) => p.pkg ? Math.max(r.w && r.h ? r.w * r.h / rowD : 0, r.w || 0, Math.min(def, 1.0)) : def;
+    if (wcv) svcRow.push({ key: "wcv", name: wcv.name, cat: "wc", border: "wall", w: p.pkg ? Math.max(2.4, wcv.area / rowD) : (p.M >= 6 ? 3.9 : 2.4), color: wcv.color });
+    if (wcs) for (let i = 0; i < wcs.n; i++) svcRow.push({ key: "wcs", name: wcs.name, cat: "wc", border: "wall", w: p.pkg ? Math.max(1.5, wcs.w * wcs.h / rowD) : 1.8, color: wcs.color });
+    const kuiR = get("kui"), elecR = get("elec"), servR = get("server");
+    if (kuiR) svcRow.push({ key: "kui", name: kuiR.name, cat: "service", border: "wall", w: p.pkg ? Math.max(1.0, kuiR.area / rowD) : 1.8 });
+    if (elecR) svcRow.push({ key: "elec", name: elecR.name, cat: "service", border: "wall", w: p.pkg ? Math.max(1.2, elecR.area / rowD) : 2.0 });
+    if (!mezz && servR) svcRow.push({ key: "server", name: servR.name, cat: "service", border: "wall", w: p.pkg ? Math.max(1.5, servR.area / rowD) : 2.0 });
+    for (const r of rows) if (!KNOWN.has(r.key) && r.zone === "service" && !r.sub) for (let i = 0; i < r.n; i++) svcRow.push({ key: r.key, name: r.name, cat: r.cat, border: r.border, color: r.color, w: Math.max(1.5, r.area / rowD) });
+    if (mezz) svcRow.push({ key: "stair", name: "Лестничная клетка", cat: "circ", border: "none", w: 2.8 });
+    // передний ряд у витража в правом торце
+    const vip = get("vip"), kit = get("kitchen"), bo = get("backoffice"), dir = get("director"), cash = get("cashier");
+    const front = [];
+    if (vip) for (let i = 0; i < vip.n; i++) front.push({ key: "vip", name: vip.name, cat: "meet", border: "glass", w: Math.max(p.pkg ? 3.0 : 4.2, vip.area / dfS), color: vip.color });
+    if (cash) front.push({ key: "cashier", name: "Касса", cat: "service", border: "wall", w: Math.max(2.4, 9 / dfS) });
+    if (p.compact) {   // маленький офис: всё служебное — в задний ряд, у витража только сделочная
+      if (kit) svcRow.splice(1, 0, { key: "kitchen", name: kit.name, cat: "staff", border: "wall", w: Math.max(2.0, kit.area / rowD) });
+      if (bo) svcRow.splice(2, 0, { key: "backoffice", name: bo.name, cat: "back", border: "glass", w: Math.max(2.0, bo.area / rowD) });
+      if (dir) svcRow.splice(2, 0, { key: "director", name: dir.name, cat: "back", border: "wall", w: Math.max(3.0, dir.area / rowD), color: dir.color });
+    } else {
+      if (kit) front.push({ key: "kitchen", name: kit.name, cat: "staff", border: "wall", w: Math.max(2.6, kit.area / dfS) });
+      if (!mezz) {
+        if (dir) front.push({ key: "director", name: dir.name, cat: "back", border: "wall", w: Math.max(3.2, (dir.area || 18) / dfS), color: dir.color });
+        if (bo) front.push({ key: "backoffice", name: bo.name, cat: "back", border: "glass", w: Math.max(3, bo.area / dfS) });
+      }
+    }
+    const mkS = KB.MAKET[p.maket] || KB.MAKET["5x3"];
+    const needPublic = (get("kids") ? 4.0 : 0) + (get("cafe") ? 4.4 : 0) + mkS[0] + 2 * gap + 1.2 + 4.8 + Math.min(Math.ceil((get("lounge") ? get("lounge").seats : 6) / 5), 2) * 2.8;
+    const pubMin = Math.max(needPublic, 0.45 * Lin);
+    const canRow2 = df >= 7.8;
+    // переполнение заднего ряда: кабинеты — во второй ряд (остров), переговорные и ипотека — к VIP или во второй ряд,
+    // кофе-поинт — в публичную зону, остальное — «не размещено»
+    const row2 = []; let cafePublic = false, deskHall = 0;
+    const over = () => sum(hallRow) + sum(svcRow) - Lin;
+    const takeLast = k => { const i = hallRow.map(r => r.key).lastIndexOf(k); return i < 0 ? null : hallRow.splice(i, 1)[0]; };
+    for (const k of ["cafe", "wardrobe", "bank", "showroom", "meet", "cabinet"]) {
+      while (over() > 1e-6) {
+        const it = takeLast(k); if (!it) break;
+        if (k === "cafe") { cafePublic = true; continue; }
+        if (k === "cabinet" && openDesks) { deskHall++; continue; }
+        const fw = Math.max(k === "bank" ? 2.6 : 3.4, (it.w * rowD) / dfS);
+        if ((k === "bank" || k === "meet") && (dfS < df || (x1 - sum(front) - fw) - x0 >= pubMin)) { it.w = fw; front.splice(vip ? vip.n : 0, 0, it); continue; }
+        if (canRow2) { row2.push(it); continue; }
+        unplaced.push(it.name);
+      }
+    }
+    // освободившееся место в заднем ряду — обратно помещениям (сначала «не размещённые», потом перенесённые к витражу)
+    { const back = [...unplaced.map(n => ({ n })), ...front.filter(f => f.w0).map(f => ({ f }))];
+      for (const c of back) { const gap = Lin - sum(hallRow) - sum(svcRow);
+        const key = c.f ? c.f.key : rows.find(r => r.name === c.n)?.key; if (!key) continue;
+        const w0 = { cabinet: 3, meet: 4.5, bank: 3, showroom: 5, wardrobe: 2, cafe: 4 }[key]; if (!w0 || w0 > gap + 1e-6) continue;
+        if (c.f) front.splice(front.indexOf(c.f), 1); else unplaced.splice(unplaced.indexOf(c.n), 1);
+        const it = mk0(key, w0); const at = hallRow.map(r => r.key).lastIndexOf(key); hallRow.splice(at < 0 ? hallRow.length : at + 1, 0, it); } }
+    const Lf = sum(front), xs = x1 - Lf;             // левая граница сервисного блока у витража
+    const xP = dfS < df ? x1 : x1 - sum(front);        // правая граница публичной полосы у витража
+    // ---- упаковка публичной полосы у витража: [детская] [ожидание…] [макет] [вход + ресепшен] [ожидание…] [кофе]
+    const yP0 = row2.length ? yA + rowD : yA, bandD = y1 - yP0;
+    const kidR0 = get("kids"), cafR = get("cafe"), tamR = get("tambour"), recR = get("reception");
+    let kw = kidR0 ? Math.max(2, kidR0.w || 3.5) : 0, kh = kidR0 ? Math.max(2, kidR0.h || 3.5) : 0;
+    const cw = cafR ? Math.max(2.4, Math.min(4.4, cafR.w || 4)) : 0, ch = cafR ? Math.min(3.5, Math.max(2, cafR.h || 3.5)) : 0;
+    const tw = tamR ? Math.max(2.2, tamR.w || 2.6) : 0, th = tamR ? Math.max(2.2, tamR.h || 2.5) : 0;
+    const rw = recR ? (recR.w || 4.4) : 0, rh = recR ? (recR.h || 2.4) : 0;
+    const beside = !!recR && (p.compact || bandD < th + 1.2 + rh + 0.2);   // ресепшен рядом со входом, если глубины мало
+    const eW = beside ? Math.max(tw, 1.4) + 0.3 + rw : Math.max(tw, rw, 3);
+    const small = p.compact ? KB.MAKET["2x1.5"] : KB.MAKET["3x2"];
+    let mk = mkS, mw = mk[0] + 2 * gap, mh = mk[1] + 2 * gap, useKids = !!kidR0, useCafe = !!(cafR && cafePublic), useMaket = !!get("maket");
+    const lounge = get("lounge") || { seats: 0 }, per = p.compact ? 3 : 5, groups = Math.ceil(lounge.seats / per), gw = 2.2, gh = p.compact ? 1.8 : 2.9;
+    const innerOK = () => bandD >= (p.compact ? gh + 0.6 : 3.5) + 1.0 + mh + 0.3;
+    if (useMaket && !innerOK() && mh + 0.6 > bandD) { if (mk !== small) { mk = small; mw = mk[0] + 2 * gap; mh = mk[1] + 2 * gap; warn.push(`Стол макета уменьшен до ${mk[0]}×${mk[1]}: не хватает глубины зала.`); } if (mh + 0.6 > bandD) { useMaket = false; warn.push("Зона макета не помещается по глубине зала — поставьте экран или уменьшите макет."); } }
+    let inner = useMaket && innerOK();
+    const L = xP - x0 - 0.6, G = 0.6;
+    const minL = groups > 0 ? gw + G : 0;   // хотя бы одна мягкая зона у витража
+    const seqW = () => minL + (useKids ? kw + G : 0) + (useMaket && !inner ? mw + G : 0) + eW + (useCafe ? cw + G : 0);
+    if (seqW() > L && useCafe) { useCafe = false; unplaced.push(cafR.name); }
+    if (seqW() > L && useKids) { useKids = false; unplaced.push(kidR0.name); }
+    if (seqW() > L && useMaket && !inner && mk !== small) { mk = small; mw = mk[0] + 2 * gap; mh = mk[1] + 2 * gap; inner = innerOK(); warn.push(`Стол макета уменьшен до ${mk[0]}×${mk[1]}: не хватает длины витрины.`); }
+    if (seqW() > L && useMaket && !inner) { useMaket = false; warn.push("Зона макета не помещается вдоль витрины — поставьте экран или увеличьте длину здания."); }
+    let freeW = L - seqW() + minL; const nL = Math.max(0, Math.min(groups, Math.floor(freeW / (gw + G))));
+    freeW -= nL * (gw + G);
+    const seq = [];
+    if (useKids) seq.push({ t: "kids", w: kw });
+    for (let i = 0; i < Math.ceil(nL / 2); i++) seq.push({ t: "lounge", w: gw });
+    if (useMaket && !inner) seq.push({ t: "maket", w: mw });
+    seq.push({ t: "ent", w: eW });
+    for (let i = 0; i < Math.floor(nL / 2); i++) seq.push({ t: "lounge", w: gw });
+    if (useCafe) seq.push({ t: "cafe", w: cw });
+    const extra = seq.length > 1 ? freeW / (seq.length - 1) : 0;
+    { let x = x0 + 0.3 + (seq.length > 1 ? 0 : freeW / 2); for (const it of seq) { it.x = x; x += it.w + G + extra; } }
+    const ent = seq.find(it => it.t === "ent");
+    let cE = beside ? ent.x + Math.max(tw, 1.4) / 2 : ent.x + eW / 2;
+    { // дверь не должна попасть на колонну витража (шаг 5 м): сдвиг блока входа в пределах соседних зазоров
+      const i = seq.indexOf(ent), lo = i > 0 ? seq[i - 1].x + seq[i - 1].w + 0.3 : x0 + 0.3, hi = i < seq.length - 1 ? seq[i + 1].x - 0.3 : xP - 0.3;
+      const dw = tw && tw < 2.6 ? 1.2 : 1.8, ok = c => { for (let k = 0; k * 5 <= W; k++) if (Math.abs(c - k * 5) < dw / 2 + 0.25) return false; return true; };
+      for (let d = 0; d <= 2.5; d += 0.05) { let hit = false; for (const s of [d, -d]) { const nx = ent.x + s, nc = cE + s; if (nx >= lo - 1e-6 && nx + eW <= hi + 1e-6 && ok(nc)) { ent.x = nx; cE = nc; hit = true; break; } } if (hit) break; } }
+    // второй ряд — два острова по сторонам от оси входа, проход 2,4 м к ресепшен
+    const segs = [[x0 + 0.6, Math.min(cE - 2.6, xs - 0.6)], [cE + 2.6, xs - 0.6]].filter(g => g[1] - g[0] >= 2.6), R2items = [];
+    { let si = 0, cx = segs.length ? segs[0][0] : 0;
+      for (const it of row2) { while (si < segs.length && cx + it.w > segs[si][1] + 1e-6) { si++; if (si < segs.length) cx = segs[si][0]; }
+        if (si >= segs.length) { unplaced.push(it.name); continue; } R2items.push([it, cx]); cx += it.w; } }
+    if (unplaced.length) warn.push(`Не поместились: ${unplaced.join(", ")}. Увеличьте длину здания или уменьшите программу.`);
+    const place = (row, x, y, h, lv = 0) => row.map(it => { const r = room(it.name, x, y, it.w, h, it.cat, it.border, { lv, color: it.color || KB.CAT[it.cat].c }); r._key = it.key; x += it.w; I.push(r); return r; });
+    const HR = place(hallRow, x0, y0, rowD);
+    const svcX = x1 - sum(svcRow);
+    const SR = place(svcRow, svcX, y0, rowD);
+    const FR = place(front, xs, yA, dfS);
+    if (dfS < df) I.push(room("Зал продаж (у витража)", xs, yA + dfS, x1 - xs, df - dfS, "client", "none", { color: "#EDE8DE" }));
+    const R2 = R2items.map(([it, cx]) => place([it], cx, yA, rowD)[0]);
+    const yP = R2.length ? yA + rowD : yA;            // начало публичной зоны
+    for (const r of R2) { const k = r._key;
+      if (k === "cabinet" || k === "bank") { I.push(furn("work3", r.x + r.w / 2 - 0.8, r.y + 0.5, 180)); I.push(furn("slide", r.x + 0.3, r.y - 0.15)); }
+      else if (k === "meet") { I.push(furn("meet6", r.x + (r.w - 2.4) / 2, r.y + 0.75)); I.push(door(r, "n", 0.3, 0.9, true)); }
+      else I.push(door(r, "n", 0.3, 0.9, true)); }
+    const hall = room("Зал продаж", x0, yA, xs - x0, df, "client", "none", { color: "#EDE8DE" });
+    I.unshift(hall);
+    const endHall = HR.length ? HR[HR.length - 1].x + HR[HR.length - 1].w : x0;
+    if (svcX - endHall > 0.3) I.push(room("Проход", endHall, y0, svcX - endHall, rowD, "circ", "none", { color: "#EDE8DE" }));
+    I.push(room("Проход вдоль кабинетов", x0, y0 + rowD, xs - x0, aisle, "circ", "none", { color: "#EDE8DE" }));
+    I.push(room("Коридор", xs, y0 + rowD, Lf, aisle, "circ", "none"));
+
+    // наполнение заднего ряда
+    for (const r of HR) { const k = r._key, x = r.x, w = r.w;
+      if (k === "cabinet" && openDesks) { r.sub = false; I.push(furn("work3", x + w / 2 - 0.8, y0 + Math.max(0.1, (rowD - 2.3) / 2))); }
+      else if (k === "cabinet" || k === "bank") { I.push(furn("work3", x + w / 2 - 0.8, y0 + 0.4)); I.push(furn("slide", x + 0.3, y0 + rowD - 0.15)); }
+      if (k === "meet") { I.push(furn("meet6", x + (w - 2.4) / 2, y0 + 0.35)); I.push(door(r, "s", 0.3, 0.9, true)); }
+      if (k === "showroom") { I.push(furn("stand", x + 0.4, y0 + 0.2, 0, { w: w - 0.8 })); I.push(door(r, "s", 0.3, 0.9, true)); }
+      if (k === "wardrobe") { I.push(furn("shelf", x + 0.1, y0 + 0.2, 90, { w: 2.6 })); }
+      if (k === "cafe") { I.push(furn("kitch", x, y0, 0, { w: 4 })); I.push(furn("bar", x + 0.5, y0 + 1.5, 0, { w: 3.5 })); for (let i = 0; i < 4; i++) I.push(furn("stool", x + 0.9 + i * 0.8, y0 + 2.3)); }
+    }
+    for (const r of SR) { const k = r._key;
+      if (k === "stair") { I.push(furn("stair2", r.x + 0.1, r.y, 0, { h: Math.min(4, rowD + aisle - 0.2) })); continue; }
+      I.push(door(r, "s", 0.2, k === "wcv" ? 1.0 : 0.8, false));
+      if (k === "wcv") { I.push(furn("wc", r.x + 1.0, r.y + 0.1)); I.push(furn("sink", r.x + 1.7, r.y + 1.4, 90)); if (r.w >= 3.5) { I.push(furn("cubicle", r.x + r.w - 1.35, r.y + 0.05)); I.push(furn("wc", r.x + r.w - 0.95, r.y + 0.1)); } }
+      if (k === "wcs") { I.push(furn("wc", r.x + 0.7, r.y + 0.1)); I.push(furn("sink", r.x + r.w - 0.6, r.y + 1.3, 90)); }
+      if (k === "kui" || k === "server") I.push(furn("shelf", r.x + 0.1, r.y + 0.1, 0, { w: Math.min(1.6, r.w - 0.2) }));
+    }
+    for (const r of FR) { const k = r._key;
+      if (k === "vip" || k === "meet" || k === "bank" || k === "showroom") {
+        if (r === FR[0]) I.push(door(r, "w", 0.4, 0.9, true)); else I.push(door(r, "n", 0.3, 0.9, true));
+        if (k === "vip" || k === "meet") { const t8 = k === "vip" && r.w >= 4.0 ? "meet8" : "meet6"; const [cx, cy] = center(r, DIMS[t8][0], DIMS[t8][1]); I.push(furn(t8, cx, cy)); }
+        if (k === "bank") I.push(furn("work3", r.x + r.w / 2 - 0.8, r.y + 1.0, 180));
+        continue; }
+      I.push(door(r, "n", 0.3, k === "cashier" ? 1.0 : 0.9, true));
+      if (k === "kitchen") { I.push(furn("kitch", r.x + r.w - 0.6, r.y + 1.1, 90, { w: Math.min(2.4, r.h - 1.5) })); if (r.w >= 3.2) I.push(furn("dine", r.x + 0.3, r.y + r.h - 2.3)); else I.push(furn("desk", r.x + 0.2, r.y + r.h - 1.0, 0, { w: Math.min(1.6, r.w - 0.8), label: "стол" })); I.push(furn("fridge", r.x + r.w - 0.75, r.y + r.h - 0.8)); }
+      if (k === "cashier") { I.push(furn("desk", r.x + 0.2, r.y + r.h - 1.0, 0, { w: Math.min(1.6, r.w - 0.4) })); I.push(furn("safe", r.x + r.w - 0.6, r.y + r.h - 0.6)); }
+      if (k === "director") { const [cx, cy] = center(r, 1.8, 0.9); I.push(furn("deskB", cx, cy)); I.push(furn("chairO", cx + 0.6, cy + 1.0, 180)); I.push(furn("chairV", cx + 0.3, cy - 0.7)); I.push(furn("chairV", cx + 1.0, cy - 0.7)); }
+      if (k === "backoffice") fillOpen(r);
+    }
+    function fillOpen(r) {
+      let need = Math.max(1, Math.ceil(p.B / 4)), placed = 0;
+      for (let y = r.y + 0.6; y + 2.6 <= r.y + r.h - 0.3 && placed < need; y += 3.6)
+        for (let x = r.x + 0.5; x + 2.8 <= r.x + r.w - 0.3 && placed < need; x += 3.8) { I.push(furn("os4", x, y, 0, { lv: r.lv })); placed++; }
+      let seats = placed * 4;
+      for (let y = r.y + 0.4; y + 1.3 <= r.y + r.h - 0.2 && seats < p.B; y += 1.9)
+        for (let x = r.x + 0.3; x + 1.4 <= r.x + r.w - 0.2 && seats < p.B; x += 1.6) { if (placed && y < r.y + 0.6 + Math.ceil(placed / Math.max(1, Math.floor((r.w - 0.8) / 3.8))) * 3.6) continue; I.push(furn("os1", x, y, 0, { lv: r.lv })); seats++; }
+      if (seats < p.B) warn.push(`В бэк-офисе помещается ${seats} мест из ${p.B}.`);
+    }
+    I.push(door({ x: x1 - 0.001, y: y0 + rowD, w: 0.001, h: aisle, lv: 0 }, "e", 0.35, 1.1, false, { label: "Служебный вход" }));
+
+    // публичная полоса у витража (позиции из упаковки выше)
+    const dW = tw && tw < 2.6 ? 1.2 : 1.8;
+    if (tamR) { I.push(room(tamR.name, cE - tw / 2, y1 - th, tw, th, "circ", "glass", { sub: true }));
+      I.push(door({ x: cE - dW / 2, y: y1 - th, w: dW, h: 0.001 }, "n", 0, dW, true)); }
+    I.push(door({ x: cE - dW / 2, y: y1, w: dW, h: 0.001 }, "n", 0, dW, true));
+    const recX = beside ? ent.x + Math.max(tw, 1.4) + 0.3 : cE - rw / 2;
+    const recY = beside ? y1 - rh - 0.4 : Math.max(yP + 0.2, y1 - th - 1.5 - rh);
+    if (recR) {
+      if (!beside && y1 - th - (recY + rh) < 1.2) warn.push("Мало места между тамбуром и ресепшен (зона «декомпрессии» < 1,2 м).");
+      I.push(room(recR.name, recX, recY, rw, rh, "client", "none", { sub: true }));
+      if (beside) { I.push(furn("recep", recX + 0.2, recY + 0.2, 90, { w: Math.min(1.4, rh - 0.3) })); I.push(furn("chairO", recX + 1.2, recY + 0.4)); }
+      else { const dk = Math.min(3, rw - 0.8); I.push(furn("recep", cE - dk / 2, recY + rh - 1.1, 180, { w: dk })); I.push(furn("chairO", cE - 0.3, recY + 0.3)); } }
+    let placedG = 0;
+    const putLounge = (x, y) => { if (p.compact) { I.push(furn("sofa3", x, y + gh - 0.9, 180)); I.push(furn("ctab", x + 0.5, y)); } else I.push(furn("lounge", x, y)); };
+    for (const it of seq) {
+      if (it.t === "kids") { I.push(room(kidR0.name, it.x, y1 - kh, kw, kh, "client", "none", { sub: true, color: "#F4D36B" })); I.push(furn("kidmat", it.x + 0.2, y1 - Math.min(1.6, kh - 0.4) - 0.2, 0, { w: Math.min(1.8, kw - 0.4), h: Math.min(1.6, kh - 0.4) })); if (kw >= 3) I.push(furn("kidtab", it.x + kw - 1.3, y1 - kh + 0.2)); }
+      if (it.t === "cafe") { I.push(room(cafR.name, it.x, y1 - ch, cw, ch, "client", "none", { sub: true, color: "#D9B98E" })); I.push(furn("bar", it.x + 0.2, y1 - ch + 0.2, 0, { w: cw - 0.4 })); if (ch >= 3) I.push(furn("cafe4", it.x + cw / 2 - 0.95, y1 - 2.2)); }
+      if (it.t === "maket") { const my = y1 - 0.6 - mh; I.push(room("Зона макета", it.x, my, mw, mh, "client", "none", { sub: true, color: "#F2F0EA" })); I.push(furn("model", it.x + gap, my + gap, 0, { w: mk[0], h: mk[1] })); }
+      if (it.t === "lounge") { putLounge(it.x, y1 - 0.4 - gh); I.push(room(lounge.name || "Зона ожидания", it.x - 0.2, y1 - gh - 0.6, gw + 0.4, gh + 0.6, "client", "none", { sub: true, color: "#F3E6CF" })); placedG++; }
+    }
+    if (inner) { // макет в глубине зала: у витража остаётся полоса ожидания; сторона — где больше места от ресепшен
+      const my = y1 - (p.compact ? gh + 0.6 : 3.5) - 1.0 - mh, rL = recX, rR = recX + rw;
+      const leftX = rL - 0.8 - mw, rightX = rR + 0.8, fitsX = x => x >= x0 + 0.3 && x + mw <= xP - 0.3;
+      let mx = my + mh < recY - 0.2 ? Math.max(x0 + 0.3, Math.min(cE - mw / 2, xP - 0.3 - mw)) : (fitsX(leftX) && (!fitsX(rightX) || cE - x0 > xP - cE) ? leftX : (fitsX(rightX) ? rightX : Math.max(x0 + 0.3, leftX)));
+      I.push(room("Зона макета", mx, my, mw, mh, "client", "none", { sub: true, color: "#F2F0EA" })); I.push(furn("model", mx + gap, my + gap, 0, { w: mk[0], h: mk[1] })); }
+    if (placedG < groups) { // остальные мягкие зоны — в свободных местах зала
+      const occ = I.filter(i => (i.lv || 0) === 0 && (i.t === "item" || (i.t === "room" && i.name !== "Зал продаж"))).map(i => { const q = (i.rot || 0) % 180 ? [i.h, i.w] : [i.w, i.h]; return [i.x, i.y, q[0], q[1]]; });
+      const hit = (x, y, w, h, m) => occ.some(([a, b, c, d]) => x < a + c + m && x + w + m > a && y < b + d + m && y + h + m > b);
+      for (let y = y1 - 0.4 - gh; y >= yP + 0.3 && placedG < groups; y -= 0.4)
+        for (let x = x0 + 0.4; x + gw <= xP - 0.4 && placedG < groups; x += 0.4) {
+          if (x + 2.2 > cE - 1.6 && x < cE + 1.6) continue;           // ось входа свободна
+          if (hit(x, y, gw, gh, p.compact ? 0.4 : 0.5)) continue;
+          putLounge(x, y); I.push(room(lounge.name || "Зона ожидания", x - 0.2, y - 0.2, gw + 0.4, gh + 0.4, "client", "none", { sub: true, color: "#F3E6CF" }));
+          occ.push([x, y, gw, gh]); placedG++; }
+    }
+    if (placedG < groups) warn.push(`Мягких зон в зале: ${placedG} из ${groups} (мест ${placedG * per} из ${lounge.seats}).`);
+    if (openDesks && deskHall) { // открытые места консультаций, не поместившиеся вдоль стены — в свободных местах зала, ближе к проходу
+      const occ = I.filter(i => (i.lv || 0) === 0 && (i.t === "item" || (i.t === "room" && !/Зал продаж|Проход/.test(i.name)))).map(i => { const q = (i.rot || 0) % 180 ? [i.h, i.w] : [i.w, i.h]; return [i.x, i.y, q[0], q[1]]; });
+      const hit = (x, y, w, h, m) => occ.some(([a, b, c, d]) => x < a + c + m && x + w + m > a && y < b + d + m && y + h + m > b);
+      const dw = cabR.w || 2.8, dh = cabR.h || 2.6, needD = deskHall; let placedD = 0;
+      for (let y = yA + 0.1; y + dh <= y1 - 0.3 && placedD < needD; y += 0.4)
+        for (let x = x0 + 0.3; x + dw <= xP - 0.3 && placedD < needD; x += 0.4) {
+          if (x + dw > cE - 1.2 && x < cE + 1.2 && y + dh > recY - 0.5) continue;
+          if (hit(x, y, dw, dh, p.compact ? 0.3 : 0.5)) continue;
+          I.push(room(cabR.name, x, y, dw, dh, cabR.cat, "none", { sub: true, color: cabR.color || KB.CAT[cabR.cat].c }));
+          I.push(furn("work3", x + dw / 2 - 0.8, y + Math.max(0.1, (dh - 2.3) / 2)));
+          occ.push([x, y, dw, dh]); placedD++; }
+      if (placedD < needD) warn.push(`Мест консультации: не поместилось ${needD - placedD} из ${cabR.n}.`);
+    }
+    if (get("media")) { I.push(room("Медиа / VR зона", x0, yP + 0.2, 3, Math.max(2, Math.min(4, y1 - 3.7 - yP)), "client", "none", { sub: true })); I.push(furn("led", x0, yP + 0.8, 90)); }
+    I.push(furn("plant", x0 + 0.1, yA + 0.1)); I.push(furn("plant", xP - 0.8, y1 - 0.8)); I.push(furn("cooler", xs - 0.5, yA + 0.2));
+
+    // антресоль над правым торцом: над сервисным блоком и служебной частью заднего ряда
+    let mA = 0;
+    if (mezz) {
+      const inner = Lin * Din, cap = Math.min(0.38 * inner, 290) / Din;
+      const stairX = x1 - 2.8, L1 = { lv: 1 }, xm = Math.min(stairX - 3.2, Math.max(Math.min(xs, svcX), x1 - cap)), Lm = x1 - xm;
+      mA = Lm * (rowD + aisle + dfS);
+      if (mA / inner > 0.4) warn.push(`Антресоль ${Math.round(mA / inner * 100)}% площади — больше 40%, проектировщик может посчитать её этажом.`);
+      // задний ряд антресоли: [до лестницы: кабинет руководителя / архив] [площадка лестницы] [после: серверная / архив]
+      const mb = []; const before = stairX - xm, after = x1 - (stairX + 2.8);
+      if (before >= 3) mb.push({ key: dir ? "director" : "server", name: dir ? dir.name : "Серверная / архив", cat: dir ? "back" : "service", border: "wall", w: before, color: dir ? dir.color : null });
+      else if (before > 0.05) mb.push({ key: "void", name: "Проход", cat: "circ", border: "none", w: before });
+      mb.push({ key: "pad", name: "Площадка лестницы", cat: "circ", border: "none", w: 2.8 });
+      if (after >= 1.5) mb.push({ key: dir && before < 3 ? "director" : "server", name: dir && before < 3 ? dir.name : "Серверная / архив", cat: dir && before < 3 ? "back" : "service", border: "wall", w: after, color: dir && before < 3 ? dir.color : null });
+      const MB = place(mb, xm, y0, rowD, 1);
+      I.push(room("Холл-галерея", xm, y0 + rowD, Lm, aisle, "circ", "none", L1));
+      const hasServer = mb.some(r => r.key === "server");
+      const MF = place(hasServer || Lm < 6 ? [{ key: "backoffice", name: bo.name, cat: "back", border: "glass", w: Lm }]
+        : [{ key: "backoffice", name: bo.name, cat: "back", border: "glass", w: Lm - 2.0 }, { key: "server", name: "Серверная / архив", cat: "service", border: "wall", w: 2.0 }], xm, yA, dfS, 1);
+      I.push(furn("stair2", stairX + 0.1, y0, 0, Object.assign({ label: "проём", h: Math.min(4, rowD + aisle - 0.2) }, L1)));
+      I.push({ id: uid(), t: "wall", lv: 1, kind: "rail", x1: xm, y1: y0 + rowD, x2: xm, y2: yA, th: 0.05 });
+      if (MB[0] && MB[0]._key === "void") I.push({ id: uid(), t: "wall", lv: 1, kind: "rail", x1: xm, y1: y0, x2: xm, y2: y0 + rowD, th: 0.05 });
+      for (const r of MB) { if (r._key === "pad" || r._key === "void") continue; I.push(door(r, "s", 0.3, r._key === "server" ? 0.8 : 0.9, true));
+        if (r._key === "director") { const [cx, cy] = center(r, 1.8, 0.9); I.push(furn("deskB", cx, cy, 0, L1)); I.push(furn("chairO", cx + 0.6, cy - 0.7, 0, L1)); }
+        if (r._key === "server") I.push(furn("shelf", r.x + 0.1, r.y + 0.1, 0, Object.assign({ w: Math.min(1.8, r.w - 0.2) }, L1))); }
+      for (const r of MF) { I.push(door(r, "n", 0.3, r._key === "server" ? 0.8 : 0.9, true)); if (r._key === "backoffice") fillOpen(r); else I.push(furn("shelf", r.x + 0.1, r.y + r.h - 0.5, 0, Object.assign({ w: 1.8 }, L1))); }
+      if ((Lm - (hasServer ? 0 : 2)) * dfS < bo.area * 0.95) warn.push(`Бэк-офис на антресоли ${(Lm * dfS).toFixed(0)} м² меньше цели ${bo.area} м².`);
+    }
+
+    const project = {
+      v: 1, name: p.name || "Офис продаж", notes: "", b: { w: W, d: D, h: H, mz: mz, front: p.front || "vitrage" },
+      items: I.map(({ _key, ...it }) => it),
+      program: rows.map(r => ({ key: r.key, name: r.name, zone: r.zone, cat: r.cat, n: r.n, area: r.area, status: r.status, rule: r.rule, sub: !!r.sub })),
+      meta: { generator: "office-kb " + KB.version, params: p, mezz, warnings: warn },
+    };
+    return { project, warnings: warn, program: rows, mezz };
+  };
+
+  /* ------------------------------------------------------------ программа: цель / факт */
+  const norm = s => String(s || "").toLowerCase().replace(/ё/g, "е");
+  const MATCH = {
+    tambour: ["тамбур"], reception: ["ресепшен", "ресепшн", "хостес"], lounge: ["ожидан", "лаунж"], maket: ["макет"], kids: ["детск"],
+    cafe: ["кофе", "бар", "кафе"], wardrobe: ["гардероб"], media: ["медиа", "vr"], cabinet: ["кабинет менеджер", "место консультац"], meet: ["переговорн"],
+    bank: ["ипотек", "банк"], showroom: ["шоурум"], vip: ["сделочн", "vip"], archive: ["архив"], storage: ["склад"], security: ["охран"], cashier: ["касса"], wcv: ["с/у посетит", "с/у мгн", "санузел посетит", "санузел универсал", "с/у универсал", "(мгн)", "с/у мужск", "с/у женск"], stair: ["лестнич"],
+    backoffice: ["бэк-офис", "бэк офис", "back"], director: ["руководител", "роп"], kitchen: ["кухн", "приём пищи", "прием пищи", "отдыха"],
+    wcs: ["с/у персонал"], kui: ["куи", "уборочн"], elec: ["электрощит"], server: ["сервер", "архив"],
+  };
+  KB.programFact = function (S) {
+    const prog = S.program || []; const rooms = (S.items || []).filter(i => i.t === "room");
+    return prog.map(pr => {
+      const keys = MATCH[pr.key] || [norm(pr.name).slice(0, 8)];
+      const hit = rooms.filter(r => keys.some(k => norm(r.name).includes(k)) && !(pr.key === "meet" && norm(r.name).includes("vip")));
+      const area = hit.reduce((s, r) => s + r.w * r.h, 0), target = pr.n * pr.area;
+      return { ...pr, placed: hit.length, factArea: +area.toFixed(1), targetArea: +target.toFixed(1),
+        state: hit.length < pr.n ? (hit.length === 0 ? "red" : "yellow") : (area < target * 0.9 ? "yellow" : "ok") };
+    });
+  };
+
+  /* ------------------------------------------------------------ проверки норм (мягкие) */
+  KB.checks = function (S) {
+    const out = [], b = S.b || {}, items = S.items || [];
+    const rooms = items.filter(i => i.t === "room"), R = (lv) => rooms.filter(r => (r.lv || 0) === lv);
+    const add = (level, text, ref, id) => out.push({ level, text, ref, id });
+    const area = r => r.w * r.h, has = (r, s) => norm(r.name).includes(s);
+    const inner = Math.max(0, (b.w - 0.6) * (b.d - 0.6));
+    // МГН санузел
+    const wcv = rooms.filter(r => has(r, "с/у посетит") || has(r, "мгн"));
+    if (!wcv.length && rooms.length) add("red", "Нет санузла для посетителей с универсальной кабиной МГН.", "СП 59.13330.2020 п. 6.3.2");
+    for (const r of wcv) if (Math.min(r.w, r.h) < 2.2 || Math.max(r.w, r.h) < 2.25) add("red", `«${r.name}»: меньше 2,20×2,25 м — универсальная кабина МГН не помещается.`, "СП 59.13330.2020 табл. 6.1", r.id);
+    // Тамбур
+    for (const r of rooms.filter(r => has(r, "тамбур"))) if (r.h < 2.45) add("yellow", `Тамбур: глубина по ходу движения ${r.h.toFixed(2)} м < 2,45 м.`, "СП 59.13330.2020 п. 6.1.8 (сверить редакцию)", r.id);
+    // Антресоль
+    const m = R(1).filter(r => !r.sub), mA = m.reduce((s, r) => s + area(r), 0);
+    if (m.length && b.upper === "floor") {
+      if (!items.some(i => i.t === "item" && /^stair/.test(i.k)) && !items.some(i => i.t === "room" && /лестниц/i.test(i.name))) add("info", "Лестница на 2 этаж в плане не показана (если она снаружи — ок).", "СП 1.13130.2020");
+    } else if (m.length) {
+      if (b.h < 4.7) add("red", `Высота зала ${b.h} м < 4,7 м — антресоль невозможна.`, "СП 118.13330.2022 п. 4.26");
+      if (b.h - b.mz < 2.2) add("red", `Над антресолью ${(b.h - b.mz).toFixed(2)} м < 2,2 м.`, "СП 118.13330.2022 п. 4.26");
+      if (b.mz - 0.3 < 2.2) add("red", `Под антресолью ${(b.mz - 0.3).toFixed(2)} м < 2,2 м.`, "СП 118.13330.2022 п. 4.26");
+      const share = inner ? mA / inner : 0;
+      if (share >= 0.4) add("red", `Антресоль ${Math.round(share * 100)}% площади помещения — может считаться этажом.`, "СП 118.13330.2022 п. 3.1.2");
+      else if (share >= 0.35) add("yellow", `Антресоль ${Math.round(share * 100)}% — близко к пределу 40%.`, "СП 118.13330.2022 п. 3.1.2");
+      if (mA > 300) add("red", "Антресоль больше 300 м² — нужна вторая лестница.", "СП 1.13130.2020 п. 4.2.7");
+      if (!items.some(i => i.t === "item" && /^stair/.test(i.k))) add("red", "На антресоль нет лестницы.", "СП 1.13130.2020 п. 4.4");
+      for (const r of m) if (["client", "meet", "office"].includes(r.cat)) add("yellow", `«${r.name}» — клиентское помещение на антресоли: нужен подъёмник для МГН или перенос вниз.`, "СП 59.13330.2020", r.id);
+      if (!items.some(i => i.t === "wall" && i.lv === 1 && i.kind === "rail")) add("yellow", "На краю антресоли нет ограждения (h ≥ 1,2 м).", "СП 118.13330.2022 п. 6.12");
+    }
+    // Бэк-офис: площадь на рабочее место
+    const seatsOf = it => ({ os1: 1, os4: 4, work3: 1 }[it.k] || 0);
+    for (const r of rooms.filter(r => has(r, "бэк-офис"))) {
+      const n = items.filter(i => i.t === "item" && (i.lv || 0) === (r.lv || 0) && i.x >= r.x - .01 && i.y >= r.y - .01 && i.x <= r.x + r.w && i.y <= r.y + r.h).reduce((s, i) => s + seatsOf(i), 0);
+      if (n && area(r) / n < 4.5) add("yellow", `«${r.name}»: ${(area(r) / n).toFixed(1)} м² на рабочее место < 4,5 м².`, "МР 2.2.0244-21 (рекомендация)", r.id);
+    }
+    // Кухня
+    const par = (S.meta && S.meta.params) || null;
+    if (par) { const staff = par.M + par.B + (par.director ? 1 : 0) + 1, need = staff <= 10 && par.pkg ? 6 : Math.max(12, staff); const k = rooms.filter(r => has(r, "кухн") || has(r, "приём пищи"));
+      const kA = k.reduce((s, r) => s + area(r), 0); if (kA + 0.01 < need * 0.9) add("yellow", `Кухня ${kA.toFixed(1)} м² < ${need} м² (${staff} чел. в смене).`, "СП 44.13330.2011 п. 5.51–5.52 (сверить)"); }
+    // Кабинет приёма
+    for (const r of rooms.filter(r => has(r, "кабинет менеджер"))) if (area(r) < 9) add("info", `«${r.name}» ${area(r).toFixed(1)} м² — тесно для приёма клиентов (реком. ≥ 9–12 м²).`, "СП 118.13330.2022 п. 5.31 (рекомендация)", r.id);
+    // Коридоры
+    for (const r of rooms.filter(r => has(r, "коридор") || has(r, "галерея"))) { const w = Math.min(r.w, r.h); if (w < 1.2) add("red", `«${r.name}» шириной ${w.toFixed(2)} м < 1,2 м.`, "СП 1.13130.2020 п. 4.3.4", r.id); else if (w < 1.5) add("yellow", `«${r.name}» ${w.toFixed(2)} м: для разъезда кресел нужно ≥ 1,5–1,8 м.`, "СП 59.13330.2020 п. 6.2.1", r.id); }
+    // Геометрия: за контуром здания и пересечения
+    for (const r of rooms) if (r.x < -0.01 || r.y < -0.01 || r.x + r.w > b.w + 0.01 || r.y + r.h > b.d + 0.01) add("red", `«${r.name}» выходит за контур здания.`, "геометрия", r.id);
+    for (const lv of [0, 1]) { const rs = R(lv).filter(r => !r.sub && !has(r, "зал"));
+      for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) { const a = rs[i], c = rs[j];
+        const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x), oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y);
+        if (ox > 0.15 && oy > 0.15) add("yellow", `«${a.name}» и «${c.name}» перекрываются.`, "геометрия", a.id); } }
+    // Программа
+    if (S.program && S.program.length) for (const f of KB.programFact(S)) {
+      if (f.placed < f.n) add(f.status === "обязательно" ? "red" : "info", `Программа: «${f.name}» ${f.placed} из ${f.n}.`, "программа помещений");
+      else if (f.state === "yellow") add("info", `Программа: «${f.name}» ${f.factArea} м² при цели ${f.targetArea} м².`, "программа помещений");
+    }
+    const order = { red: 0, yellow: 1, info: 2 };
+    return out.sort((a, c) => order[a.level] - order[c.level]);
+  };
+
+  /* ------------------------------------------------------------ текстовая сводка (для Claude и CLI) */
+  KB.summary = function (S) {
+    const rooms = (S.items || []).filter(i => i.t === "room" && !i.sub);
+    const a0 = rooms.filter(r => !r.lv).reduce((s, r) => s + r.w * r.h, 0), a1 = rooms.filter(r => r.lv === 1).reduce((s, r) => s + r.w * r.h, 0);
+    const lines = [`${S.name}: здание ${S.b.w}×${S.b.d}×${S.b.h} м, 1 этаж ${a0.toFixed(1)} м², ${S.b.upper === "floor" ? "2 этаж" : "антресоль"} ${a1.toFixed(1)} м²`];
+    if (S.program) { lines.push("Программа (цель → факт):"); for (const f of KB.programFact(S)) lines.push(`  ${f.state === "ok" ? "✓" : f.state === "yellow" ? "~" : "✗"} ${f.name}: ${f.placed}/${f.n} шт, ${f.factArea}/${f.targetArea} м²`); }
+    const ch = KB.checks(S); lines.push(`Проверки: ${ch.filter(c => c.level === "red").length} красных, ${ch.filter(c => c.level === "yellow").length} жёлтых`);
+    for (const c of ch) lines.push(`  [${c.level}] ${c.text} (${c.ref})`);
+    return lines.join("\n");
+  };
+
+  /* ------------------------------------------------------------ АВТОПЛАН: размеры здания + вариант наполнения → зонирование
+   * Программа уровня (Базовый / Стандарт / Премиум) считается от площади, затем подгоняется под реальные размеры:
+   * не помещается — по порядку уровня убираются/уменьшаются помещения; осталось много места — добавляются места продаж и сервис.
+   * Возвращает лучший из перебранных вариантов и журнал решений (что и почему изменено).
+   */
+  KB.LEVEL_KEYS = ["S", "M", "L"];
+  // где помещение стоит в схеме: полоса вдоль глухой стены / публичная зона у витража / служебное ядро
+  const GROUP = { cafe: "band", wardrobe: "band", showroom: "band", cabinet: "band", meet: "band", bank: "band", vip: "band", cashier: "band",
+    kids: "pub", lounge: "pub", seats: "pub", maket: "pub", media: "pub", reception: "pub", tambour: "pub" };
+  const MAKET_STEPS = ["6x5", "6x4", "5x3", "3x2", "2x1.5"];
+  KB.autoPlan = function (p0) {
+    const pkg = String(p0.pkg || p0.level || "M").toUpperCase(), base = KB.PACKAGES[pkg];
+    if (!base) throw new Error("Вариант: S (Базовый), M (Стандарт) или L (Премиум)");
+    const w = +p0.w, d = +p0.d, h = +p0.h || 4.5;
+    if (!(w >= 6 && d >= 5)) throw new Error("Задайте размеры здания: длина ≥ 6 м, глубина ≥ 5 м.");
+    const inner = (w - 0.6) * (d - 0.6), mezzOk = p0.mezz === "yes" || (p0.mezz !== "no" && h >= 6.2);
+    const A = +p0.area || Math.round(inner * (mezzOk ? 1.2 : 1));          // программа — с учётом ~20% на антресоли
+    const log = [];
+    const nm = k => { const r = base.rows.find(x => x.key === k); return r ? r.name : k; };
+    const def = () => { const P = JSON.parse(JSON.stringify(base)); P.compact = A < 180 || d < 9.5; if (P.compact) P.gap = Math.min(P.gap || 1.2, 1.0); return P; };
+    let st = { counts: Object.assign({}, p0.counts || {}), opts: Object.assign({}, p0.opts || {}), seats: null, maket: null };
+    const run = s => {
+      const P = def(); if (s.seats != null) P.vars.seats = String(s.seats); if (s.maket) P.vars.maket = "'" + s.maket + "'";
+      const g = KB.generate2({ pkg, pkgDef: P, area: A, w, d, h, mezz: p0.mezz || "auto", name: p0.name || "Офис продаж", opts: s.opts, counts: s.counts, overflowOrder: base.shrink });
+      const fact = KB.programFact(g.project);
+      let miss = 0, missOpt = [], missReq = [];
+      for (const f of fact) if (f.placed < f.n) { const k = f.status === "обязательно" ? 10 : 3; miss += k * (f.n - f.placed); (k === 10 ? missReq : missOpt).push(f); }
+      const sp = g.project.meta.seatsPlaced, sw = g.project.meta.seatsWanted;
+      if (sw && sp < sw) { const lr = fact.find(f => f.key === "lounge"); if (lr && !missOpt.includes(lr) && !missReq.includes(lr)) { missOpt.push(Object.assign({}, lr, { placed: 0 })); miss += 3; } }
+      const red = KB.checks(g.project).filter(c => c.level === "red" && c.ref !== "программа помещений").length;
+      const fill = fact.reduce((a, f) => a + Math.min(f.factArea, f.targetArea * 1.3), 0) / inner;
+      return { g, fact, miss, missOpt, missReq, red, fill, score: miss * 10 + red * 5, s: JSON.parse(JSON.stringify(s)), pp: KB.packageProgram(pkg, A, s.opts, s.counts, P) };
+    };
+    const cur = r => (r.fact.find(f => f.key === "cabinet") || {}).n;
+    let best = run(st), it = 0; const first = best;
+    // 1) не помещается → уменьшаем строго по приоритетам уровня (первым уходит наименее важное);
+    //    макет и ожидание, упёршиеся в глубину зала, уменьшаются сразу — от других помещений они не зависят
+    const M0 = best.pp.vars.M, mDef = best.pp.maket;
+    let bestEver = best;
+    const keep = r => { if (r.score < bestEver.score || (r.score === bestEver.score && r.fill > bestEver.fill)) bestEver = r; };
+    const step = (s, did) => { s.log = (s.log || []).concat(did); return s; };
+    while (best.miss > 0 && it++ < 45) {
+      const s = JSON.parse(JSON.stringify(best.s)); let did = null;
+      const miss = best.missReq.concat(best.missOpt), has = k => miss.some(f => f.key === k);
+      const depthBound = best.g.warnings.some(w => /макета не помещается по глубине/.test(w));
+      if (has("maket") && depthBound) {
+        const i = MAKET_STEPS.indexOf(best.pp.maket);
+        if (i >= 0 && i < MAKET_STEPS.length - 1) { s.maket = MAKET_STEPS[i + 1]; did = `стол макета ${best.pp.maket.replace("x", "×")} → ${s.maket.replace("x", "×")}: не хватает глубины зала`; }
+        else { s.opts.maket = false; s.counts.maket = 0; did = "макет не помещается по глубине — вместо него экран / медиастена"; }
+      } else for (const k of (() => { // сначала то, что делит место с не поместившимся (та же зона плана)
+          const G = k => GROUP[k] || "core", mg = new Set(miss.map(f => G(f.key)));
+          if (mg.has("band")) mg.add("core");   // служебное ядро отнимает длину у полосы кабинетов
+          const same = (base.shrink || []).filter(k => mg.has(G(k))); return same.concat((base.shrink || []).filter(k => !same.includes(k))); })()) {
+        if (k === "seats") { const v = best.pp.vars.seats, Mv = best.pp.vars.M, fl = pkg === "S" ? Math.max(4, Math.round(0.8 * Mv)) : pkg === "M" ? Math.max(6, Mv) : Math.max(8, Mv);
+          if (v > fl && (has("lounge") || v > 1.5 * Mv)) { s.seats = Math.max(fl, v - 2); did = `мест ожидания: ${v} → ${s.seats}`; break; } continue; }
+        if (k === "maket") { if (!has("maket") && !miss.some(f => GROUP[f.key] === "pub")) continue; const i = MAKET_STEPS.indexOf(best.pp.maket);
+          const iMin = has("maket") ? MAKET_STEPS.length - 1 : Math.max(MAKET_STEPS.indexOf(base.maketMin || "2x1.5"), 0);
+          if (i >= 0 && i < iMin) { s.maket = MAKET_STEPS[i + 1]; did = `стол макета: ${best.pp.maket.replace("x", "×")} → ${s.maket.replace("x", "×")}`; break; } continue; }
+        const row = best.pp.rows.find(r => r.key === k); if (!row || !(row.n > 0)) continue;
+        const f = miss.find(x => x.key === k);
+        const minN = (base.minN || {})[k] || 1;
+        if (f && f.placed >= minN && f.placed < row.n) { s.counts[k] = f.placed; did = `${row.name}: поместилось ${f.placed} из ${row.n}`; break; }
+        if (row.n > minN) { s.counts[k] = row.n - 1; did = `${row.name}: ${row.n} → ${row.n - 1}`; break; }
+        if (row.n > 1) continue;
+        if (row.status !== "обязательно" || ["kids", "cafe", "wardrobe", "server", "archive", "storage", "media", "showroom", "bank", "director"].includes(k)) { s.opts[k] = false; s.counts[k] = 0; did = `«${row.name}» убрано — не хватает места`; break; }
+      }
+      if (!did && (has("maket") || has("lounge")) && best.pp.rows.some(r => r.key === "maket")) { const i = MAKET_STEPS.indexOf(best.pp.maket);   // крайний случай — меньше минимума уровня или экран
+        if (i >= 0 && i < MAKET_STEPS.length - 1) { s.maket = MAKET_STEPS[i + 1]; did = `стол макета: ${best.pp.maket.replace("x", "×")} → ${s.maket.replace("x", "×")}`; }
+        else { s.opts.maket = false; s.counts.maket = 0; did = "макет не помещается — вместо него экран / медиастена"; } }
+      if (!did) break;
+      best = run(step(s, did)); keep(best);
+    }
+    best = bestEver;
+    // 2) места больше, чем нужно → добавляем (по порядку уровня), пока всё помещается; рост ограничен здравым смыслом
+    const capOf = k => k === "cabinet" ? Math.ceil(M0 * 1.3) : k === "meet" ? 3 : k === "showroom" || k === "media" ? 1 : 2;
+    for (let guard = 0; guard < 30 && best.miss === 0 && best.fill < 0.66; guard++) {
+      let accepted = false;
+      const back = (base.shrink || []).slice().reverse().filter(k => best.s.opts[k] === false);   // сначала возвращаем убранное (важное — первым)
+      const iM = MAKET_STEPS.indexOf(best.pp.maket), iDef = MAKET_STEPS.indexOf(mDef);
+      const upM = best.pp.rows.some(r => r.key === "maket") && iM > iDef && iDef >= 0 ? ["^maket"] : [];
+      for (const k of back.map(k => "+" + k).concat(upM, base.grow || [])) {
+        const s = JSON.parse(JSON.stringify(best.s)); let did;
+        if (k === "^maket") { s.maket = MAKET_STEPS[iM - 1]; did = `стол макета: ${best.pp.maket.replace("x", "×")} → ${s.maket.replace("x", "×")} (место освободилось)`;
+          const r = run(step(s, did)); if (r.miss === 0 && r.red <= best.red) { best = r; accepted = true; break; } continue; }
+        if (k[0] === "+") { const kk = k.slice(1); s.opts[kk] = true; delete s.counts[kk]; did = `«${nm(kk)}» возвращено — место освободилось`;
+          const r = run(step(s, did)); if (r.miss === 0 && r.red <= best.red) { best = r; accepted = true; break; } continue; }
+        if (k === "seats") { const v = best.pp.vars.seats; if (v >= 2.5 * best.pp.vars.M + 4) continue; s.seats = v + 2; did = `мест ожидания: ${v} → ${v + 2} (есть свободная площадь)`; }
+        else { const row = best.pp.rows.find(r => r.key === k); const n = row ? row.n : 0; if (n >= capOf(k)) continue; s.counts[k] = n + 1; s.opts[k] = true; did = `${nm(k)}: ${n} → ${n + 1} (есть свободная площадь)`; }
+        const r = run(step(s, did));
+        if (r.miss === 0 && r.red <= best.red && r.fill > best.fill + 0.005) { best = r; accepted = true; break; }
+      }
+      if (!accepted) break;
+    }
+    // журнал — итоговая разница «программа уровня → что встало», без промежуточных шагов перебора
+    { const p0r = first.pp, p1 = best.pp, byK = rr => Object.fromEntries(rr.rows.map(r => [r.key, r])), A0 = byK(p0r), A1 = byK(p1);
+      const gone = Object.keys(A0).filter(k => !A1[k]).map(k => A0[k].name), added = Object.keys(A1).filter(k => !A0[k]).map(k => A1[k].name);
+      if (gone.length) log.push(`Не поместилось и убрано: ${gone.join(", ")}.`);
+      for (const k of Object.keys(A1)) if (A0[k] && A0[k].n !== A1[k].n) log.push(`${A1[k].name}: ${A0[k].n} → ${A1[k].n}${A1[k].n > A0[k].n ? " (есть место)" : " (не хватило места)"}.`);
+      if (p0r.maket !== p1.maket && A1.maket) log.push(`Стол макета: ${p0r.maket.replace("x", "×")} → ${p1.maket.replace("x", "×")}.`);
+      if (p0r.vars.seats !== p1.vars.seats) log.push(`Мест ожидания: ${p0r.vars.seats} → ${p1.vars.seats}.`);
+      if (added.length) log.push(`Добавлено (место позволяет): ${added.join(", ")}.`); }
+    const P = KB.PACKAGES[pkg], v = best.pp.vars;
+    const proj = best.g.project;
+    proj.name = p0.name || `Офис продаж — ${P.name}`;
+    proj.meta = Object.assign(proj.meta || {}, { level: pkg, levelName: P.name, auto: { log, fill: +best.fill.toFixed(2) } });
+    const brief = `${P.name}: ${v.M} ${best.pp.rows.some(r => r.key === "cabinet" && r.border === "none") ? "мест консультаций" : "кабинетов менеджеров"}, ожидание ${v.seats} мест, макет ${best.pp.maket.replace("x", "×")}` +
+      `${best.g.mezz ? ", антресоль" : ""}; помещений ${best.pp.net} м² из ${Math.round(inner)} м² внутри стен.`;
+    return { project: proj, warnings: best.g.warnings, log, brief, vars: v, program: best.pp, missing: best.missReq.concat(best.missOpt).map(f => f.name), score: best.score, mezz: best.g.mezz };
+  };
+  KB.variants = function (p0) { return KB.LEVEL_KEYS.map(k => Object.assign({ pkg: k }, KB.autoPlan(Object.assign({}, p0, { pkg: k })))); };
+
+  /* ============================================================ КОМАНДЫ ПЛАНИРОВЩИКА (для Claude / MCP / ИИ-помощника)
+   * Все команды меняют проект S на месте и возвращают { ok, msg, ids }.
+   * Помещение или предмет указывается id или названием («Кабинет менеджера 2», «кухня»).
+   * Координаты — метры от левого верхнего угла здания: X вдоль дороги, Y вглубь, фасад с витражом — Y = b.d.
+   */
+  const isDoorK = k => /^(door|slide|auto|win)/.test(k || "");
+  const aabbOf = it => { if (it.t !== "item") return { x: it.x, y: it.y, w: it.w, h: it.h };
+    const q = (it.rot || 0) % 180 !== 0; return { x: it.x, y: it.y, w: q ? it.h : it.w, h: q ? it.w : it.h }; };
+  KB.aabb = aabbOf;
+  const lvOf = it => it.lv || 0;
+  const inside = (a, r, m = 0) => { const cx = a.x + a.w / 2, cy = a.y + a.h / 2; return cx >= r.x - m && cx <= r.x + r.w + m && cy >= r.y - m && cy <= r.y + r.h + m; };
+  const overlap = (a, c, m = 0) => a.x < c.x + c.w + m && a.x + a.w + m > c.x && a.y < c.y + c.h + m && a.y + a.h + m > c.y;
+  const isHall = r => /зал|холл|open-space продаж/i.test(r.name || "") && !r.sub;
+  const isCirc = r => r.cat === "circ" || /проход|коридор|галерея/i.test(r.name || "");
+
+  /* Типы помещений: как распознать по названию, категория, ограждение, типовой размер и наполнение. */
+  KB.ROOM_TYPES = [
+    { key: "tambour", re: /тамбур/, cat: "circ", border: "glass", size: [2.6, 2.5] },
+    { key: "reception", re: /ресепшен|хостес|стойка/, cat: "client", border: "none", size: [4.4, 2.2], zone: true },
+    { key: "kids", re: /детск/, cat: "client", border: "none", size: [3.5, 3.5], zone: true, color: "#F4D36B" },
+    { key: "maket", re: /макет/, cat: "client", border: "none", size: [7.4, 5.4], zone: true, color: "#F2F0EA" },
+    { key: "cafe", re: /кофе|бар|кафе/, cat: "client", border: "none", size: [4, 3.2], zone: true, color: "#D9B98E" },
+    { key: "lounge", re: /ожидан|лаунж|мягк/, cat: "client", border: "none", size: [5, 4], zone: true },
+    { key: "media", re: /медиа|vr/, cat: "client", border: "none", size: [3.5, 3], zone: true },
+    { key: "showroom", re: /шоурум|материал/, cat: "client", border: "glass", size: [5, 3.2] },
+    { key: "wardrobe", re: /гардероб/, cat: "staff", border: "wall", size: [2, 3.2] },
+    { key: "opendesk", re: /место консультац|open-space продаж/, cat: "office", border: "none", size: [2.8, 2.6], zone: true },
+    { key: "bank", re: /ипотек|банк|брокер|юрист/, cat: "office", border: "glass", size: [3, 3.2] },
+    { key: "cabinet", re: /кабинет менеджер|кабинет продаж|менеджер/, cat: "office", border: "glass", size: [3, 3.2] },
+    { key: "vip", re: /сделочн|vip/, cat: "meet", border: "glass", size: [5, 4.5] },
+    { key: "meet", re: /переговорн/, cat: "meet", border: "glass", size: [4.5, 3.2] },
+    { key: "cashier", re: /касса/, cat: "service", border: "wall", size: [3, 3] },
+    { key: "director", re: /руководител|роп|директор/, cat: "back", border: "wall", size: [4.5, 4] },
+    { key: "backoffice", re: /бэк|back|бухгалтер|open-space/, cat: "back", border: "glass", size: [6, 5] },
+    { key: "kitchen", re: /кухн|приём пищи|прием пищи|комната отдыха/, cat: "staff", border: "wall", size: [4, 3.5] },
+    { key: "wcv", re: /мгн|посетит|универсал/, cat: "wc", border: "wall", size: [2.4, 2.4], color: "#CFE8E6", wc: true },
+    { key: "wcs", re: /с\/у|санузел|туалет|wc/, cat: "wc", border: "wall", size: [1.8, 2.5], color: "#CFE8E6", wc: true },
+    { key: "kui", re: /куи|уборочн/, cat: "service", border: "wall", size: [1.8, 2] },
+    { key: "elec", re: /электрощит|щитов|слаботоч/, cat: "service", border: "wall", size: [2, 2.5] },
+    { key: "server", re: /сервер/, cat: "service", border: "wall", size: [2, 2.5] },
+    { key: "archive", re: /архив|склад|кладов/, cat: "service", border: "wall", size: [2.5, 3] },
+    { key: "security", re: /охран/, cat: "service", border: "wall", size: [2, 2] },
+    { key: "stair", re: /лестниц/, cat: "circ", border: "wall", size: [2.8, 5.1] },
+    { key: "corridor", re: /коридор|проход|галерея/, cat: "circ", border: "none", size: [1.8, 6], zone: true },
+    { key: "hall", re: /зал|холл/, cat: "client", border: "none", size: [12, 8], zone: true, color: "#EDE8DE" },
+  ];
+  KB.roomType = function (name) {
+    const n = norm(name);
+    // «с/у посетителей», «с/у МГН» — посетительский; любой другой с/у — персонала
+    for (const t of KB.ROOM_TYPES) if (t.re.test(n)) { if (t.key === "wcv" && !/с\/у|санузел|туалет|wc|кабин/.test(n)) continue; return t; }
+    return null;
+  };
+
+  /* ---------- поиск элементов */
+  function findEl(S, ref, t) {
+    if (ref == null || ref === "") throw new Error("Не указан элемент (id или название).");
+    const pool = S.items.filter(i => !t || i.t === t);
+    const byId = pool.find(i => i.id === String(ref)); if (byId) return byId;
+    const n = norm(ref).trim();
+    const label = i => norm(i.t === "room" ? i.name : i.t === "item" ? (i.label || (KB.FK[i.k] ? KB.FK[i.k].n : i.k)) : i.kind);
+    let hit = pool.filter(i => label(i) === n); if (hit.length === 1) return hit[0];
+    if (!hit.length) hit = pool.filter(i => label(i).includes(n));
+    if (hit.length === 1) return hit[0];
+    if (!hit.length) throw new Error(`Не найдено: «${ref}». Посмотрите список в describe_plan.`);
+    throw new Error(`«${ref}» — несколько совпадений: ${hit.slice(0, 8).map(i => `${i.id} (${i.t === "room" ? i.name : i.k} @ ${(+i.x || 0).toFixed(1)},${(+i.y || 0).toFixed(1)})`).join("; ")}. Укажите id.`);
+  }
+  KB.findEl = findEl;
+  // Предметы внутри помещения (центр внутри; двери — с допуском на толщину стены)
+  KB.contents = function (S, r) {
+    return S.items.filter(i => i !== r && lvOf(i) === lvOf(r) && (i.t === "item" ? inside(aabbOf(i), r, isDoorK(i.k) ? 0.35 : 0)
+      : i.t === "room" ? (i.sub && !r.sub && inside(i, r) && i.w * i.h < r.w * r.h) : false));
+  };
+
+  /* ---------- сторона двери: где снаружи проход / зал, а не другое помещение и не наружная стена */
+  function sideScore(S, r, side) {
+    const b = S.b, lv = lvOf(r), e = 0.35;
+    const mid = side === "n" ? [r.x + r.w / 2, r.y - e] : side === "s" ? [r.x + r.w / 2, r.y + r.h + e] : side === "w" ? [r.x - e, r.y + r.h / 2] : [r.x + r.w + e, r.y + r.h / 2];
+    const [px, py] = mid;
+    if (px < 0.3 || py < 0.3 || px > b.w - 0.3 || py > b.d - 0.3) return -10;          // наружу
+    const here = S.items.filter(i => i.t === "room" && i !== r && lvOf(i) === lv && px > i.x && px < i.x + i.w && py > i.y && py < i.y + i.h);
+    if (!here.length) return lv ? -5 : 2;                                                  // открытое пространство (на антресоли — пустота)
+    const solid = here.filter(i => !i.sub && !isHall(i) && !isCirc(i));
+    if (solid.length) return -3;
+    if (here.some(isCirc)) return 4;
+    if (here.some(isHall)) return 3;
+    return 1;                                                                              // зона без стен
+  }
+  KB.doorSide = function (S, r) {
+    let best = "s", bs = -1e9;
+    for (const s of ["s", "n", "e", "w"]) { const v = sideScore(S, r, s) + ((s === "n" || s === "s") ? (r.w >= r.h ? 0.3 : 0) : (r.h > r.w ? 0.3 : 0)); if (v > bs) { bs = v; best = s; } }
+    return best;
+  };
+  // Сторона, обращённая к входу/фасаду — для зон без стен (ресепшен, макет смотрят на посетителя)
+  function faceSide(S, r) {
+    const ent = S.items.find(i => i.t === "item" && lvOf(i) === 0 && (i.k === "auto" || /вход/i.test(i.label || "")) && !/служеб/i.test(i.label || ""));
+    const tx = ent ? ent.x + aabbOf(ent).w / 2 : r.x + r.w / 2, ty = ent ? ent.y : S.b.d;
+    const dx = tx - (r.x + r.w / 2), dy = ty - (r.y + r.h / 2);
+    return Math.abs(dy) >= Math.abs(dx) * 0.8 ? (dy > 0 ? "s" : "n") : (dx > 0 ? "e" : "w");
+  }
+
+  /* ---------- локальная система помещения: u — вдоль «лицевой» стены, v — от задней стены к лицевой.
+   * face: n|s|e|w — лицевая сторона (дверь / обзор). Предмет в локальных координатах: ставим по центру (cu, cv) с поворотом rl. */
+  function frame(r, face) {
+    const Wl = face === "n" || face === "s" ? r.w : r.h, Dl = face === "n" || face === "s" ? r.h : r.w;
+    const toW = (cu, cv) => face === "s" ? [r.x + cu, r.y + cv, 0] : face === "n" ? [r.x + r.w - cu, r.y + r.h - cv, 180]
+      : face === "e" ? [r.x + cv, r.y + r.h - cu, 270] : [r.x + r.w - cv, r.y + cu, 90];
+    return { W: Wl, D: Dl, put(k, u, v, rl = 0, o = {}) {   // u, v — левый-задний угол предмета в локальных координатах
+      const f = KB.FK[k] || { w: 1, h: 1 }, w = o.w || f.w, h = o.h || f.h;
+      const lw = rl % 180 ? h : w, lh = rl % 180 ? w : h;
+      const [cx, cy, ra] = toW(u + lw / 2, v + lh / 2), rot = (rl + ra) % 360, q = rot % 180 !== 0;
+      const aw = q ? h : w, ah = q ? w : h;
+      return Object.assign({ id: uid(), t: "item", lv: lvOf(r), k, x: r3(cx - aw / 2), y: r3(cy - ah / 2), w, h, rot, flip: false, label: "" }, o, { w, h });
+    } };
+  }
+  function slideDoor(r, side, off) {
+    const lv = lvOf(r);
+    if (side === "s") return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x + off), y: r3(r.y + r.h - 0.15), w: 1, h: 0.3, rot: 0, flip: false, label: "" };
+    if (side === "n") return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x + off), y: r3(r.y - 0.15), w: 1, h: 0.3, rot: 0, flip: false, label: "" };
+    if (side === "e") return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x + r.w - 0.15), y: r3(r.y + off), w: 1, h: 0.3, rot: 90, flip: false, label: "" };
+    return { id: uid(), t: "item", lv, k: "slide", x: r3(r.x - 0.15), y: r3(r.y + off), w: 1, h: 0.3, rot: 90, flip: false, label: "" };
+  }
+
+  /* ---------- автоматическое наполнение помещения мебелью по его типу */
+  KB.furnishRoom = function (S, r, o = {}) {
+    const T = KB.roomType(r.name) || { key: "other" }, out = [], lv = lvOf(r);
+    const zone = r.border === "none";
+    const face = o.face || (zone && !/^(opendesk|cabinet|bank)$/.test(T.key) ? faceSide(S, r) : KB.doorSide(S, r));
+    const F = frame(r, face), W = F.W, D = F.D, P = (...a) => out.push(F.put(...a));
+    const cU = w => Math.max(0.1, (W - w) / 2);
+    // дверь (если у помещения есть стены)
+    if (!zone && o.door !== false && T.key !== "stair") {
+      const along = face === "n" || face === "s" ? r.w : r.h, dw = T.key === "wcv" ? 1.0 : (T.wc || /куи|щит|сервер/.test(T.key) ? 0.8 : 0.9);
+      const off0 = Math.min(0.3, Math.max(0.05, along - dw - 0.05)), off = face === "n" || face === "e" ? Math.max(0.05, along - dw - off0) : off0; // дверь всегда слева в локальной системе
+      const inward = !(T.wc || T.key === "kui" || T.key === "elec" || T.key === "server" || T.key === "archive");
+      out.push(r.border === "glass" && T.key !== "vip" && T.key !== "meet" && T.key !== "showroom" ? slideDoor(r, face, off) : door(r, face, off, dw, inward));
+    }
+    const doorZone = 1.1; // у лицевой стены возле двери оставляем свободно
+    switch (T.key) {
+      case "cabinet": case "bank": case "opendesk":
+        P("work3", cU(1.6), zone ? Math.max(0.1, (D - 2.3) / 2) : Math.min(0.4, Math.max(0.05, D - 2.3 - 0.9)));
+        if (!zone && W >= 3.6) P("cab", W - 0.95, 0.05); break;
+      case "meet": case "vip": {
+        const opts = [["meet10", 4, 2.2], ["meet8", 3.2, 2.2], ["meet6", 2.4, 2.1], ["round4", 1.9, 1.9]];
+        let fitT = opts[3], rl = 0;
+        for (const t of (T.key === "vip" ? opts.slice(1) : opts)) { if (t[1] + 1.4 <= W && t[2] + 1.0 <= D) { fitT = t; rl = 0; break; } if (t[2] + 1.0 <= W && t[1] + 1.4 <= D) { fitT = t; rl = 90; break; } }
+        const lw = rl ? fitT[2] : fitT[1], lh = rl ? fitT[1] : fitT[2];
+        P(fitT[0], cU(lw), Math.max(0.5, (D - lh) / 2 - (D - lh > 1.6 ? 0.2 : 0)), rl);
+        if (W >= 4 && D - lh >= 2.2) P("led", cU(2), 0.02);
+        if (T.key === "vip" && W - lw >= 3.4) P("sofa2", 0.15, 0.1, 90);
+        break; }
+      case "director": {
+        P("cab", 0.1, 0.05); if (W >= 4) P("cab", W - 1.0, 0.05);
+        P("chairO", cU(0.6), 0.6, 180); P("deskB", cU(1.8), 1.25); P("chairV", W / 2 - 0.75, 2.3); P("chairV", W / 2 + 0.25, 2.3);
+        if (D >= 4.6 && W >= 4.2) P("round4", W - 2.1, D - doorZone - 1.9 > 2.6 ? D - doorZone - 1.9 : 2.8);
+        break; }
+      case "backoffice": {
+        const need = o.seats || Math.max(1, Math.floor(r.w * r.h / 6)); let seats = 0;
+        const cols4 = Math.floor((W - 0.6) / 3.6), rows4 = Math.floor((D - doorZone - 0.5) / 3.4);
+        for (let j = 0; j < rows4 && seats + 2 < need; j++) for (let i = 0; i < cols4 && seats + 2 < need; i++) { P("os4", 0.4 + i * 3.6, 0.5 + j * 3.4); seats += 4; }
+        const y1 = rows4 && seats ? 0.5 + Math.ceil(seats / 4 / Math.max(1, cols4)) * 3.4 : 0.3;
+        for (let v = y1; v + 1.3 <= D - doorZone + 0.2 && seats < need; v += 1.9) for (let u = 0.3; u + 1.4 <= W - 0.2 && seats < need; u += 1.6) { P("os1", u, v); seats++; }
+        if (W >= 3.2) { P("mfp", W - 1.7, D - 0.55); P("cab", W - 1.0, D - 0.5); }
+        out._note = `рабочих мест: ${seats}${need > seats ? ` из ${need}` : ""}`; break; }
+      case "kitchen": {
+        const kw = Math.min(2.4, W - 0.9); P("kitch", 0.1, 0.02, 0, { w: kw }); P("fridge", Math.min(W - 0.75, kw + 0.15), 0.02);
+        if (D - 0.6 - doorZone >= 2.1 && W >= 2.4) P("dine", cU(1.9), 0.9 + Math.max(0, (D - 0.9 - doorZone - 1.9) / 2));
+        else P("desk", cU(Math.min(1.6, W - 0.6)), 0.9, 0, { w: Math.min(1.6, W - 0.6), label: "стол" });
+        break; }
+      case "wcv": P("wc", 0.9, 0.05); P("sink", W - 0.6, Math.min(1.2, D - 1.5), 90);
+        if (W >= 3.6) { P("cubicle", W - 1.3, 0.05); P("wc", W - 0.9, 0.1); } break;
+      case "wcs": P("wc", Math.min(0.6, W - 0.5), 0.05); P("sink", W - 0.5, Math.min(1.0, D - 1.3), 90); break;
+      case "kui": case "server": case "archive": P("shelf", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 3)) });
+        if (T.key === "archive" && D >= 2.6 && W >= 2) P("shelf", 0.05, 0.6, 90, { w: Math.min(D - 1.6, 3) }); break;
+      case "elec": P("cab", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 1.8)), label: "щиты" }); break;
+      case "security": case "cashier": P("desk", 0.15, 0.1, 0, { w: Math.min(1.6, W - 0.4) }); P("chairO", 0.6, 0.95, 180);
+        if (T.key === "cashier") P("safe", W - 0.6, 0.05); break;
+      case "wardrobe": P("shelf", 0.1, 0.05, 0, { w: W - 0.2, label: "вешала" }); if (D >= 2.4) P("bench", cU(1.2), D - 1.3); break;
+      case "reception": {
+        const sw = Math.min(3, W - 0.6); P("recep", cU(sw), Math.max(0.9, D - 1.2), 0, { w: sw }); P("chairO", W / 2 - 0.3, Math.max(0.1, D - 2.0));
+        if (W >= 4) P("cab", 0.1, 0.05); break; }
+      case "lounge": {
+        const gw = 2.4, gh = 3.1, nx = Math.max(1, Math.floor((W + 0.4) / (gw + 0.6))), ny = Math.max(1, Math.floor((D + 0.3) / (gh + 0.5)));
+        if (W < 2.4 || D < 2.9) { P("sofa3", cU(2.2), 0.1); if (D >= 1.8) P("ctab", cU(1.2), 1.1); break; }
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) P("lounge", (W - nx * gw - (nx - 1) * 0.6) / 2 + i * (gw + 0.6), (D - ny * gh - (ny - 1) * 0.5) / 2 + j * (gh + 0.5));
+        if (W >= 3) P("plant", W - 0.65, 0.05); break; }
+      case "maket": {
+        const M = [["6x4", 6, 4], ["5x3", 5, 3], ["3x2", 3, 2], ["2x1.5", 2, 1.5]];
+        const pick = M.find(m => m[1] + 2.0 <= W && m[2] + 2.0 <= D) || M.find(m => m[1] + 1.2 <= W && m[2] + 1.2 <= D) || M[3];
+        P("model", cU(pick[1]), (D - pick[2]) / 2, 0, { w: pick[1], h: pick[2], label: "макет " + pick[0].replace("x", "×") });
+        if (D - pick[2] >= 2.6) P("stand", cU(1.2), 0.05); out._note = "макет " + pick[0]; break; }
+      case "kids": P("kidmat", 0.2, 0.2, 0, { w: Math.min(2, W - 0.4), h: Math.min(2, D - 0.4) });
+        if (W >= 3.2 && D >= 1.2) P("kidtab", W - 1.2, D - 0.8); break;
+      case "cafe": { const bw = Math.min(3, W - 0.4); P("bar", cU(bw), 0.1, 0, { w: bw }); const ns = Math.max(1, Math.floor(bw / 0.75));
+        for (let i = 0; i < ns; i++) P("stool", cU(bw) + 0.15 + i * (bw - 0.45) / Math.max(1, ns - 1), 0.9);
+        if (D >= 4) P("cafe4", cU(1.9), D - 2.1); P("cooler", W - 0.45, 0.1); break; }
+      case "media": P("media", cU(Math.min(4, W - 0.4)), 0.02, 0, { w: Math.min(4, W - 0.4) }); if (D >= 2.8) P("sofa3", cU(2.2), Math.min(D - 1.0, 2.4), 180); break;
+      case "showroom": { const n = Math.max(1, Math.floor((W - 0.4) / 1.3)); for (let i = 0; i < n; i++) P("stand", 0.2 + i * 1.3, 0.05);
+        if (D >= 3) P("ctab", cU(1.2), Math.min(D - 1.8, 1.5), 0, { label: "образцы" }); break; }
+      case "hall": P("plant", 0.2, 0.2); P("plant", W - 0.8, 0.2); break;
+      default: break;
+    }
+    // обрезаем то, что вылезло за помещение (кроме дверей)
+    const bad = out.filter(i => !isDoorK(i.k) && (() => { const a = aabbOf(i); return a.x < r.x - 0.02 || a.y < r.y - 0.02 || a.x + a.w > r.x + r.w + 0.02 || a.y + a.h > r.y + r.h + 0.02; })());
+    const res = out.filter(i => !bad.includes(i)); res._note = [out._note, bad.length ? `не поместилось предметов: ${bad.length}` : ""].filter(Boolean).join(", "); res._face = face;
+    return res;
+  };
+
+  /* ---------- свободное место */
+  KB.findSpace = function (S, o = {}) {
+    const b = S.b, lv = o.lv || 0, w = +o.w, h = +o.h, m = o.margin == null ? 0.3 : +o.margin, step = o.step || 0.2, t = 0.3;
+    if (!(w > 0 && h > 0)) throw new Error("find_space: нужны w и h (м).");
+    const within = o.within ? findEl(S, o.within, "room") : null;
+    const blocks = S.items.filter(i => lvOf(i) === lv && i !== within && (i.t === "item" ? true : i.t === "room" ? !isHall(i) && !(within && i.sub && !inside(i, within)) : false)).map(i => i.t === "wall" ? null : aabbOf(i)).filter(Boolean);
+    const box = within ? { x: within.x, y: within.y, w: within.w, h: within.h } : { x: t, y: t, w: b.w - 2 * t, h: b.d - 2 * t };
+    const res = [];
+    for (let y = box.y; y + h <= box.y + box.h + 1e-6; y += step) for (let x = box.x; x + w <= box.x + box.w + 1e-6; x += step) {
+      const a = { x, y, w, h }; if (blocks.some(c => overlap(a, c, within ? 0 : m) && !(c.w >= b.w - 1 && c.h >= b.d - 1))) continue;
+      if (lv === 1 && !S.items.some(i => i.t === "room" && i.lv === 1 && !i.sub && inside(a, i))) continue; // на антресоли — только над перекрытием
+      const cy = y + h / 2, cx = x + w / 2;
+      const pref = o.near === "facade" ? b.d - cy : o.near === "back" ? cy : o.near === "left" ? cx : o.near === "right" ? b.w - cx : o.near === "center" ? Math.hypot(cx - b.w / 2, cy - b.d / 2) : cy * 0 + cx * 0.001;
+      res.push({ x: r3(x), y: r3(y), w, h, score: pref });
+    }
+    res.sort((a, c) => a.score - c.score);
+    const picked = []; for (const r of res) { if (picked.every(p => !overlap(p, r, 0.5))) picked.push(r); if (picked.length >= (o.limit || 5)) break; }
+    return picked.map(({ score, ...r }) => r);
+  };
+
+  /* ---------- команды */
+  const num = (v, name) => { const n = +v; if (!isFinite(n)) throw new Error(`Параметр ${name} должен быть числом (м).`); return n; };
+  KB.OPS = {
+    building(S, a) { for (const k of ["w", "d", "h", "mz"]) if (a[k] != null) S.b[k] = num(a[k], k); if (a.name) S.name = String(a.name); if (a.notes != null) S.notes = String(a.notes);
+      return { msg: `Здание ${S.b.w}×${S.b.d}×${S.b.h} м` }; },
+    add_room(S, a) {
+      const T = KB.roomType(a.name) || {}, sz = T.size || [3, 3];
+      const w = a.w != null ? num(a.w, "w") : sz[0], h = a.h != null ? num(a.h, "h") : sz[1];
+      let x = a.x, y = a.y;
+      if (x == null || y == null) { const sp = KB.findSpace(S, { w, h, lv: a.lv || 0, near: a.near || (T.cat === "client" ? "facade" : "back"), limit: 1 })[0];
+        if (!sp) throw new Error(`Нет свободного места ${w}×${h} м для «${a.name}». Уменьшите размер или освободите место.`); x = sp.x; y = sp.y; }
+      const cat = a.cat || T.cat || "client";
+      const r = room(String(a.name || "Помещение"), num(x, "x"), num(y, "y"), w, h, cat, a.border || T.border || "wall",
+        { lv: a.lv || 0, sub: a.sub != null ? !!a.sub : !!T.zone && !/^(hall|corridor)$/.test(T.key), color: a.color || T.color || (KB.CAT[cat] || KB.CAT.client).c });
+      S.items.push(r); const ids = [r.id]; let note = "";
+      if (a.furnish !== false) { const f = KB.furnishRoom(S, r); S.items.push(...f); ids.push(...f.map(i => i.id)); note = f._note ? ` (${f._note})` : ""; }
+      return { msg: `Добавлено «${r.name}» ${r.w}×${r.h} м = ${(r.w * r.h).toFixed(1)} м² в (${r.x}; ${r.y}), id ${r.id}${a.furnish !== false ? ", мебель расставлена" : ""}${note}`, ids };
+    },
+    update(S, a) {
+      const it = findEl(S, a.id || a.name || a.ref); const was = { ...it };
+      const kids = it.t === "room" && a.move_contents !== false ? KB.contents(S, it) : [];
+      if (it.t === "wall") { for (const k of ["x1", "y1", "x2", "y2"]) if (a[k] != null) it[k] = num(a[k], k); if (a.kind) it.kind = a.kind;
+        if (a.dx || a.dy) { it.x1 += +a.dx || 0; it.x2 += +a.dx || 0; it.y1 += +a.dy || 0; it.y2 += +a.dy || 0; } return { msg: "Стена изменена", ids: [it.id] }; }
+      for (const k of ["x", "y", "w", "h"]) if (a[k] != null) it[k] = r3(num(a[k], k));
+      if (a.dx) it.x = r3(it.x + +a.dx); if (a.dy) it.y = r3(it.y + +a.dy);
+      if (a.new_name != null) it.name = String(a.new_name); if (a.label != null) it.label = String(a.label);
+      for (const k of ["cat", "border", "color"]) if (a[k] != null) it[k] = a[k];
+      if (a.cat && !a.color && KB.CAT[a.cat]) it.color = KB.CAT[a.cat].c;
+      if (a.sub != null) it.sub = !!a.sub; if (a.lv != null) it.lv = +a.lv; if (a.rot != null && it.t === "item") it.rot = ((+a.rot % 360) + 360) % 360; if (a.flip != null) it.flip = !!a.flip;
+      const dx = it.x - was.x, dy = it.y - was.y;
+      if ((dx || dy) && kids.length) for (const c of kids) { c.x = r3(c.x + dx); c.y = r3(c.y + dy); }
+      let note = "";
+      if (it.t === "room" && (a.w != null || a.h != null) && a.refurnish !== false && kids.some(c => c.t === "item")) {
+        S.items = S.items.filter(i => !(kids.includes(i) && i.t === "item")); const f = KB.furnishRoom(S, it); S.items.push(...f); note = ", мебель переставлена";
+      }
+      return { msg: `«${it.t === "room" ? it.name : it.k}»: ${it.w}×${it.h} в (${it.x}; ${it.y})${kids.length && (dx || dy) ? `, перенесено вместе с содержимым (${kids.length})` : ""}${note}`, ids: [it.id] };
+    },
+    delete(S, a) {
+      const it = findEl(S, a.id || a.name || a.ref); const kids = it.t === "room" && a.with_contents !== false ? KB.contents(S, it) : [];
+      const gone = new Set([it, ...kids]); S.items = S.items.filter(i => !gone.has(i));
+      return { msg: `Удалено «${it.t === "room" ? it.name : it.k}»${kids.length ? ` и ${kids.length} предметов внутри` : ""}` };
+    },
+    add_item(S, a) {
+      const f = KB.FK[a.k]; if (!f) throw new Error(`Нет предмета «${a.k}» в каталоге. Список — list_catalog.`);
+      let x = a.x, y = a.y, lv = a.lv || 0;
+      const szl = KB.SIZES[a.k] || [], sz = a.size == null ? null : (szl[+a.size] || szl.find(s => norm(s[0]).includes(norm(a.size))));
+      const w = a.w != null ? num(a.w, "w") : sz ? sz[1] : f.w, h = a.h != null ? num(a.h, "h") : sz ? sz[2] : f.h, rot = ((+a.rot || 0) % 360 + 360) % 360;
+      const aw = rot % 180 ? h : w, ah = rot % 180 ? w : h;
+      if (a.room) { const r = findEl(S, a.room, "room"); lv = lvOf(r);
+        if (x == null || y == null) { const sp = KB.findSpace(S, { w: aw, h: ah, lv, within: r.id, near: a.near || "back", margin: 0.1, limit: 1 })[0];
+          if (!sp) throw new Error(`В «${r.name}» нет места для ${f.n} ${aw}×${ah} м.`); x = sp.x; y = sp.y; } }
+      if (x == null || y == null) { const sp = KB.findSpace(S, { w: aw, h: ah, lv, near: a.near || "center", limit: 1 })[0]; if (!sp) throw new Error("Нет свободного места."); x = sp.x; y = sp.y; }
+      const n = Math.max(1, Math.min(40, +a.count || 1)), ids = [], gap = a.gap != null ? +a.gap : 0.2, dir = a.dir === "y" ? "y" : "x";
+      for (let i = 0; i < n; i++) { const it = { id: uid(), t: "item", lv, k: a.k, x: r3(num(x, "x") + (dir === "x" ? i * (aw + gap) : 0)), y: r3(num(y, "y") + (dir === "y" ? i * (ah + gap) : 0)), w, h, rot, flip: !!a.flip, label: a.label || "" };
+        if (/^door|^slide|^auto|^win/.test(a.k)) { const d = f.d; if (d === "door") it.h = r3(it.w + 0.3); if (d === "door2") it.h = r3(it.w / 2 + 0.3); }
+        S.items.push(it); ids.push(it.id); }
+      return { msg: `Добавлено: ${f.n} ×${n} в (${r3(+x)}; ${r3(+y)})`, ids };
+    },
+    furnish(S, a) {
+      const r = findEl(S, a.room || a.id || a.name, "room");
+      if (a.replace !== false) { const drop = new Set(KB.contents(S, r).filter(i => i.t === "item" && (a.keep_doors === false || !isDoorK(i.k)))); S.items = S.items.filter(i => !drop.has(i)); }
+      const hasDoor = KB.contents(S, r).some(i => i.t === "item" && isDoorK(i.k));
+      const f = KB.furnishRoom(S, r, { door: !hasDoor, face: a.face, seats: a.seats }); S.items.push(...f);
+      return { msg: `«${r.name}»: расставлено ${f.length} предметов, лицевая сторона ${f._face}${f._note ? `, ${f._note}` : ""}`, ids: f.map(i => i.id) };
+    },
+    clear(S, a) { const r = findEl(S, a.room || a.id || a.name, "room"); const drop = new Set(KB.contents(S, r).filter(i => i.t === "item" && (a.doors || !isDoorK(i.k))));
+      S.items = S.items.filter(i => !drop.has(i)); return { msg: `«${r.name}»: убрано предметов ${drop.size}` }; },
+    add_door(S, a) {
+      const r = findEl(S, a.room || a.id || a.name, "room"); const side = a.side || KB.doorSide(S, r), w = +a.width || 0.9;
+      const along = side === "n" || side === "s" ? r.w : r.h, off = a.offset != null ? +a.offset : Math.max(0.05, Math.min(0.3, along - w - 0.05));
+      const d = a.type === "slide" ? slideDoor(r, side, off) : door(r, side, off, w, a.inward !== false, { label: a.label || "" });
+      S.items.push(d); return { msg: `Дверь ${Math.round(w * 1000)} в «${r.name}», сторона ${side}`, ids: [d.id] };
+    },
+    add_wall(S, a) { const kind = a.kind || "part", TH = { ext: 0.3, block: 0.2, part: 0.1, glass: 0.1, vitrage: 0.15, rail: 0.05 };
+      if (!TH[kind]) throw new Error("kind: ext|block|part|glass|vitrage|rail");
+      const wl = { id: uid(), t: "wall", lv: a.lv || 0, kind, x1: num(a.x1, "x1"), y1: num(a.y1, "y1"), x2: num(a.x2, "x2"), y2: num(a.y2, "y2"), th: TH[kind] };
+      S.items.push(wl); return { msg: `Стена ${kind} ${Math.hypot(wl.x2 - wl.x1, wl.y2 - wl.y1).toFixed(2)} м`, ids: [wl.id] }; },
+    floor(S, a) { const r = findEl(S, a.room || a.id || a.name, "room"); r.color = a.color; return { msg: `Пол «${r.name}» → ${a.color}` }; },
+    generate(S, a) { const g = KB.generateFor(a); Object.keys(S).forEach(k => delete S[k]); Object.assign(S, g.project);
+      return { msg: `Сгенерирован план «${S.name}» ${S.b.w}×${S.b.d}×${S.b.h} м${g.mezz ? " с антресолью" : ""}. ${g.warnings.length ? "Предупреждения: " + g.warnings.join(" ") : "Без предупреждений."}` }; },
+  };
+  // Генерация по пакету: размеры здания, если не заданы, подбираются по площади
+  KB.generateFor = function (a) {
+    const p = Object.assign({}, a);
+    if (p.pkg) { p.pkg = String(p.pkg).toUpperCase(); if (!KB.PACKAGES[p.pkg]) throw new Error("Пакет: S, M или L");
+      p.area = +p.area || KB.PACKAGES[p.pkg].A; const b = KB.suggestBuilding(p.pkg, p.area); for (const q of ["w", "d", "h"]) if (p[q] == null) p[q] = b[q]; }
+    return KB.generate(p);
+  };
+  // Автоплан: размеры + вариант наполнения (S Базовый / M Стандарт / L Премиум) → зонирование заново
+  KB.OPS.auto = function (S, a) { const r = KB.autoPlan(Object.assign({ w: S.b.w, d: S.b.d, h: S.b.h }, a)); Object.keys(S).forEach(k => delete S[k]); Object.assign(S, r.project);
+    return { msg: `${r.brief}${r.log.length ? " Решения: " + r.log.join("; ") + "." : ""}${r.warnings.length ? " Замечания: " + r.warnings.join(" ") : ""}` }; };
+  KB.OP_ALIASES = { auto_plan: "auto", move: "update", resize: "update", edit: "update", remove: "delete", furnish_room: "furnish", add_furniture: "add_item", set_building: "building", new_office: "generate", set_floor: "floor", clear_room: "clear" };
+  KB.apply = function (S, op) {
+    const name = KB.OP_ALIASES[op.op] || op.op, fn = KB.OPS[name];
+    if (!fn) throw new Error(`Неизвестная команда «${op.op}». Есть: ${Object.keys(KB.OPS).join(", ")}.`);
+    const r = fn(S, op) || {}; return Object.assign({ ok: true, op: name }, r);
+  };
+  // Пакет команд: выполняются по очереди; ошибка одной не отменяет остальные (если не atomic)
+  KB.applyAll = function (S, ops, atomic) {
+    const snap = atomic ? JSON.stringify(S) : null, res = [];
+    for (const op of ops || []) { try { res.push(KB.apply(S, op)); } catch (e) { res.push({ ok: false, op: op.op, msg: e.message });
+      if (atomic) { const back = JSON.parse(snap); Object.keys(S).forEach(k => delete S[k]); Object.assign(S, back); res.push({ ok: false, msg: "Откат: пакет не применён целиком." }); break; } } }
+    return res;
+  };
+
+  /* ---------- текстовое описание плана для Claude */
+  KB.describe = function (S, o = {}) {
+    const b = S.b, L = [], rooms = S.items.filter(i => i.t === "room");
+    L.push(`Проект «${S.name}». Здание ${b.w}×${b.d} м (X вдоль дороги 0→${b.w}, Y вглубь 0→${b.d}; витраж/вход — сторона Y=${b.d}), высота ${b.h} м${b.mz ? `, отметка антресоли +${b.mz}` : ""}. Наружные стены 0,3 м.`);
+    for (const lv of [0, 1]) {
+      const rs = rooms.filter(r => lvOf(r) === lv).sort((a, c) => (a.y - c.y) || (a.x - c.x)); if (!rs.length) continue;
+      const tot = rs.filter(r => !r.sub).reduce((s, r) => s + r.w * r.h, 0);
+      L.push(`\n${lv ? (b.upper === "floor" ? "2 ЭТАЖ" : "АНТРЕСОЛЬ") : "1 ЭТАЖ"} — помещений ${rs.length}, сумма (без зон внутри) ${tot.toFixed(1)} м²:`);
+      for (const r of rs) {
+        const its = KB.contents(S, r).filter(i => i.t === "item"), cnt = {};
+        for (const i of its) { const n = KB.FK[i.k] ? KB.FK[i.k].n : i.k; cnt[n] = (cnt[n] || 0) + 1; }
+        L.push(`  [${r.id}] ${r.name}${r.sub ? " (зона)" : ""} — x ${r.x}, y ${r.y}, ${r.w}×${r.h} = ${(r.w * r.h).toFixed(1)} м², ${KB.CAT[r.cat] ? KB.CAT[r.cat].n : r.cat}, ${r.border === "none" ? "без стен" : r.border === "glass" ? "стекло" : "стены"}` +
+          (o.items === false ? "" : its.length ? `; внутри: ${Object.entries(cnt).map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(", ")}` : "; пусто"));
+      }
+    }
+    const free = S.items.filter(i => i.t === "item" && !rooms.some(r => lvOf(r) === lvOf(i) && !isHall(r) && inside(aabbOf(i), r, 0.35)));
+    if (free.length && o.items !== false) { const cnt = {}; for (const i of free) { const n = KB.FK[i.k] ? KB.FK[i.k].n : i.k; cnt[n] = (cnt[n] || 0) + 1; }
+      L.push(`\nПредметы в общем зале / вне помещений: ${Object.entries(cnt).map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(", ")}`); }
+    const walls = S.items.filter(i => i.t === "wall"); if (walls.length) L.push(`Стен/перегородок отдельных: ${walls.length}`);
+    if (o.ascii !== false) { L.push("\nСХЕМА 1 этажа (1 символ = 0,5 м; буквы — помещения из списка ниже, · — свободно, # — мебель):"); L.push(KB.ascii(S, 0)); }
+    if (o.checks !== false) { L.push(""); L.push(KB.summary(S).split("\n").slice(1).join("\n")); }
+    return L.join("\n");
+  };
+  KB.ascii = function (S, lv = 0, cell = 0.5) {
+    const b = S.b, cols = Math.ceil(b.w / cell), rowsN = Math.ceil(b.d / cell), G = Array.from({ length: rowsN }, () => Array(cols).fill("·"));
+    const rs = S.items.filter(i => i.t === "room" && lvOf(i) === lv).sort((a, c) => c.w * c.h - a.w * a.h);
+    const sym = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", legend = [];
+    rs.forEach((r, n) => { const s = sym[n % sym.length]; legend.push(`${s}=${r.name}`);
+      for (let j = Math.floor(r.y / cell); j < Math.min(rowsN, Math.ceil((r.y + r.h) / cell)); j++) for (let i = Math.floor(r.x / cell); i < Math.min(cols, Math.ceil((r.x + r.w) / cell)); i++) if (j >= 0 && i >= 0) G[j][i] = s; });
+    for (const it of S.items.filter(i => i.t === "item" && lvOf(i) === lv && !isDoorK(i.k))) { const a = aabbOf(it);
+      for (let j = Math.floor((a.y + 0.1) / cell); j < Math.min(rowsN, Math.ceil((a.y + a.h - 0.1) / cell)); j++) for (let i = Math.floor((a.x + 0.1) / cell); i < Math.min(cols, Math.ceil((a.x + a.w - 0.1) / cell)); i++) if (j >= 0 && i >= 0) G[j][i] = "#"; }
+    return G.map(r => r.join("")).join("\n") + `\n(низ схемы — фасад с витражом)\nЛегенда: ${legend.join(", ")}`;
+  };
+  KB.catalogText = function (group) {
+    const g = {}; for (const f of KB.FURN) { if (group && !norm(f[2]).includes(norm(group))) continue; (g[f[2]] = g[f[2]] || []).push(`${f[0]} — ${f[1]} ${f[3]}×${f[4]} м${KB.SIZES[f[0]] ? ` [size: ${KB.SIZES[f[0]].map((s, i) => `${i}=${s[0]}`).join("; ")}]` : ""}`); }
+    const rt = KB.ROOM_TYPES.map(t => `${t.key}: ${t.size.join("×")} м, ${KB.CAT[t.cat].n}, ${t.border === "none" ? "зона без стен" : t.border === "glass" ? "стекло" : "стены"}`);
+    return Object.entries(g).map(([k, v]) => `${k}:\n  ${v.join("\n  ")}`).join("\n") + (group ? "" : `\n\nТипы помещений (распознаются по названию, задают мебель и размер по умолчанию):\n  ${rt.join("\n  ")}\nЦвета пола: ${KB.FLOORS.map(f => `${f[0]} ${f[1]}`).join("; ")}`);
+  };
+  KB.FLOORS = [["Керамогранит светлый", "#EDE8DE"], ["Керамогранит серый", "#C9C9C4"], ["Мрамор", "#F2F0EA"], ["Бетон / микроцемент", "#BDBAB2"], ["Ламинат дуб", "#D9B98E"], ["Паркет орех", "#A8784E"], ["Ковролин серый", "#9EA3A6"], ["Ковролин синий", "#5F7390"], ["Плитка санузла", "#CFE8E6"], ["Резиновое покрытие (детская)", "#F4D36B"], ["Тёмный керамогранит", "#5B5854"], ["Белый глянец", "#FAFAF7"]];
+
+  /* ============================================================ ДВИЖОК ЗОНИРОВАНИЯ v2
+   * Любой прямоугольник W×D (фасад с витражом — Y = D). Схема «от пути клиента»:
+   *   служебное ядро в торце (санузлы, КУИ, щитовая, кухня, бэк-офис; при высоте ≥ 6,2 м — бэк-офис, РОП, кухня, архив на антресоли);
+   *   полоса полупубличных помещений вдоль глухой стены (кабинеты/столы, переговорные, банк, сделочная у ядра, бар и шоурум у зоны ожидания);
+   *   проход вдоль полосы; при нехватке длины — второй ряд напротив (двусторонний проход) и/или полоса вдоль торцевой стены;
+   *   публичная зона у витража: [детская][ожидание][ВХОД+ресепшен][макет][медиа] — вход между колоннами, макет виден с улицы.
+   * Мебель и двери расставляет KB.furnishRoom по типу помещения.
+   */
+  KB.layout = function (p, pp) {
+    const W = +p.w, D = +p.d, H = +p.h || 4.5, t = 0.3, X0 = t, X1 = W - t, Y0 = t, Y1 = D - t, Din = Y1 - Y0, Lin = X1 - X0;
+    const warn = [], placedKeys = [], R = [];
+    const rows = pp.rows, get = k => rows.find(r => r.key === k), A = Lin * Din;
+    const compact = Din < 9.5 || A < 180;
+    const cab = get("cabinet"), openDesks = !!(cab && cab.border === "none");
+    const rb = openDesks ? (compact ? 2.6 : 2.8) : (compact ? 3.0 : 3.2);
+    const a = compact ? 1.5 : 1.8;
+    let mezz = p.mezz === "yes" || (p.mezz !== "no" && H >= 6.2);
+    if (mezz && H - 3.3 < 2.2) { mezz = false; warn.push("Антресоль не помещается по высоте — всё внизу."); }
+    const mk = (r, x, y, w, h, o = {}) => { const it = room(o.name || r.name, x, y, w, h, o.cat || r.cat, o.border || r.border || "wall", Object.assign({ color: r.color || KB.CAT[o.cat || r.cat].c }, o.extra || {})); it._key = r.key; R.push(it); return it; };
+    const copies = k => { const r = get(k); if (!r) return []; return Array.from({ length: r.n }, () => r); };
+    const areaOf = r => (r.w && r.h ? r.w * r.h : r.area);
+    const wOf = (r, depth, minW) => Math.max(minW || 1.2, areaOf(r) / depth);
+
+    /* ---------- 1. служебное ядро (правый торец) */
+    const coreBack = [];
+    const wcv = get("wcv");
+    if (wcv) { if (wcv.area >= 10) coreBack.push({ r: wcv, name: "С/у МГН", w: 2.3 }, { r: wcv, name: "С/у мужской", w: 1.5 }, { r: wcv, name: "С/у женский", w: 1.5 }); else coreBack.push({ r: wcv, w: Math.max(2.4, wcv.area / rb) }); }
+    for (const r of copies("wcs")) coreBack.push({ r, w: Math.max(1.5, areaOf(r) / rb) });
+    for (const k of ["kui", "elec"]) { const r = get(k); if (r) coreBack.push({ r, w: wOf(r, rb, k === "kui" ? 1.2 : 1.4) }); }
+    const upKeys = mezz ? ["director", "backoffice", "kitchen", "archive", "server", "storage"] : [];
+    for (const k of ["server", "archive", "storage", "security", "prayer"]) { const r = get(k); if (r && !upKeys.includes(k)) coreBack.push({ r, w: wOf(r, rb, 1.4) }); }   // мелкие — в задний ряд
+    const coreFront = [];
+    for (const k of ["kitchen", "backoffice", "director"]) { const r = get(k); if (r && !upKeys.includes(k)) coreFront.push({ r }); }
+    const wBack = coreBack.reduce((s, c) => s + c.w, 0);
+    const Df = Din - rb - a;
+    const frontArea = coreFront.reduce((s, c) => s + areaOf(c.r), 0);
+    // глубина ряда за коридором: сколько нужно по площади при ширине ядра ≈ ширине заднего ряда; остаток у витража — под сделочные/банк
+    let dA = 0;
+    if (coreFront.length) { dA = Math.min(Df, Math.max(3.4, frontArea / Math.max(wBack, 3.6) + 0.2)); if (Df - dA < 3.2) dA = Df; }
+    const cfW = c => Math.max(c.r.key === "director" ? 3.2 : 2.4, areaOf(c.r) / Math.max(dA, 1));
+    const wFront = coreFront.reduce((s, c) => s + cfW(c), 0);
+    let Wc = Math.max(wBack, wFront, 3.6);
+    if (Wc > Lin * 0.45) { warn.push(`Служебный блок ${Wc.toFixed(1)} м — больше 45% длины; служебные помещения сжаты.`); Wc = Math.max(Lin * 0.45, Math.min(wBack, Lin * 0.6)); }
+    const xc = X1 - Wc;
+    { let x = xc; const kk = Wc / Math.max(wBack, 1e-6);
+      for (const c of coreBack) { const w = c.w * kk; mk(c.r, x, Y0, w, rb, { name: c.name }); x += w; placedKeys.push(c.r.key); } }
+    mk({ key: "corr", name: "Коридор", cat: "circ", border: "none" }, xc, Y0 + rb, Wc, a);
+    if (coreFront.length) { let x = xc; const kk = Wc / wFront;
+      for (const c of coreFront) { const w = cfW(c) * kk; mk(c.r, x, Y0 + rb + a, w, dA); x += w; placedKeys.push(c.r.key); } }
+    const coreBottom = Y0 + rb + a + dA;
+
+    /* ---------- 2. полоса вдоль глухой стены */
+    const band = [];
+    const push = (k, w0) => { for (const r of copies(k)) band.push({ r, w: r.key === "cabinet" ? (r.w || 3) : wOf(r, rb, w0) }); };
+    push("cafe", 2.4); push("wardrobe", 1.5); push("showroom", 4); push("cabinet"); push("meet", 4.2); push("bank", 3); push("vip", 3.2); push("cashier", 2.6);
+    const stairW = mezz ? 2.8 : 0;
+    const eDepth = Y1 - coreBottom, frontBlock = [];
+    if (eDepth >= 3.2) { let wLeft = Wc;
+      for (const k of ["vip", "cashier", "bank", "meet"]) for (let i = band.length - 1; i >= 0; i--) { const b = band[i]; if (b.r.key !== k) continue; const w = Math.max(2.8, areaOf(b.r) / Math.min(eDepth, 5)); if (w <= wLeft + 0.01) { frontBlock.push({ r: b.r, w }); band.splice(i, 1); wLeft -= w; } } }
+    const Lb = xc - X0 - stairW; let used = band.reduce((s, b) => s + b.w, 0);
+    const overflow = [];
+    while (used > Lb + 0.01 && band.length) {
+      let idx = -1;
+      const ord = (p.overflowOrder || ["showroom", "wardrobe", "cashier", "cafe", "bank", "meet", "cabinet", "vip"]).filter(k => band.some(b => b.r.key === k));
+      for (const k of ord.concat(["showroom", "wardrobe", "cashier", "cafe", "bank", "meet", "cabinet", "vip"])) { idx = band.map(b => b.r.key).lastIndexOf(k); if (idx >= 0) break; }
+      if (idx < 0) idx = band.length - 1; const [b] = band.splice(idx, 1); overflow.push(b); used -= b.w; }
+    { let x = X0; const slack = Lb - used, add = slack > 0 && band.length ? Math.min(slack / band.length, 0.6) : 0;
+      for (const b of band) { const w = b.w + add; mk(b.r, x, Y0, w, rb); x += w; placedKeys.push(b.r.key); }
+      if (xc - stairW - x > 0.3) mk({ key: "pass", name: "Проход", cat: "circ", border: "none" }, x, Y0, xc - stairW - x, rb); }
+    if (mezz) mk({ key: "stair", name: "Лестница на антресоль", cat: "circ", border: "none" }, xc - stairW, Y0, stairW, rb + a);
+    mk({ key: "aisle", name: "Проход вдоль кабинетов", cat: "circ", border: "none" }, X0, Y0 + rb, xc - X0 - stairW, a);
+
+    /* ---------- 3. переполнение: второй ряд напротив, затем полоса вдоль левого торца */
+    let py0 = Y0 + rb + a, px0 = X0, lobby = null, seatsExtra = 0;
+    // в ряд напротив сначала — кабинеты и переговорные (клиент идёт к ним из зала), потом остальное
+    const semiFirst = ["cabinet", "meet", "bank", "vip", "showroom", "cashier", "cafe", "wardrobe"];
+    overflow.sort((p, q) => semiFirst.indexOf(p.r.key) - semiFirst.indexOf(q.r.key));
+    const islandRow = (y, faceNorth) => { const maxL = (xc - X0) - 2.6, row = []; let wSum = 0;
+      while (overflow.length && wSum + overflow[0].w <= maxL) { const b = overflow.shift(); row.push(b); wSum += b.w; }
+      let x = X0 + Math.max(1.3, ((xc - X0) - wSum) / 2);
+      for (const b of row) { mk(b.r, x, y, b.w, rb); x += b.w; placedKeys.push(b.r.key); }
+      return row.length; };
+    if (overflow.length && Y1 - py0 - rb >= 5.6) {
+      if (islandRow(py0, true)) {
+        py0 += rb;
+        // глубокий зал: второй ряд «спина к спине» — двери в зал
+        if (overflow.length && Y1 - py0 - rb >= 5.8 && islandRow(py0, false)) py0 += rb;
+      }
+    }
+    if (overflow.length && (xc - X0) >= 16) {
+      let y = py0;
+      while (overflow.length && y + overflow[0].w <= Y1 - 0.2) { const b = overflow.shift(); mk(b.r, X0, y, rb, b.w); y += b.w; placedKeys.push(b.r.key); }
+      if (y > py0) px0 = X0 + rb + 0.3;
+    }
+    for (const b of overflow) warn.push(`Не поместилось: ${b.r.name}.`);
+    if (frontBlock.length) { const dd = Math.min(eDepth, 5), y0 = Y1 - dd; let x = xc;
+      if (y0 - coreBottom > 0.3) lobby = mk({ key: "lobby", name: "Холл", cat: "circ", border: "none" }, xc, coreBottom, Wc, y0 - coreBottom);
+      const kk = Wc / frontBlock.reduce((s, f) => s + f.w, 0);
+      for (const f of frontBlock) { mk(f.r, x, y0, f.w * kk, dd); x += f.w * kk; placedKeys.push(f.r.key); } }
+    else if (eDepth > 0.3) lobby = mk({ key: "lobby", name: "Холл", cat: "circ", border: "none" }, xc, coreBottom, Wc, eDepth);
+
+    /* ---------- 4. публичная зона у витража */
+    const Pw = xc - px0, Pd = Y1 - py0;
+    mk({ key: "hall", name: "Зал продаж", cat: "client", border: "none", color: "#EDE8DE" }, px0, py0, Pw, Pd);
+    const gap = compact ? 0.5 : 0.8, W_ = Pw - 0.6;
+    const lounge = get("lounge"), seats = lounge ? (lounge.seats || Math.round(lounge.area / 1.8)) : 0;
+    const G = compact ? { w: 2.4, h: 2.2, seats: 3 } : { w: 2.6, h: 3.3, seats: 4 };
+    const groups = lounge ? Math.max(1, Math.ceil(seats / G.seats)) : 0;
+    const mkR = get("maket"), mkS = mkR ? (KB.MAKET[pp.maket] || KB.MAKET["3x2"]) : null, mg = Math.min(+p.gap || 1.2, compact ? 1.0 : 1.2);
+    const mw = mkS ? mkS[0] + 2 * mg : 0, mh = mkS ? mkS[1] + 2 * mg : 0;
+    const kidsR = get("kids"), kw = kidsR ? Math.max(2.4, kidsR.w || 3) : 0, kh = kidsR ? Math.max(2.4, kidsR.h || 3) : 0;
+    const medR = get("media"), MW = 3.5, MH = 3.0, recR = get("reception"), tamR = get("tambour");
+    const recW = recR ? Math.max(2.2, recR.w || 3.6) : 0, recH = recR ? Math.max(1.8, recR.h || 2.2) : 0;
+    const tamW = tamR ? 2.6 : 0, tamH = tamR ? 2.5 : 0;
+    // вход: тамбур на оси, ресепшен сбоку (≥ 1 м от оси, со стороны зоны ожидания) — путь в зал свободен
+    const E = (recR ? recW + 1.0 : 0) + Math.max(tamW, 2) / 2 + Math.max(tamW / 2, 1.0) + 0.3;
+    const recFront = Pd < 9.5;                                   // неглубокий зал: стойка рядом с тамбуром, у витража
+    const Ed = recR ? (recFront ? Math.max(tamH, recH + 0.5) : tamH + 0.8 + recH) : Math.max(tamH, 1.2);
+    const Fd = Math.max(Ed, lounge ? G.h : 0) + 0.2;             // глубина ряда у витража
+    const Id = Pd - Fd - 0.9;                                      // глубина внутреннего ряда (0,9 — проход между рядами)
+    const innerOK = Id >= 2.4;
+    // что уходит в глубину зала
+    let inMaket = !!(mkR && innerOK && mh <= Id), inKids = !!(kidsR && innerOK && kh <= Id), inMedia = !!(medR && innerOK && MH <= Id);
+    let useMaket = !!mkR, useKids = !!kidsR, useMedia = !!medR;
+    if (useMaket && !inMaket && mh > Pd - 0.3) { useMaket = false; warn.push("Зона макета не помещается по глубине зала — поставьте экран или уменьшите макет."); }
+    const fFixed = () => E + (useMaket && !inMaket ? mw + gap : 0) + (useKids && !inKids ? kw + gap : 0) + (useMedia && !inMedia ? MW + gap : 0);
+    const iFixed = () => (useMaket && inMaket ? mw + gap : 0) + (useKids && inKids ? kw + gap : 0) + (useMedia && inMedia ? MW + gap : 0);
+    while (iFixed() > W_ && (inMedia || inKids)) { if (inMedia && useMedia) { useMedia = false; } else if (inKids) { inKids = false; } else break; }
+    while (fFixed() > W_) { if (useMedia && !inMedia) useMedia = false; else if (useKids && !inKids) useKids = false; else if (useMaket && !inMaket) { useMaket = false; warn.push("Зона макета не помещается по ширине зала."); } else break; }
+    if (medR && !useMedia) warn.push("Медиа-зона не поместилась.");
+    if (kidsR && !useKids) warn.push("Детская не поместилась.");
+    const cF = () => Math.max(0, Math.floor((W_ - fFixed() + gap) / (G.w + gap))), cI = () => innerOK && G.h <= Id ? Math.max(0, Math.floor((W_ - iFixed() + gap) / (G.w + gap))) : 0;
+    while (lounge && cF() + cI() < 1) {                       // хотя бы одна мягкая группа ожидания — важнее медиа и детской
+      if (useMedia) { useMedia = false; warn.push("Медиа-зона убрана ради зоны ожидания."); } else if (useKids) { useKids = false; warn.push("Детская убрана ради зоны ожидания."); } else break; }
+    const capF = cF();
+    const nF = Math.min(groups, capF);
+    const capI = cI();
+    const nI = Math.min(groups - nF, capI);
+    if (lounge && (nF + nI) * G.seats < seats) warn.push(`Мест ожидания: ${(nF + nI) * G.seats} из ${seats}.`);
+    // ряд у витража: [детская][ожидание…][ВХОД][макет][медиа]
+    const fItems = (useKids && !inKids ? 1 : 0) + nF + 1 + (useMaket && !inMaket ? 1 : 0) + (useMedia && !inMedia ? 1 : 0);
+    const spF = gap + Math.max(0, W_ - fFixed() - nF * (G.w + gap)) / Math.max(1, fItems + 1);
+    let x = px0 + 0.3 + (spF - gap);
+    if (useKids && !inKids) { mk(kidsR, x, Y1 - kh - 0.2, kw, kh, { extra: { sub: true } }); placedKeys.push("kids"); x += kw + spF; }
+    for (let i = 0; i < nF; i++) { mk(lounge, x, Y1 - 0.2 - G.h, G.w, G.h, { extra: { sub: true } }); x += G.w + spF; }
+    let entX = x + (recR ? recW + 1.0 : 0) + Math.max(tamW, 2) / 2;
+    { const snap = Math.round((entX - 2.5) / 5) * 5 + 2.5; if (Math.abs(snap - entX) < 0.9) entX = snap; }   // ось входа — между колоннами (шаг 5 м)
+    if (tamR) { mk(tamR, entX - tamW / 2, Y1 - tamH, tamW, tamH, { extra: { sub: true } }); placedKeys.push("tambour"); }
+    if (recR) { mk(recR, Math.max(px0 + 0.2, entX - 1.0 - recW), recFront ? Y1 - recH - 0.5 : Math.max(py0 + 0.3, Y1 - tamH - 0.8 - recH), recW, recH, { extra: { sub: true } }); placedKeys.push("reception"); }
+    x = entX + Math.max(tamW / 2, 1.0) + 0.3 + spF;
+    if (useMaket && !inMaket) { mk(mkR, x, Y1 - mh - 0.2, mw, mh, { name: "Зона макета", extra: { sub: true } }); placedKeys.push("maket"); x += mw + spF; }
+    if (useMedia && !inMedia) { mk(medR, x, Y1 - MH - 0.2, MW, MH, { extra: { sub: true } }); placedKeys.push("media"); x += MW + spF; }
+    if (lounge && nF + nI) placedKeys.push("lounge");
+    // внутренний ряд: макет на оси входа (виден с порога), слева — детская и ожидание, справа — медиа
+    if (innerOK && (inMaket && useMaket || inKids && useKids || inMedia && useMedia || nI)) {
+      const yIn = h => py0 + Math.max(0.3, (Id - h) / 2 + 0.1);
+      const leftW = (inKids && useKids ? kw + gap : 0) + nI * (G.w + gap), rightW = inMedia && useMedia ? MW + gap : 0;
+      let mX = inMaket && useMaket ? entX - mw / 2 : px0 + 0.3 + leftW;
+      mX = Math.max(mX, px0 + 0.3 + leftW); mX = Math.min(mX, xc - 0.3 - rightW - (inMaket && useMaket ? mw : 0));
+      let xl = px0 + 0.3;
+      if (inKids && useKids) { mk(kidsR, xl, yIn(kh), kw, kh, { extra: { sub: true } }); placedKeys.push("kids"); xl += kw + gap; }
+      for (let i = 0; i < nI; i++) { mk(lounge, xl, yIn(G.h), G.w, G.h, { extra: { sub: true } }); xl += G.w + gap; }
+      let xr = mX;
+      if (inMaket && useMaket) { mk(mkR, mX, yIn(mh), mw, mh, { name: "Зона макета", extra: { sub: true } }); placedKeys.push("maket"); xr = mX + mw + gap; }
+      if (inMedia && useMedia) { mk(medR, Math.max(xr, xl), yIn(MH), MW, MH, { extra: { sub: true } }); placedKeys.push("media"); }
+    }
+    // просторный холл у служебного блока — второй лаунж (у переговорных / VIP): то, что не встало у витража
+    if (lobby && lobby.h >= 3.4) {
+      const need = [];
+      for (let i = nF + nI; i < groups; i++) need.push({ r: lounge, w: G.w, h: G.h });
+      if (kidsR && !useKids) need.push({ r: kidsR, w: kw, h: kh, key: "kids" });
+      if (medR && !useMedia) need.push({ r: medR, w: MW, h: MH, key: "media" });
+      let xl = lobby.x + 0.4, extraSeats = 0;
+      for (const it of need) { if (xl + it.w > lobby.x + lobby.w - 0.3 || it.h > lobby.h - 1.4) continue;
+        mk(it.r, xl, lobby.y + (lobby.h - it.h) / 2, it.w, it.h, { extra: { sub: true } }); xl += it.w + gap;
+        if (it.r === lounge) extraSeats += G.seats; else { placedKeys.push(it.key); const i = warn.findIndex(w => w.startsWith(it.key === "kids" ? "Детская" : "Медиа")); if (i >= 0) warn.splice(i, 1); } }
+      if (extraSeats) { seatsExtra = extraSeats; lobby.name = "Холл / лаунж"; }
+      else if (lounge && lobby.w * lobby.h >= 24 && lobby.h >= G.h + 1.4 && xl === lobby.x + 0.4) {   // пустой просторный холл — лаунж у переговорных
+        mk(lounge, lobby.x + (lobby.w - G.w) / 2, lobby.y + (lobby.h - G.h) / 2, G.w, G.h, { name: "Лаунж у переговорных", extra: { sub: true } }); seatsExtra = G.seats; }
+    }
+    const doors = [];
+    if (tamR) doors.push({ k: "auto", x: entX - 1, y: Y1 - 0.15, w: 2, h: 0.3, label: "Вход" }, { k: "auto", x: entX - 1, y: Y1 - tamH - 0.15, w: 2, h: 0.3 });
+    else doors.push({ k: "door18", x: entX - 0.9, y: Y1 - 1.05, w: 1.8, h: 1.2, rot: 180, label: "Вход" });
+    doors.push({ k: "door10", x: X1 - 0.15, y: Y0 + rb + 0.25, w: 1.0, h: 1.3, rot: 270, label: "Служебный вход" });
+
+    /* ---------- 5. антресоль над ядром */
+    let mA = 0, mezzBottom = 0;
+    if (mezz) {
+      const L1 = { lv: 1 }, up = upKeys.map(get).filter(Boolean);
+      const backUp = up.filter(r => ["archive", "server", "storage"].includes(r.key)), frontUp = up.filter(r => !["archive", "server", "storage"].includes(r.key));
+      const dF = Math.min(Din - rb - a, Math.max(4, frontUp.reduce((s, r) => s + areaOf(r), 0) / Wc + 0.5, 5));
+      let xm = xc; const sumB = backUp.reduce((s, r) => s + wOf(r, rb, 1.6), 0), kB = sumB > Wc ? Wc / sumB : 1;
+      for (const r of backUp) { const w = wOf(r, rb, 1.6) * kB; mk(r, xm, Y0, w, rb, { extra: L1 }); xm += w; placedKeys.push(r.key); }
+      if (xm < X1 - 0.3) mk({ key: "void", name: "Холл антресоли", cat: "circ", border: "none" }, xm, Y0, X1 - xm, rb, { extra: L1 });
+      mk({ key: "gal", name: "Галерея антресоли", cat: "circ", border: "none" }, xc - stairW, Y0 + rb, Wc + stairW, a, { extra: L1 });
+      const fw = r => Math.max(r.key === "director" ? 3.4 : 2.6, areaOf(r) / dF), sumF = frontUp.reduce((s, r) => s + fw(r), 0), kF = Wc / Math.max(sumF, 1e-6);
+      xm = xc;
+      for (const r of frontUp) { const w = fw(r) * kF; mk(r, xm, Y0 + rb + a, w, dF, { extra: L1, border: r.key === "director" ? "glass" : r.border }); xm += w; placedKeys.push(r.key); }
+      mA = Wc * (rb + a + dF) + stairW * a;
+      if (mA > Math.min(0.38 * A, 290)) warn.push(`Антресоль ${Math.round(mA)} м² — больше допустимой доли, проверьте с проектировщиком.`);
+      if (sumF > Wc * 1.25) warn.push("Помещения антресоли сжаты — не хватает ширины служебного блока.");
+      mezzBottom = Y0 + rb + a + dF;
+    }
+    return { rooms: R, doors, warn, placedKeys, mezz, mA, xc, meta: { rb, a, Wc, compact, entX, mezzBottom, X1, seatsPlaced: (nF + nI) * G.seats + seatsExtra, seatsWanted: seats } };
+  };
+
+  // Сборка проекта из программы через движок v2 (с мебелью и дверями)
+  KB.generate2 = function (p0) {
+    const prog = KB.program(p0), p = prog.params, pp = { rows: prog.rows, maket: p.maket };
+    const L = KB.layout(Object.assign({}, p0, p), pp);
+    const S = { v: 1, name: p.name || "Офис продаж", notes: "", b: { w: +p0.w, d: +p0.d, h: +p0.h || 4.5, mz: 3.3, front: "vitrage" }, items: [] };
+    for (const r of L.rooms) { const { _key, ...it } = r; S.items.push(it); }
+    for (const dr of L.doors) S.items.push({ id: uid(), t: "item", lv: 0, k: dr.k, x: r3(dr.x), y: r3(dr.y), w: dr.w, h: dr.h, rot: dr.rot || 0, flip: false, label: dr.label || "" });
+    if (L.mezz) { const st = S.items.find(i => i.name === "Лестница на антресоль");
+      if (st) S.items.push({ id: uid(), t: "item", lv: 0, k: "stair2", x: r3(st.x + 0.1), y: r3(st.y + 0.1), w: 2.6, h: r3(Math.min(4, st.h - 0.2)), rot: 0, flip: false, label: "на антресоль" });
+      S.items.push({ id: uid(), t: "wall", lv: 1, kind: "rail", x1: r3(L.xc), y1: r3(L.meta.mezzBottom), x2: r3(L.meta.X1), y2: r3(L.meta.mezzBottom), th: 0.05 }); }
+    const skip = new Set(["hall", "aisle", "corr", "pass", "lobby", "gal", "void", "stair", "tambour"]);
+    for (const r of L.rooms) { if (skip.has(r._key)) continue; const it = S.items.find(i => i.id === r.id); if (!it) continue;
+      if (r._key === "maket") { const mkS = KB.MAKET[p.maket] || KB.MAKET["3x2"]; S.items.push({ id: uid(), t: "item", lv: 0, k: "model", x: r3(it.x + (it.w - mkS[0]) / 2), y: r3(it.y + (it.h - mkS[1]) / 2), w: mkS[0], h: mkS[1], rot: 0, flip: false, label: "макет " + String(p.maket).replace("x", "×") }); continue; }
+      if (r._key === "lounge") { const c = frame(it, "s");
+        const g = it.w >= 2.5 && it.h >= 3 ? [["lounge", (it.w - 2.2) / 2, (it.h - 2.9) / 2]] : [["sofa3", (it.w - 2.2) / 2, it.h - 1.0], ["ctab", (it.w - 1.2) / 2, 0.2]];
+        for (const [k, u, v] of g) S.items.push(c.put(k, u, v)); continue; }
+      S.items.push(...KB.furnishRoom(S, it)); }
+    S.program = prog.rows.map(r => ({ key: r.key, name: r.name, zone: r.zone, cat: r.cat, n: r.n, area: r.area, status: r.status, rule: r.rule, sub: !!r.sub }));
+    S.meta = { generator: "office-kb layout v2", params: p, mezz: L.mezz, warnings: L.warn, seatsPlaced: L.meta.seatsPlaced, seatsWanted: L.meta.seatsWanted };
+    return { project: S, warnings: L.warn, program: prog.rows, mezz: L.mezz };
+  };
+
+  /* ------------------------------------------------------------ описание для ИИ-помощника */
+  KB.PARAM_SCHEMA_TEXT = `{"name":string,"w":число м (длина вдоль дороги),"d":число м (глубина),"h":число м (высота),"M":менеджеров на смене,"B":сотрудников бэк-офиса,"maket":"3x2"|"5x3"|"6x4","kids":bool,"cafe":bool,"wardrobe":bool,"bank":bool,"cashier":bool,"media":bool,"showroom":bool,"director":bool,"mezz":"auto"|"yes"|"no"}`;
+
+  if (typeof module !== "undefined" && module.exports) module.exports = KB; else root.OfficeKB = KB;
+})(typeof window !== "undefined" ? window : globalThis);

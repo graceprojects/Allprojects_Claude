@@ -576,9 +576,28 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     const allowed = new Set(["min", "max", "round", "ceil", "floor", "clamp", ...Object.keys(vars)]);
     const ids = src.replace(/'[^']*'|"[^"]*"/g, "").match(/[A-Za-z_]\w*/g) || [];
     for (const id of ids) if (!allowed.has(id)) throw new Error(`Неизвестное имя «${id}» в формуле: ${src}`);
-    const fn = new Function("min", "max", "round", "ceil", "floor", "clamp", ...Object.keys(vars), "return (" + src + ");");
-    return fn(Math.min, Math.max, Math.round, Math.ceil, Math.floor, (x, a, b) => Math.min(b, Math.max(a, x)), ...Object.values(vars));
+    return calc(src, vars);
   };
+  // Маленький разборщик формул без eval / new Function (страница на claude.ai может запрещать eval политикой CSP).
+  // Числа, 'строки', имена, min/max/round/ceil/floor/clamp, + - * / %, сравнения, && || !, a ? b : c, скобки.
+  const FN = { min: Math.min, max: Math.max, round: Math.round, ceil: Math.ceil, floor: Math.floor, clamp: (x, a, b) => Math.min(b, Math.max(a, x)) };
+  function calc(src, vars) {
+    const T = src.match(/\d+(?:\.\d+)?|'[^']*'|"[^"]*"|[A-Za-z_]\w*|===|!==|==|!=|<=|>=|&&|\|\||[-+*/%()?:<>!,]/g) || []; let i = 0;
+    const peek = () => T[i], take = t => { if (t && T[i] !== t) throw new Error(`Ожидалось «${t}» в формуле: ${src}`); return T[i++]; };
+    const BIN = { "||": 1, "&&": 2, "==": 3, "!=": 3, "===": 3, "!==": 3, "<": 4, "<=": 4, ">": 4, ">=": 4, "+": 5, "-": 5, "*": 6, "/": 6, "%": 6 };
+    const op = (o, a, b) => o === "+" ? a + b : o === "-" ? a - b : o === "*" ? a * b : o === "/" ? a / b : o === "%" ? a % b : o === "<" ? a < b : o === "<=" ? a <= b : o === ">" ? a > b : o === ">=" ? a >= b
+      : o === "==" || o === "===" ? a === b : o === "!=" || o === "!==" ? a !== b : o === "&&" ? a && b : a || b;
+    function atom() { const t = take();
+      if (t == null) throw new Error("Формула оборвалась: " + src);
+      if (t === "(") { const v = expr(); take(")"); return v; }
+      if (t === "-") return -atom(); if (t === "+") return +atom(); if (t === "!") return !atom();
+      if (/^\d/.test(t)) return +t; if (/^['"]/.test(t)) return t.slice(1, -1);
+      if (peek() === "(") { take("("); const a = []; if (peek() !== ")") { a.push(expr()); while (peek() === ",") { take(","); a.push(expr()); } } take(")"); return FN[t](...a); }
+      if (t in vars) return vars[t]; throw new Error(`Неизвестное имя «${t}» в формуле: ${src}`); }
+    function bin(p) { let a = atom(); for (;;) { const o = peek(), q = BIN[o]; if (!q || q < p) return a; take(); a = op(o, a, bin(q + 1)); } }
+    function expr() { const c = bin(1); if (peek() !== "?") return c; take("?"); const a = expr(); take(":"); const b = expr(); return c ? a : b; }
+    const v = expr(); if (i < T.length) throw new Error("Лишнее в формуле: " + src); return v;
+  }
 
   // Программа из пакета: rows с вычисленными n и area; opts[key] включает/выключает строки; counts[key] — ручное количество
   KB.packageProgram = function (pkgKey, A, opts = {}, counts = {}, pkgDef) {

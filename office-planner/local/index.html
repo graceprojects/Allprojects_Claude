@@ -2264,6 +2264,8 @@ $("#bClaude").onclick=claudeDialog;
 /* ============================================================ запуск */
 S = OfficeKB.generate({name:"Офис продаж 40×12 (пример)"}).project;
 try{ const last=JSON.parse(localStorage.getItem("op.projects")||"{}"); const ids=Object.keys(last).sort((a,b)=>last[b].updatedAt-last[a].updatedAt); if(ids[0]){ S=JSON.parse(last[ids[0]].json); projectId=ids[0]; } }catch(e){}
+// прямая ссылка на пример: ?example=chine или #chine
+{ const q=(new URLSearchParams(location.search).get("example")||location.hash.slice(1)||"").toLowerCase(); if(q&&EXAMPLES[q]){ S=JSON.parse(JSON.stringify(EXAMPLES[q])); projectId="example-"+q; hasUserEdit=true; } }
 renderLib(); fit(); render(); setStatus(projectId?"Открыт последний проект":"Пример — изменения сохранятся автоматически");
 (async()=>{
   if(location.protocol.startsWith("http")&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&await livePing(location.origin)) liveConnect(location.origin,false);

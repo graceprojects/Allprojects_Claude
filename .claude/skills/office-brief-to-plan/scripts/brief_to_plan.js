@@ -110,19 +110,20 @@ function finish(S) {
    * или часть мест ожидания, хотя место в зале есть. Пробуем найти для них свободный прямоугольник
    * (зона макета уже включает обход 1 м; остальным — зазор 0,6 м), начиная с обязательного. Всё найденное отмечаем в отчёте. */
   const rescued = [];
-  const hall = () => S.items.find(i => i.t === "room" && !i.lv && /Зал продаж/.test(i.name));
+  const halls = () => S.items.filter(i => i.t === "room" && !i.lv && /^(Зал продаж|Холл)(\s|$)/.test(i.name)).sort((a, b) => b.w * b.h - a.w * a.h);
   const tryPlace = (row, w, h, lv, near) => {
-    const H = lv ? null : hall(), c = row.border === "none" ? 0.3 : 0.6;   // у зоны без стен проход уже внутри неё
-    for (const [ww, hh] of [[w, h], [h, w]]) {
-      const sp = KB.findSpace(S, Object.assign({ w: +(ww + 2 * c).toFixed(2), h: +(hh + 2 * c).toFixed(2), lv, near, limit: 1 }, H && row.zone !== "service" ? { within: H.id } : {}))[0];
+    const areas = lv || row.zone === "service" ? [null] : halls().map(x => x.id);   // публичное — в зале продаж, затем в холлах
+    // зазор: у зоны без стен проход уже внутри неё; помещению со стенами сначала 0,6 м, в тесном холле — 0,2 м (встаёт к стене)
+    for (const c of row.border === "none" ? [0.3] : [0.6, 0.2]) for (const within of areas) for (const [ww, hh] of [[w, h], [h, w]]) {
+      const sp = KB.findSpace(S, Object.assign({ w: +(ww + 2 * c).toFixed(2), h: +(hh + 2 * c).toFixed(2), lv, near, limit: 1 }, within ? { within } : {}))[0];
       if (!sp) continue;
-      KB.applyAll(S, [{ op: "add_room", name: row.name, x: +(sp.x + c).toFixed(2), y: +(sp.y + c).toFixed(2), w: ww, h: hh, lv, cat: row.cat, border: row.border || "wall", sub: !!row.sub || row.border === "none", color: row.color }]);
+      KB.applyAll(S, [{ op: "add_room", name: row.name, x: +(sp.x + c).toFixed(2), y: +(sp.y + c).toFixed(2), w: ww, h: hh, lv, cat: row.cat, border: row.border || "wall", sub: !!row.sub || row.border === "none" || !!within, color: row.color }]);   // внутри зала/холла — вложенное помещение (площадь уже в зале)
       return true; }
     return false; };
-  const missingNow = () => { const fact = KB.programFact(S);     // сравниваем с ТЗ, а не с урезанной движком программой
-    return rows.map(row => { const f = fact.find(x => x.key === row.key); const n = row.n === "M" ? M : +row.n || 1;
-      return { key: row.key, n, placed: f ? Math.min(f.placed, n) : 0, status: row.status || "обязательно" }; }).filter(f => f.placed < f.n); };
-  for (const f of missingNow().sort((x, y) => (x.status === "обязательно" ? 0 : 1) - (y.status === "обязательно" ? 0 : 1))) {
+  const missingNow = () => missingOf(S);
+  const PRI = ["cabinet", "meet", "vip", "bank", "cashier", "maket", "reception", "lounge", "cafe", "kids", "showroom", "media", "wardrobe"];
+  const pr = k => { const i = PRI.indexOf(k); return i < 0 ? PRI.length : i; };
+  for (const f of missingNow().sort((x, y) => ((x.status === "обязательно" ? 0 : 100) + pr(x.key)) - ((y.status === "обязательно" ? 0 : 100) + pr(y.key)))) {
     const row = rows.find(r => r.key === f.key); if (!row) continue;
     for (let k = f.placed; k < f.n; k++) {
       let ok = false;
@@ -147,7 +148,8 @@ function finish(S) {
 }
 const missingOf = S => { const fact = KB.programFact(S);
   return rows.map(row => { const f = fact.find(x => x.key === row.key); const n = row.n === "M" ? M : +row.n || 1;
-    return { key: row.key, n, placed: f ? Math.min(f.placed, n) : 0, status: row.status || "обязательно" }; }).filter(f => f.placed < f.n); };
+    const byName = S.items.filter(i => i.t === "room" && (i.name === row.name || (row.key === "maket" && /^Зона макета/.test(i.name)))).length;   // доразмещённое движок не знает
+    return { key: row.key, n, placed: Math.min(n, Math.max(f ? f.placed : 0, byName)), status: row.status || "обязательно" }; }).filter(f => f.placed < f.n); };
 const score = (x, S) => missingOf(S).reduce((a, q) => a + (q.n - q.placed) * (q.status === "обязательно" ? 10 : 3), 0)
   + Math.max(0, (S.meta.seatsWanted || 0) - (S.meta.seatsPlaced || 0)) + KB.checks(S).filter(c => c.level === "red").length * 5
   + x.log.filter(l => /макет|→/.test(l)).length * 2;          // уменьшенный макет / урезанные количества — тоже потеря
@@ -182,7 +184,13 @@ for (const f of fact) L.push(`- ${f.name}: ${f.n} → ${f.placed}${f.placed < f.
 if (S.meta.seatsWanted) L.push(`- мест ожидания: ${S.meta.seatsWanted} → ${S.meta.seatsPlaced}`);
 if (r.log.length) L.push("", "Что движок изменил, чтобы всё поместилось:", ...r.log.map(x => "- " + x));
 if (rescued.length) L.push("", "Доразмещено после движка (проверьте на листе):", ...rescued.map(x => "- " + x));
-if (r.warnings.length) L.push("", "Замечания раскладки:", ...r.warnings.map(x => "- " + x));
+const lost = missingOf(S).map(f => { const row = rows.find(x => x.key === f.key); return `${row.name}${f.n > 1 ? ` (${f.placed} из ${f.n})` : ""}${f.status !== "обязательно" ? " — было «если останется место»" : ""}`; });
+if ((S.meta.seatsPlaced || 0) < (S.meta.seatsWanted || 0)) lost.push(`мест ожидания ${S.meta.seatsPlaced || 0} из ${S.meta.seatsWanted} (по ТЗ ${seats})`);
+L.push("", lost.length ? "⚠ ИЗ ТЗ НЕ ПОМЕСТИЛОСЬ (обязательно скажите заказчику и предложите варианты):" : "Всё из ТЗ на плане.", ...lost.map(x => "- " + x));
+const stillMissing = new Set(missingOf(S).map(f => (rows.find(x => x.key === f.key) || {}).name));
+const warns = r.warnings.filter(x => { const m = /^Не поместилось: (.+)\.$/.exec(x); return !m || stillMissing.has(m[1]); })
+  .filter(x => !/^Мест ожидания/.test(x) || (S.meta.seatsPlaced || 0) < (S.meta.seatsWanted || 0)).filter((x, i, a) => a.indexOf(x) === i);
+if (warns.length) L.push("", "Замечания раскладки:", ...warns.map(x => "- " + x));
 const red = checks.filter(c => c.level === "red"), yel = checks.filter(c => c.level === "yellow" || c.level === "warn");
 L.push("", `Проверки норм: красных ${red.length}, жёлтых ${yel.length}`, ...red.concat(yel).map(c => `- [${c.level}] ${c.text || c.msg || c.title}${c.ref ? " (" + c.ref + ")" : ""}`));
 L.push("", `Файл проекта: ${out}`);

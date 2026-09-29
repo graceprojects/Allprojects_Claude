@@ -157,7 +157,7 @@ table.keys{width:100%;border-collapse:collapse;font-size:13px} table.keys td{pad
 .chip.good{color:var(--ok);border-color:var(--ok)} .chip.warn{color:var(--warn);border-color:var(--warn)}
 .nvsum{align-self:end;font-size:13px}.nvlog{margin-top:8px;font-size:12.5px}.nvlog ol{margin:4px 0;padding-left:18px}
 @media (max-width:820px){.vcards{grid-template-columns:1fr}}
-@media (max-width:700px){ .hud .chip:not(.chk){display:none} .hud{right:170px} .selbar select{max-width:110px} }
+@media (max-width:700px){ .hud .chip:not(.chk){display:none} .hud{top:8px;bottom:auto;left:8px;right:auto} .chk{white-space:nowrap} .selbar select{max-width:110px} }
 .pks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .pk{text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:3px}
 .pk b{font-size:15px} .pk span{font-family:var(--font-mono);font-size:12px;color:var(--accent)} .pk small{font-size:11.5px;color:var(--muted);line-height:1.35}
@@ -169,9 +169,14 @@ table.keys{width:100%;border-collapse:collapse;font-size:13px} table.keys td{pad
 #plan text{font-family:var(--font-ui);letter-spacing:0;text-rendering:geometricPrecision}
 @media (max-width:980px){
   body{overflow:auto}
-  .app{height:auto;grid-template-columns:1fr;grid-template-rows:auto 62vh auto auto;grid-template-areas:"top" "main" "side" "lib"}
-  .lib,.side{border:0;border-top:1px solid var(--line);max-height:none}
-  .lib .list{max-height:60vh}
+  .app{height:auto;grid-template-columns:1fr;grid-template-rows:auto 62vh auto;grid-template-areas:"top" "main" "side"}
+  .side{border:0;border-top:1px solid var(--line);max-height:none}
+  /* библиотека на телефоне — выезжающая снизу панель */
+  .lib{position:fixed;left:0;right:0;bottom:0;height:72vh;z-index:35;border:0;border-radius:18px 18px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.18);transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+  .lib.open{transform:none}
+  .lib:before{content:"";display:block;width:38px;height:5px;border-radius:3px;background:var(--fill);margin:8px auto 0;flex:0 0 auto}
+  .libfab{display:inline-flex!important}
+  .lib .list{max-height:none}
   .pane{max-height:none}
   .cards{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
 }
@@ -275,6 +280,9 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
 :root:not([data-theme="dark"]){ --muted:#6e6e73 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){ --muted:#98989f }}
 @media (max-width:700px){ .dlg .actions .btn{white-space:normal;text-align:left} .dlg table{display:block;overflow-x:auto;max-width:100%} .dlg .grp{overflow-x:auto;max-width:100%} }
+.libfab{display:none!important;position:absolute;left:12px;bottom:12px;z-index:6}
+.libback{position:fixed;inset:0;z-index:34;background:rgba(0,0,0,.25)}
+@media (max-width:980px){ .libfab{display:inline-flex!important} }
 :focus-visible{outline:none!important;box-shadow:0 0 0 3px var(--accent-soft),0 0 0 1.5px var(--accent)!important}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -314,6 +322,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     <div class="hud" id="hud"></div>
     <div class="empty" id="empty" hidden><div class="ebox"><b>Начните новый проект</b><p>Задайте размеры помещения — план и мебель соберутся сами в трёх вариантах наполнения.</p><button class="btn cta big" id="bEmptyNew"><span class="plus">＋</span><span class="lbl">Новый проект</span></button><button class="btn" id="bEmptyOpen">Открыть проект или пример</button></div></div>
     <div class="selbar" id="selbar" hidden role="toolbar" aria-label="Действия с выделенным"></div>
+    <button class="btn cta libfab" id="bLib" hidden><span class="plus">＋</span><span class="lbl">Добавить</span></button>
     <div class="zoombar" id="zoombar" role="toolbar" aria-label="Масштаб"><button data-z="out" title="Уменьшить (−)" aria-label="Уменьшить">−</button><button data-z="fit" title="Весь план (F)" aria-label="Весь план">⤢</button><button data-z="in" title="Увеличить (+)" aria-label="Увеличить">+</button><button data-z="help" title="Справка по управлению (?)" aria-label="Справка">?</button></div>
   </main>
 
@@ -2109,7 +2118,8 @@ function planMarkup(lv, opt={}){
   out.push(`</g>`);
   // подписи помещений
   for(const r of ordered){
-    let fs = Math.max(.12, Math.min(.34, r.w/10, r.h/4));
+    const pxMin = exp ? 0 : 9/V.s;   // на экране подпись не мельче ~9 px, если помещение позволяет
+    let fs = Math.max(.12, Math.min(Math.max(.34, pxMin), r.w/10, r.h/4));
     const cx=r.x+r.w/2, cy=r.y+r.h/2, num=nums[r.id];
     const area = r.w*r.h;
     const name = r.sub ? r.name : `${num}. ${r.name}`;
@@ -2117,7 +2127,8 @@ function planMarkup(lv, opt={}){
     // подпись вписывается в помещение: уменьшаем шрифт, в крошечных — только номер и площадь
     for(let g=0; g<6 && ((words.length+1)*fs*1.2 > r.h*.9 || Math.max(...words.map(x=>x.length))*fs*.62 > r.w*.95); g++){ fs*=.85; words=wrapText(name, r.w, fs); }
     if(fs < .1 || (words.length+1)*fs*1.2 > r.h*.95){ fs=Math.max(.1,Math.min(.2,r.w/6,r.h/3)); words=[r.sub?"":String(num)].filter(Boolean); }
-    const lines = [...words, `${m2(area)} м²`];
+    let lines = [...words, `${m2(area)} м²`];
+    if(!exp && fs*V.s < 6.5){ const f2=8/V.s; if(r.w > f2*2.4 && r.h > f2*1.6 && !r.sub){ fs=f2; lines=[String(num)]; } else continue; }   // мелко на экране — только номер (или ничего)
     const y0 = cy - (lines.length-1)*fs*1.2/2;
     out.push(`<text font-size='${fs}' text-anchor='middle' fill='${exp?"#222":"var(--ink)"}' pointer-events='none' style='paint-order:stroke;stroke:${hx(r.color,.8)};stroke-width:${fs*.25}px'>`+
       lines.map((l,i)=>`<tspan x='${cx}' y='${y0+i*fs*1.2}' dominant-baseline='central' ${i===lines.length-1?"font-weight='600'":""}>${esc(l)}</tspan>`).join("")+`</text>`);
@@ -2363,7 +2374,7 @@ function renderPane0(){
     <h5>Покрытие пола</h5><div class="sw">${FLOORS.map(([n,c])=>`<button data-floor="${c}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join("")}</div>
     <div class="row"><label class="f">Свой цвет<input type="color" id="pC" value="${it.color}"></label><label class="f">Высота перегородок, м<input type="number" id="pPH" value="${it.ph??3}" step=".1"></label></div>
     <label class="c"><input type="checkbox" id="pSub" ${it.sub?"checked":""}> Зона внутри другого помещения (не суммируется в итог)</label>
-    <div class="actions"><button class="btn" id="aDup">Копия</button><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`+previewHTML(it);
+    <div class="actions"><button class="btn primary" id="aFurn" title="Убрать мебель внутри и расставить по размеру и типу помещения">Расставить мебель</button><button class="btn" id="aDup">Копия</button><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`+previewHTML(it);
   } else if(it.t==="wall"){
     const L=Math.hypot(it.x2-it.x1,it.y2-it.y1);
     P.innerHTML=`<h3>${WALLS[it.kind].n}</h3>
@@ -2403,6 +2414,7 @@ function bindProps(it){
   act("aDel",()=>{ S.items=S.items.filter(i=>i.id!==it.id); sel=null; });
   act("aDup",()=>dup(it)); act("aRot",()=>rot(it)); act("aFlip",()=>it.flip=!it.flip);
   act("aStd",()=>{ const f=FK[it.k]; it.w=f.w; it.h=f.h; });
+  act("aFurn",()=>{ const kids=OfficeKB.contents(S,it).filter(k=>k.t==="item"); S.items=S.items.filter(i=>!kids.includes(i)); const f=OfficeKB.furnishRoom(S,it); S.items.push(...f); toast(f.length?`Мебель расставлена: ${f.length} предм.`:"Для этого типа помещения стандартной мебели нет"); });
   act("aLv",()=>{ const kids=it.t==="room"?OfficeKB.contents(S,it):[]; it.lv=it.lv?0:1; for(const k of kids) k.lv=it.lv; level=it.lv; });
 }
 function dup(it){ const c=JSON.parse(JSON.stringify(it)); c.id=uid(); if(c.t==="wall"){ c.x1+=.5;c.x2+=.5;c.y1+=.5;c.y2+=.5; } else { c.x+=.5; c.y+=.5; } S.items.push(c); sel=c.id; }
@@ -2740,6 +2752,11 @@ $("#bMore").addEventListener("click",e=>{ e.stopPropagation(); document.querySel
   document.body.appendChild(m); m.style.top=(r.bottom+6)+"px"; m.style.left=Math.max(8,Math.min(innerWidth-m.offsetWidth-8,r.right-m.offsetWidth))+"px";
   m.addEventListener("click",ev=>{ const b=ev.target.closest("[data-go]"); if(!b) return; m.remove(); if(b.dataset.go==="help") helpDialog(); else $("#"+b.dataset.go).click(); });
   setTimeout(()=>addEventListener("pointerdown",function h(ev){ if(!m.contains(ev.target)){ m.remove(); removeEventListener("pointerdown",h); } }),0); });
+// библиотека-шторка на телефоне
+const libSheet=o=>{ const L=$(".lib"); L.classList.toggle("open",o); document.querySelectorAll(".libback").forEach(x=>x.remove());
+  if(o){ const b=document.createElement("div"); b.className="libback"; b.onclick=()=>libSheet(false); document.body.appendChild(b); } };
+$("#bLib").hidden=false; $("#bLib").onclick=()=>libSheet(true);
+$("#lib").addEventListener("click",e=>{ if(e.target.closest("[data-add]")&&matchMedia("(max-width:980px)").matches&&!e.shiftKey) setTimeout(()=>libSheet(false),60); },true);
 function helpDialog(){ const m=document.createElement("div"); m.className="modal";
   const K=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
   m.innerHTML=`<div class="dlg" role="dialog" aria-label="Справка"><h3>Как управлять</h3><table class="keys">
@@ -2775,7 +2792,7 @@ async function projectsDialog(){
   const list=await listProjects(); const m=document.createElement("div"); m.className="modal";
   m.innerHTML=`<div class="dlg" role="dialog" aria-label="Проекты"><h3>Проекты</h3>
   <p class="note">${store?"Проекты сохраняются в этом планировщике и доступны при следующем открытии.":"Проекты сохраняются в этом браузере. Для передачи другим — «Выгрузить → Файл проекта»."}</p>
-  <div class="plist">${list.map((p,i)=>`<div class="pitem"><div><b>${esc(p.name)}</b><small>${new Date(p.updatedAt).toLocaleString("ru")}${p.id===projectId?" · открыт":""}</small></div><button class="btn" data-open="${i}">Открыть</button><button class="btn danger" data-del="${i}">Удалить</button></div>`).join("")||`<p class="note">Пока нет сохранённых проектов.</p>`}</div>
+  <div class="plist">${list.map((p,i)=>`<div class="pitem"><div><b>${esc(p.name)}</b><small>${new Date(p.updatedAt).toLocaleString("ru")}${p.id===projectId?" · открыт":""}</small></div><button class="btn" data-open="${i}">Открыть</button>${p.id.startsWith("example-")?`<button class="btn" data-reset="${i}" title="Вернуть исходный пример">Сбросить</button>`:""}<button class="btn danger" data-del="${i}">Удалить</button></div>`).join("")||`<p class="note">Пока нет сохранённых проектов.</p>`}</div>
   <h5>Создать новый</h5>
   <div class="row four"><label class="f">Длина, м<input id="nW" type="number" value="40" step=".5"></label><label class="f">Глубина, м<input id="nD" type="number" value="12" step=".5"></label><label class="f">Высота, м<input id="nH" type="number" value="7" step=".1"></label><label class="f">&nbsp;<button class="btn primary" id="nNew">Пустое здание</button></label></div>
   <div class="actions"><button class="btn" id="nTpl">Пример: офис продаж 40×12 с антресолью</button><button class="btn" id="nOlam2">ОЛАМ НАЗАРБЕК v2 (движок + мебель по ТЗ)</button><button class="btn" id="nOlam">ОЛАМ НАЗАРБЕК 500 м² (по опроснику)</button><button class="btn" id="nChine">Пример: Chine House (houz), 2 этажа</button><button class="btn" id="nImp">Открыть файл…</button><span class="spacer"></span><button class="btn" id="nClose">Закрыть</button></div>
@@ -2784,14 +2801,19 @@ async function projectsDialog(){
   m.addEventListener("click",async e=>{ if(e.target===m) return close(); const t=e.target;
     if(t.id==="nClose") close();
     if(t.dataset.open){ const p=list[+t.dataset.open]; try{ openProject(p.json,p.id); close(); }catch(err){ toast("Файл проекта повреждён"); } }
+    if(t.dataset.reset){ const p=list[+t.dataset.reset], k=p.id.slice(8); await deleteProject(p); close(); openExample(k,()=>k==="tpl"?OfficeKB.generate({name:"Офис продаж 40×12 (пример)"}).project:JSON.parse(JSON.stringify(EXAMPLES[k])),[]); toast("Пример возвращён к исходному"); return; }
     if(t.dataset.del){ const i=+t.dataset.del; if(t.dataset.sure){ await deleteProject(list[i]); close(); projectsDialog(); } else { t.dataset.sure="1"; t.textContent="Точно удалить?"; } }
     if(t.id==="nNew"){ await flush(); S=blankProject(+$("#nW").value||40,+$("#nD").value||12,+$("#nH").value||7); projectId=uid(); sel=null; level=0; undo.length=0; redo.length=0; setView("2d"); fit(); commit(); close(); }
-    if(t.id==="nTpl"){ await flush(); S=OfficeKB.generate({name:"Офис продаж 40×12 (пример)"}).project; projectId=uid(); sel=null; level=0; undo.length=0; redo.length=0; setView("2d"); fit(); commit(); close(); }
-    if(t.id==="nOlam2"){ await flush(); S=JSON.parse(JSON.stringify(EXAMPLES.olam2)); projectId=uid(); sel=null; level=0; undo.length=0; redo.length=0; setView("2d"); fit(); commit(); close(); }
-    if(t.id==="nOlam"){ await flush(); S=JSON.parse(JSON.stringify(EXAMPLES.olam)); projectId=uid(); sel=null; level=0; undo.length=0; redo.length=0; setView("2d"); fit(); commit(); close(); }
-    if(t.id==="nChine"){ await flush(); S=JSON.parse(JSON.stringify(EXAMPLES.chine)); projectId=uid(); sel=null; level=0; undo.length=0; redo.length=0; setView("2d"); fit(); commit(); close(); }
+    if(t.id==="nTpl"){ await flush(); openExample("tpl",()=>OfficeKB.generate({name:"Офис продаж 40×12 (пример)"}).project,list); close(); }
+    if(t.id==="nOlam2"){ await flush(); openExample("olam2",()=>JSON.parse(JSON.stringify(EXAMPLES.olam2)),list); close(); }
+    if(t.id==="nOlam"){ await flush(); openExample("olam",()=>JSON.parse(JSON.stringify(EXAMPLES.olam)),list); close(); }
+    if(t.id==="nChine"){ await flush(); openExample("chine",()=>JSON.parse(JSON.stringify(EXAMPLES.chine)),list); close(); }
     if(t.id==="nImp"){ close(); $("#fileIn").click(); } });
 }
+// пример — один проект на пример: повторное открытие продолжает вашу копию, а не плодит дубли
+function openExample(k,fresh,list){ const saved=(list||[]).find(p=>p.id==="example-"+k);
+  S=saved?JSON.parse(saved.json):fresh(); projectId="example-"+k; sel=null; level=0; undo.length=0; redo.length=0; setView("2d"); fit(); commit();
+  if(saved) toast("Открыта ваша копия примера. Исходник — «Проекты» → «Сбросить»"); }
 async function flush(){ if(dirty){ clearTimeout(saveTimer); await saveNow(); } }
 $("#bProjects").onclick=async()=>{ await flush(); projectsDialog(); };
 $("#fileIn").addEventListener("change",async e=>{ const f=e.target.files[0]; if(!f) return; try{ const txt=await f.text(); await flush(); openProject(txt, uid()); commit(); toast("Проект открыт"); }catch(err){ toast("Это не файл проекта планировщика"); } e.target.value=""; });

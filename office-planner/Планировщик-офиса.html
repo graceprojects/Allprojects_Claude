@@ -1246,8 +1246,8 @@ table.keys{width:100%;border-collapse:collapse;font-size:13px} table.keys td{pad
         for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) P("lounge", (W - nx * gw - (nx - 1) * 0.6) / 2 + i * (gw + 0.6), (D - ny * gh - (ny - 1) * 0.5) / 2 + j * (gh + 0.5));
         if (W >= 3) P("plant", W - 0.65, 0.05); break; }
       case "maket": {
-        const M = [["6x4", 6, 4], ["5x3", 5, 3], ["3x2", 3, 2], ["2x1.5", 2, 1.5]];
-        const pick = M.find(m => m[1] + 2.0 <= W && m[2] + 2.0 <= D) || M.find(m => m[1] + 1.2 <= W && m[2] + 1.2 <= D) || M[3];
+        const M = [["6x5", 6, 5], ["6x4", 6, 4], ["5x3", 5, 3], ["3x2", 3, 2], ["2x1.5", 2, 1.5]], e = 0.02;   // допуск на округление размеров зоны
+        const pick = M.find(m => m[1] + 2.0 <= W + e && m[2] + 2.0 <= D + e) || M.find(m => m[1] + 1.2 <= W + e && m[2] + 1.2 <= D + e) || M[4];
         P("model", cU(pick[1]), (D - pick[2]) / 2, 0, { w: pick[1], h: pick[2], label: "макет " + pick[0].replace("x", "×") });
         if (D - pick[2] >= 2.6) P("stand", cU(1.2), 0.05); out._note = "макет " + pick[0]; break; }
       case "kids": P("kidmat", 0.2, 0.2, 0, { w: Math.min(2, W - 0.4), h: Math.min(2, D - 0.4) });

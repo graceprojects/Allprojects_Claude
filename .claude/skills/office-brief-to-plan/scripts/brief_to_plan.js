@@ -92,30 +92,76 @@ KB.PACKAGES.T = { name: "По ТЗ заказчика", sub: B.name || "", min: 
   grow: [], shrink, rows };
 
 const name = B.name ? `${B.name} — офис продаж ${Math.round(A)} м²` : `Офис продаж ${Math.round(A)} м²`;
-let r;
-if (w && d) r = KB.autoPlan({ pkg: "T", w, d, h, mezz, name });
-else {   // типичные глубины помещений офиса продаж в ЖК (витраж по длинной стороне)
-  const depths = A <= 120 ? [7.5, 8, 9] : A <= 220 ? [8.5, 9.5, 10.5] : A <= 350 ? [10, 11, 12] : [12, 12.5, 14];
-  const score = x => { const f = KB.programFact(x.project); return f.reduce((a, q) => a + Math.max(0, q.n - q.placed) * (q.status === "обязательно" ? 10 : 3), 0)
-    + Math.max(0, (x.project.meta.seatsWanted || 0) - (x.project.meta.seatsPlaced || 0)) + KB.checks(x.project).filter(c => c.level === "red").length * 5; };
+const MSTEPS2 = MSTEPS;
+function finish(S) {
+  /* ---------- мебель по ТЗ ---------- */
+  const fit = (it, key, i) => { const s = KB.SIZES[key] && KB.SIZES[key][i]; if (!s) return; const q = (it.rot || 0) % 180;
+    const cx = it.x + (q ? it.h : it.w) / 2, cy = it.y + (q ? it.w : it.h) / 2; it.w = s[1]; it.h = s[2];
+    it.x = +(cx - (q ? s[2] : s[1]) / 2).toFixed(3); it.y = +(cy - (q ? s[1] : s[2]) / 2).toFixed(3); };
+  const items = k => S.items.filter(i => i.t === "item" && i.k === k);
+  items("recep").forEach(it => fit(it, "recep", recepN >= 3 ? 3 : recepN === 2 ? 1 : 0));
+  const mi = ms <= 4 ? 0 : ms <= 6 ? 1 : ms <= 8 ? 2 : ms <= 10 ? 3 : ms <= 12 ? 4 : 5;
+  S.items.filter(i => i.t === "item" && /^meet(6|8|10)$/.test(i.k)).forEach(it => {
+    const room = S.items.find(x => x.t === "room" && x.lv === it.lv && it.x >= x.x - .01 && it.y >= x.y - .01 && it.x <= x.x + x.w && it.y <= x.y + x.h);
+    if (room && /Переговорн/.test(room.name)) { it.k = "meet6"; fit(it, "meet6", mi); } });
+
+  /* ---------- доразмещение: то, что движок не смог поставить, ищем в свободных местах ----------
+   * Движок раскладывает зал рядами и в маленьких / неглубоких помещениях иногда роняет макет, детскую
+   * или часть мест ожидания, хотя место в зале есть. Пробуем найти для них свободный прямоугольник
+   * (зона макета уже включает обход 1 м; остальным — зазор 0,6 м), начиная с обязательного. Всё найденное отмечаем в отчёте. */
+  const rescued = [];
+  const hall = () => S.items.find(i => i.t === "room" && !i.lv && /Зал продаж/.test(i.name));
+  const tryPlace = (row, w, h, lv, near) => {
+    const H = lv ? null : hall(), c = row.border === "none" ? 0.3 : 0.6;   // у зоны без стен проход уже внутри неё
+    for (const [ww, hh] of [[w, h], [h, w]]) {
+      const sp = KB.findSpace(S, Object.assign({ w: +(ww + 2 * c).toFixed(2), h: +(hh + 2 * c).toFixed(2), lv, near, limit: 1 }, H && row.zone !== "service" ? { within: H.id } : {}))[0];
+      if (!sp) continue;
+      KB.applyAll(S, [{ op: "add_room", name: row.name, x: +(sp.x + c).toFixed(2), y: +(sp.y + c).toFixed(2), w: ww, h: hh, lv, cat: row.cat, border: row.border || "wall", sub: !!row.sub || row.border === "none", color: row.color }]);
+      return true; }
+    return false; };
+  const missingNow = () => { const fact = KB.programFact(S);     // сравниваем с ТЗ, а не с урезанной движком программой
+    return rows.map(row => { const f = fact.find(x => x.key === row.key); const n = row.n === "M" ? M : +row.n || 1;
+      return { key: row.key, n, placed: f ? Math.min(f.placed, n) : 0, status: row.status || "обязательно" }; }).filter(f => f.placed < f.n); };
+  for (const f of missingNow().sort((x, y) => (x.status === "обязательно" ? 0 : 1) - (y.status === "обязательно" ? 0 : 1))) {
+    const row = rows.find(r => r.key === f.key); if (!row) continue;
+    for (let k = f.placed; k < f.n; k++) {
+      let ok = false;
+      if (row.key === "maket") {
+        for (const m of MSTEPS.slice(Math.max(0, MSTEPS.indexOf(maket)))) { const t = KB.MAKET[m]; if (!t) continue;
+          const r2 = Object.assign({}, row, { name: `Зона макета ${m.replace("x", "×")}` });
+          if (tryPlace(r2, +(t[0] + 2).toFixed(2), +(t[1] + 2).toFixed(2), 0, "facade")) { ok = true; rescued.push(`${r2.name} — поставлена в свободное место зала`); break; } }
+      } else {
+        const w = +row.w || +Math.sqrt((+row.area || 9) * 1.3).toFixed(1), h = +row.h || +((+row.area || 9) / w).toFixed(1);
+        const lvs = row.zone === "service" && S.items.some(i => i.t === "room" && i.lv === 1) ? [1, 0] : [0];
+        for (const lv of lvs) if (tryPlace(row, w, h, lv, row.zone === "public" ? "facade" : "back")) { ok = true; rescued.push(`${row.name} — ${lv ? "на антресоли" : "в свободном месте"}`); break; }
+      }
+      if (!ok) break;
+    }
+  }
+  if (S.meta.seatsWanted > (S.meta.seatsPlaced || 0)) {        // недостающие места ожидания — группами по 3
+    let need = S.meta.seatsWanted - (S.meta.seatsPlaced || 0), n = 0;
+    while (need > 0 && tryPlace({ name: "Зона ожидания", zone: "public", cat: "client", border: "none", sub: true }, 2.4, 2.2, 0, "facade")) { need -= 3; n++; }
+    if (n) { S.meta.seatsPlaced = Math.min(S.meta.seatsWanted, S.meta.seatsPlaced + n * 3); rescued.push(`ещё ${n} ${n === 1 ? "группа" : "группы"} ожидания (по 3 места)`); }
+  }
+  return rescued;
+}
+const missingOf = S => { const fact = KB.programFact(S);
+  return rows.map(row => { const f = fact.find(x => x.key === row.key); const n = row.n === "M" ? M : +row.n || 1;
+    return { key: row.key, n, placed: f ? Math.min(f.placed, n) : 0, status: row.status || "обязательно" }; }).filter(f => f.placed < f.n); };
+const score = (x, S) => missingOf(S).reduce((a, q) => a + (q.n - q.placed) * (q.status === "обязательно" ? 10 : 3), 0)
+  + Math.max(0, (S.meta.seatsWanted || 0) - (S.meta.seatsPlaced || 0)) + KB.checks(S).filter(c => c.level === "red").length * 5
+  + x.log.filter(l => /макет|→/.test(l)).length * 2;          // уменьшенный макет / урезанные количества — тоже потеря
+let r, rescued;
+if (w && d) { r = KB.autoPlan({ pkg: "T", w, d, h, mezz, name }); rescued = finish(r.project); }
+else {   // типичные глубины помещений офиса продаж в ЖК (витраж по длинной стороне); каждую доводим до конца и сравниваем
+  const depths = A <= 120 ? [7.5, 8, 9, 10] : A <= 220 ? [8.5, 9.5, 10.5, 11.5] : A <= 350 ? [10, 11, 12, 13] : [12, 12.5, 13, 14];
   let best = null;
-  for (const dd of depths) { const ww = Math.round(A / dd * 2) / 2; const x = KB.autoPlan({ pkg: "T", w: ww, d: dd, h, mezz, name }); x._s = score(x);
-    if (!best || x._s < best._s) { best = x; w = ww; d = dd; } }
+  for (const dd of depths) { const ww = Math.round(A / dd * 2) / 2; const x = KB.autoPlan({ pkg: "T", w: ww, d: dd, h, mezz, name }); const rs = finish(x.project); x._s = score(x, x.project);
+    if (!best || x._s < best._s) { best = x; w = ww; d = dd; rescued = rs; } }
   r = best;
-  assume.push(`размеры не указаны → ${String(w).replace(".", ",")} × ${String(d).replace(".", ",")} м (≈ ${Math.round(w * d)} м²; из глубин ${depths.join(" / ")} м выбрана та, где программа помещается лучше; витраж по длинной стороне)`);
+  assume.push(`размеры не указаны → ${String(w).replace(".", ",")} × ${String(d).replace(".", ",")} м (≈ ${Math.round(w * d)} м²; из глубин ${depths.join(" / ")} м выбрана та, где ТЗ выполняется полнее; витраж по длинной стороне)`);
 }
 const S = r.project;
-
-/* ---------- мебель по ТЗ ---------- */
-const fit = (it, key, i) => { const s = KB.SIZES[key] && KB.SIZES[key][i]; if (!s) return; const q = (it.rot || 0) % 180;
-  const cx = it.x + (q ? it.h : it.w) / 2, cy = it.y + (q ? it.w : it.h) / 2; it.w = s[1]; it.h = s[2];
-  it.x = +(cx - (q ? s[2] : s[1]) / 2).toFixed(3); it.y = +(cy - (q ? s[1] : s[2]) / 2).toFixed(3); };
-const items = k => S.items.filter(i => i.t === "item" && i.k === k);
-items("recep").forEach(it => fit(it, "recep", recepN >= 3 ? 3 : recepN === 2 ? 1 : 0));
-const mi = ms <= 4 ? 0 : ms <= 6 ? 1 : ms <= 8 ? 2 : ms <= 10 ? 3 : ms <= 12 ? 4 : 5;
-S.items.filter(i => i.t === "item" && /^meet(6|8|10)$/.test(i.k)).forEach(it => {
-  const room = S.items.find(x => x.t === "room" && x.lv === it.lv && it.x >= x.x - .01 && it.y >= x.y - .01 && it.x <= x.x + x.w && it.y <= x.y + x.h);
-  if (room && /Переговорн/.test(room.name)) { it.k = "meet6"; fit(it, "meet6", mi); } });
 
 /* ---------- отчёт ---------- */
 const fact = KB.programFact(S), checks = KB.checks(S);
@@ -135,6 +181,7 @@ L.push("", "Программа (цель → факт):");
 for (const f of fact) L.push(`- ${f.name}: ${f.n} → ${f.placed}${f.placed < f.n ? "  ⚠ не поместилось" : ""}${f.factArea ? ` · ${f2(f.factArea)} м²` : ""}`);
 if (S.meta.seatsWanted) L.push(`- мест ожидания: ${S.meta.seatsWanted} → ${S.meta.seatsPlaced}`);
 if (r.log.length) L.push("", "Что движок изменил, чтобы всё поместилось:", ...r.log.map(x => "- " + x));
+if (rescued.length) L.push("", "Доразмещено после движка (проверьте на листе):", ...rescued.map(x => "- " + x));
 if (r.warnings.length) L.push("", "Замечания раскладки:", ...r.warnings.map(x => "- " + x));
 const red = checks.filter(c => c.level === "red"), yel = checks.filter(c => c.level === "yellow" || c.level === "warn");
 L.push("", `Проверки норм: красных ${red.length}, жёлтых ${yel.length}`, ...red.concat(yel).map(c => `- [${c.level}] ${c.text || c.msg || c.title}${c.ref ? " (" + c.ref + ")" : ""}`));

@@ -39,6 +39,16 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn{border:1px solid var(--line);background:var(--paper);padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.cta{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 80%,#fff),var(--accent));border-color:var(--accent);color:#fff;font-weight:700;padding:7px 16px 7px 12px;border-radius:10px;box-shadow:0 2px 10px color-mix(in srgb,var(--accent) 45%,transparent);display:inline-flex;align-items:center;gap:6px;transition:transform .12s,box-shadow .12s}
+.btn.cta .plus{font-size:16px;line-height:1;font-weight:800}
+.btn.cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px color-mix(in srgb,var(--accent) 60%,transparent);border-color:var(--accent)}
+.btn.cta.big{font-size:15px;padding:11px 22px 11px 18px}
+.btn.cta.pulse{animation:ctaPulse 1.6s ease-out 3}
+@keyframes ctaPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+@media (max-width:900px){ #bWizard .lbl{display:none} #bWizard{padding:7px 10px} }
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.empty .ebox{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 26px;max-width:360px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.empty .ebox b{font-size:17px}.empty .ebox p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}
 .btn.danger{color:var(--warn)}
 .btn:focus-visible,.grp button:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .spacer{flex:1}
@@ -169,9 +179,9 @@ table.keys{width:100%;border-collapse:collapse;font-size:13px} table.keys td{pad
 <div class="app">
   <header class="top">
     <div class="brand"><i></i>Планировщик</div>
+    <button class="btn cta" id="bWizard" title="Новый проект: размеры → три варианта наполнения → готовое зонирование (N)"><span class="plus">＋</span><span class="lbl">Новый проект</span></button>
     <input id="pname" class="pname" aria-label="Название проекта" value="Офис продаж">
     <button class="btn" id="bProjects">Проекты</button>
-    <button class="btn primary" id="bWizard" title="Размеры → три варианта наполнения → готовое зонирование">Новый офис</button>
     <div class="grp" role="group" aria-label="Уровень">
       <button id="lv0" class="on">1 этаж</button><button id="lv1">Антресоль</button>
     </div>
@@ -185,7 +195,7 @@ table.keys{width:100%;border-collapse:collapse;font-size:13px} table.keys td{pad
     <span class="spacer"></span>
     <span class="status" id="status">—</span>
     <button class="btn" id="bClaude" title="Claude: помощник и подключение Claude Desktop / Code">Claude</button>
-    <button class="btn primary" id="bExport">Выгрузить</button>
+    <button class="btn" id="bExport">Выгрузить</button>
   </header>
 
   <aside class="lib" aria-label="Библиотека">
@@ -198,6 +208,7 @@ table.keys{width:100%;border-collapse:collapse;font-size:13px} table.keys td{pad
     <div id="three" hidden></div>
     <div class="hint" id="hint" hidden></div>
     <div class="hud" id="hud"></div>
+    <div class="empty" id="empty" hidden><div class="ebox"><b>Начните новый проект</b><p>Задайте размеры помещения — план и мебель соберутся сами в трёх вариантах наполнения.</p><button class="btn cta big" id="bEmptyNew"><span class="plus">＋</span><span class="lbl">Новый проект</span></button><button class="btn" id="bEmptyOpen">Открыть проект или пример</button></div></div>
     <div class="selbar" id="selbar" hidden role="toolbar" aria-label="Действия с выделенным"></div>
     <div class="zoombar" id="zoombar" role="toolbar" aria-label="Масштаб"><button data-z="out" title="Уменьшить (−)" aria-label="Уменьшить">−</button><button data-z="fit" title="Весь план (F)" aria-label="Весь план">⤢</button><button data-z="in" title="Увеличить (+)" aria-label="Увеличить">+</button><button data-z="help" title="Справка по управлению (?)" aria-label="Справка">?</button></div>
   </main>
@@ -1712,7 +1723,7 @@ let tool = null;         // {type:'wall', kind} | {type:'room', preset}
 let snapOn = true, grid = 0.05;
 const undo = [], redo = [];
 const V = {s:30, tx:40, ty:40};   // масштаб px/м и сдвиг
-let dirty = false, projectId = null, store = null, hasUserEdit = false;
+let emptyOff = false, dirty = false, projectId = null, store = null, hasUserEdit = false;
 
 function blankProject(w=40,d=12,h=7){
   return {v:1, name:"Новый офис продаж", notes:"", b:{w, d, h, mz:3.3, front:"vitrage"}, items:[]};
@@ -2041,6 +2052,7 @@ function renderHud(){
   const rooms=S.items.filter(i=>i.t==="room"&&!i.sub);
   const a0=rooms.filter(r=>r.lv===0).reduce((s,r)=>s+r.w*r.h,0), a1=rooms.filter(r=>r.lv===1).reduce((s,r)=>s+r.w*r.h,0);
   const bA=S.b.w*S.b.d;
+  { const e=$("#empty"); if(e) e.hidden = emptyOff || S.items.some(i=>i.t==="room"); }
   $("#hud").innerHTML = `<span class="chip">${fmt(S.b.w,1)} × ${fmt(S.b.d,1)} м · ${m2(bA)} м²</span><span class="chip">1 этаж ${m2(a0)} м²</span><span class="chip">${S.b.upper==="floor"?`2 этаж ${m2(a1)} м²`:`Антресоль ${m2(a1)} м² · ${Math.round(a1/bA*100)}%`}</span><span class="chip">Сетка ${Math.round(grid*100)} см ${snapOn?"· привязка":""}</span>`+checksChip();
 }
 
@@ -2288,6 +2300,7 @@ document.addEventListener("keydown", e=>{
   if(e.key==="Escape"){ if(drag&&(drag.mode==="move"||drag.mode==="resize"||drag.mode==="wend"||drag.mode==="bres")&&undo.length){ S=JSON.parse(undo.pop()); }
     drag=null; guides=[]; tool=null; setToolUI(); sel=null; drawPreview=null; render(); return; }
   if(e.key==="?"||(e.shiftKey&&e.code==="Slash")){ e.preventDefault(); helpDialog(); return; }
+  if(!ctrl&&!e.altKey&&(k==="n"||k==="т")){ e.preventDefault(); newOfficeDialog(); return; }
   if(!ctrl&&(k==="f"||k==="а")&&view==="2d"){ fit(); renderPlan(); return; }
   if(!ctrl&&(e.key==="+"||e.key==="=")&&view==="2d"){ zoomBy(1.25); return; }
   if(!ctrl&&(e.key==="-"||e.key==="_")&&view==="2d"){ zoomBy(.8); return; }
@@ -2543,7 +2556,7 @@ function helpDialog(){ const m=document.createElement("div"); m.className="modal
   ${K("<kbd>R</kbd>","повернуть на 90°")}${K("<kbd>Ctrl</kbd>+<kbd>D</kbd>","копия")}${K("<kbd>Del</kbd>","удалить")}
   ${K("Стрелки","сдвиг на шаг сетки (с <kbd>Shift</kbd> — ×10)")}${K("<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>","отменить / вернуть")}
   ${K("Масштаб","колесо мыши, <kbd>+</kbd> / <kbd>−</kbd>, <kbd>F</kbd> — весь план")}${K("Сдвиг плана","тяните пустое место или зажмите <kbd>Пробел</kbd>")}
-  ${K("<kbd>Esc</kbd>","снять выделение / выйти из рисования")}${K("<kbd>?</kbd>","эта справка")}</table>
+  ${K("<kbd>Esc</kbd>","снять выделение / выйти из рисования")}${K("<kbd>N</kbd>","новый проект")}${K("<kbd>?</kbd>","эта справка")}</table>
   <div class="actions"><span class="spacer"></span><button class="btn primary" id="hClose">Понятно</button></div></div>`;
   document.body.appendChild(m); m.addEventListener("click",e=>{ if(e.target===m||e.target.id==="hClose") m.remove(); }); }
 
@@ -2761,7 +2774,7 @@ function newOfficeDialog(){
   const prev=(S.meta&&S.meta.params)||{};
   const st={ w:+S.b.w||30, d:+S.b.d||12, h:+S.b.h||4.5, mezz:"auto", name:(prev.name&&prev.name!=="Офис продаж")?prev.name:"Офис продаж", pick:null, res:null };
   const m=document.createElement("div"); m.className="modal"; const $m=id=>m.querySelector("#"+id);
-  m.innerHTML=`<div class="dlg wiz nv" role="dialog" aria-label="Новый офис продаж"><h3>Новый офис продаж</h3>
+  m.innerHTML=`<div class="dlg wiz nv" role="dialog" aria-label="Новый проект"><h3>Новый проект</h3>
   <p class="note">Задайте размеры помещения — Claude-движок сам соберёт зонирование в трёх вариантах наполнения. Выберите один — дальше всё можно двигать мышкой.</p>
   <div class="row four">
     <label class="f">Длина вдоль улицы, м<input id="n_w" type="number" step=".5" min="6" value="${st.w}"></label>
@@ -2771,7 +2784,7 @@ function newOfficeDialog(){
   <div class="row"><label class="f">Название<input id="n_name" value="${esc(st.name)}"></label><div class="f nvsum" id="n_sum"></div></div>
   <div class="vcards" id="n_cards"><p class="note">Считаю варианты…</p></div>
   <details class="nvlog"><summary>Как движок принял решения</summary><div id="n_log" class="note"></div></details>
-  <div class="actions"><button class="btn primary" id="n_go" disabled>Создать план</button><button class="btn" id="n_prog">Точная настройка программы…</button><span class="spacer"></span><button class="btn" id="n_cancel">Отмена</button></div></div>`;
+  <div class="actions"><button class="btn primary" id="n_go" disabled>Создать план</button><button class="btn" id="n_prog">Точная настройка программы…</button><button class="btn" id="n_blank" title="Только стены по размерам — расставите всё сами">Пустое помещение</button><span class="spacer"></span><button class="btn" id="n_cancel">Отмена</button></div></div>`;
   document.body.appendChild(m);
   const rec=A=> A<200?"S":A<450?"M":"L";
   const draw=()=>{
@@ -2804,6 +2817,7 @@ function newOfficeDialog(){
       if(sel) $m("n_log").innerHTML=(sel.log.length?`<ol>${sel.log.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`:"Программа уровня поместилась без изменений.")+(sel.warnings.length?`<p>Замечания раскладки: ${sel.warnings.map(esc).join(" ")}</p>`:""); $m("n_go").disabled=false; return; }
     if(t===m||t.id==="n_cancel") return m.remove();
     if(t.id==="n_prog"){ m.remove(); wizardDialog(); return; }
+    if(t.id==="n_blank"){ await flush(); pushUndo(); S=blankProject(st.w,st.d,st.h); S.name=st.name||S.name; emptyOff=true; projectId=uid(); sel_reset(); m.remove(); setView("2d"); fit(); commit(); toast("Пустое помещение создано — берите помещения и мебель из библиотеки слева"); return; }
     if(t.id==="n_go"){ const sel=st.res&&st.res.find(r=>r.pkg===st.pick); if(!sel) return; await flush(); pushUndo();
       S=OfficeKB.autoPlan({pkg:st.pick,w:st.w,d:st.d,h:st.h,mezz:st.mezz,name:st.name}).project; S.name=st.name||S.name;
       S.meta.params=Object.assign({},S.meta.params,{pkg:st.pick,name:S.name}); projectId=uid(); sel_reset(); m.remove(); setView("2d"); fit(); commit(); tab="ex"; setTabs(); renderPane();
@@ -2811,6 +2825,9 @@ function newOfficeDialog(){
 }
 function sel_reset(){ sel=null; level=0; redo.length=0; }
 $("#bWizard").onclick=()=>newOfficeDialog();
+$("#bEmptyNew").onclick=()=>newOfficeDialog();
+$("#bEmptyOpen").onclick=()=>projectsDialog();
+try{ if(!localStorage.getItem("op_seen_new")){ $("#bWizard").classList.add("pulse"); localStorage.setItem("op_seen_new","1"); } }catch(e){}
 
 /* ---------- редактор пакетов: правила компании ---------- */
 function packageEditor(k0){

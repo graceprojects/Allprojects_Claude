@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+/* Генератор офиса продаж → файл проекта для «Планировщика офиса продаж».
+ *
+ *   node generate_office.js --w 40 --d 12 --h 7 --M 6 --B 6 [--maket 5x3] [--mezz auto|yes|no]
+ *        [--kids 1] [--cafe 1] [--wardrobe 1] [--bank 1] [--cashier 0] [--media 0] [--showroom 0] [--director 1]
+ *        [--name "Офис продаж ЖК …"] [--out office.json] [--json '{"w":40,…}']
+ *
+ * Печатает в stderr сводку (программа цель/факт, проверки, предупреждения), JSON проекта — в --out или stdout.
+ * Файл открывается в планировщике: «Проекты» → «Открыть файл…».
+ */
+const fs = require("fs"), path = require("path");
+const KB = require(path.join(__dirname, "office-kb.js"));
+const a = process.argv.slice(2), p = {};
+for (let i = 0; i < a.length; i++) {
+  if (!a[i].startsWith("--")) continue;
+  const k = a[i].slice(2), v = a[i + 1] && !a[i + 1].startsWith("--") ? a[++i] : "1";
+  if (k === "json") Object.assign(p, JSON.parse(v));
+  else p[k] = v;
+}
+const bool = ["kids", "cafe", "wardrobe", "bank", "cashier", "media", "showroom", "director"];
+const num = ["w", "d", "h", "M", "B"];
+for (const k of bool) if (k in p && typeof p[k] === "string") p[k] = !["0", "false", "no", "нет"].includes(p[k].toLowerCase());
+for (const k of num) if (k in p) p[k] = +String(p[k]).replace(",", ".");
+const out = p.out; delete p.out;
+const fit = KB.fit(p);
+const r = KB.generate(p);
+process.stderr.write(`Вмещается: нужно ≈ ${fit.need} м² (${fit.net} × ${fit.k}), есть ${fit.have} м² → ${fit.ratio >= 1 ? "да" : "НЕТ"}\n`);
+process.stderr.write(KB.summary(r.project) + "\n");
+if (r.warnings.length) process.stderr.write("Предупреждения:\n  - " + r.warnings.join("\n  - ") + "\n");
+const json = JSON.stringify(r.project, null, 1);
+if (out) { fs.writeFileSync(out, json); process.stderr.write(`Файл проекта: ${out}\n`); } else process.stdout.write(json);

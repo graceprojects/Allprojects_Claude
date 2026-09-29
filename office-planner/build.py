@@ -21,6 +21,13 @@ open(os.path.join(HERE, 'local', 'index.html'), 'w', encoding='utf-8').write(loc
 three = open(os.path.join(HERE, 'local', 'three.min.js'), encoding='utf-8').read()
 single = head + s.replace(CDN, '<script>' + three.replace('</script', '<\\/script') + '</script>') + '\n</body></html>\n'
 open(os.path.join(HERE, 'Планировщик-офиса.html'), 'w', encoding='utf-8').write(single)
+# сайт: статическая папка для любого хостинга (GitHub Pages, Netlify, свой сервер)
+site = os.path.join(HERE, 'site'); os.makedirs(site, exist_ok=True)
+open(os.path.join(site, 'index.html'), 'w', encoding='utf-8').write(single)
+rep = os.path.join(HERE, 'research', 'report.html')
+if os.path.exists(rep):
+    open(os.path.join(site, 'report.html'), 'w', encoding='utf-8').write(head + open(rep, encoding='utf-8').read() + '\n</body></html>\n')
+open(os.path.join(site, '.nojekyll'), 'w').write('')
 skill = os.path.join(ROOT, '.claude', 'skills', 'sales-office-planning', 'scripts')
 if os.path.isdir(skill):
     shutil.copy(os.path.join(HERE, 'src', 'office-kb.js'), os.path.join(skill, 'office-kb.js'))

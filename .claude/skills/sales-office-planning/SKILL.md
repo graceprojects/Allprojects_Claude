@@ -63,6 +63,7 @@ node scripts/check_project.js office.json
 
 Если доступны инструменты `open_planner`, `describe_plan`, `add_room` … — работай через них, а не через файлы:
 `open_planner` → `describe_plan` → (новый офис: `compare_variants` → показать пользователю три варианта → `auto_plan`) → правки `batch` / `add_room` / `update_element` / `furnish_room` → `check_plan` → `view_plan` (посмотри картинку и исправь наложения) → коротко расскажи пользователю итог и замечания.
+Готовые наборы мебели: `add_furniture_set` (MCP) или `{op:"add_set", set:"meet", room:"Переговорная", variant:"auto"}`; `{op:"sets_all"}` обставляет все помещения. 17 наборов, 80+ вариантов, все по стандартным типоразмерам (список — `list_catalog`).
 Те же команды есть в ядре: `KB.apply(S, {op:"add_room", …})`, `KB.applyAll`, `KB.furnishRoom`, `KB.findSpace`, `KB.describe` — ими можно править JSON и через Node.
 Установка сервера — `office-planner/mcp/README.md` (zip и `.mcpb` публикуются на сайте рядом с планировщиком).
 

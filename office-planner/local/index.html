@@ -286,6 +286,18 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
 .libfab{display:none!important;position:absolute;left:12px;bottom:12px;z-index:6}
 .libback{position:fixed;inset:0;z-index:34;background:rgba(0,0,0,.25)}
 @media (max-width:980px){ .libfab{display:inline-flex!important} }
+.setcard svg{height:44px!important}
+.setdlg{max-width:1100px}
+.settabs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.settabs button{border:0;background:var(--fill);border-radius:999px;padding:6px 12px;cursor:pointer;color:var(--ink);font:inherit;font-size:12.5px}
+.settabs button.fit{box-shadow:inset 0 0 0 1.5px var(--ok)} .settabs button.on{background:var(--accent);color:#fff;box-shadow:none}
+.setgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.setv{border:0;background:var(--paper);border-radius:14px;box-shadow:var(--shadow);padding:8px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;color:var(--ink);font:inherit}
+.setv .sv2{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#fff;border-radius:10px;padding:4px}
+.setv .sv2 svg,.setv .sv2 img{width:100%;height:110px;object-fit:contain;display:block}
+.setv.on{box-shadow:0 0 0 2.5px var(--accent),var(--shadow)} .setv.no{opacity:.55} .setv.ok small{color:var(--ok)}
+.setv b{font-size:13px;font-weight:600} .setv small{color:var(--muted);font-size:11.5px}
+.setv svg{--paper:#fff;--ink:#222;--muted:#999;--wall:#3a3f3b;--glass:#9fd3f0;--glass-edge:#2a78b8}
 :focus-visible{outline:none!important;box-shadow:0 0 0 3px var(--accent-soft),0 0 0 1.5px var(--accent)!important}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -396,11 +408,11 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     ["work3","Рабочее место менеджера + 2 гостя","Офисная мебель",1.6,2.3,.75,"work3","#e8e2d6"],["desk","Стол менеджера 1600","Офисная мебель",1.6,.8,.75,"table","#e8e2d6"],
     ["deskB","Стол руководителя 1800","Офисная мебель",1.8,.9,.75,"table","#8c6a4a"],["os1","Рабочее место open-space","Офисная мебель",1.4,1.3,.75,"os1","#e8e2d6"],
     ["os4","Блок open-space на 4","Офисная мебель",2.8,2.6,.75,"os4","#e8e2d6"],["chairO","Кресло офисное","Офисная мебель",.6,.6,1,"chair","#3c4146"],
-    ["chairV","Стул посетителя","Офисная мебель",.5,.5,.85,"chair","#6b7075"],["cab","Шкаф для документов","Офисная мебель",.9,.45,2,"cab","#dcd6cb"],
+    ["chairV","Стул посетителя","Офисная мебель",.5,.5,.85,"chair","#6b7075"],["cab","Шкаф для документов","Офисная мебель",.9,.45,2,"wardB","#dcd6cb"],
     ["shelf","Стеллаж архивный","Офисная мебель",1,.4,2.2,"shelf","#c9c4ba"],["safe","Сейф","Офисная мебель",.5,.5,1.2,"safe","#55595c"],
     ["mfp","МФУ / принтер","Офисная мебель",.6,.5,1,"mfp","#d8dbdd"],
-    ["deskL","Стол угловой","Офисная мебель",1.6,1.6,.75,"deskL","#e8e2d6"],["locker","Шкафчики персонала","Офисная мебель",.9,.5,1.9,"cab","#c9ccd0"],
-    ["wardrobe","Шкаф-купе","Офисная мебель",1.8,.6,2.4,"cab","#dcd6cb"],
+    ["deskL","Стол угловой","Офисная мебель",1.6,1.6,.75,"deskL","#e8e2d6"],["locker","Шкафчики персонала","Офисная мебель",.9,.5,1.9,"locker","#c9ccd0"],
+    ["wardrobe","Шкаф-купе (корпусный)","Офисная мебель",1.8,.6,2.4,"wardS","#dcd6cb"],
     // переговоры
     ["meet6","Стол переговоров на 6","Переговорные",2.6,2.1,.75,"meet","#d8cdb8"],["meet8","Стол переговоров на 8","Переговорные",3.2,2.2,.75,"meet","#d8cdb8"],
     ["meet10","Стол переговоров на 10","Переговорные",3.8,2.3,.75,"meet","#d8cdb8"],["round4","Круглый стол на 4","Переговорные",1.9,1.9,.75,"cafe4","#d8cdb8"],
@@ -415,6 +427,47 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     ["urinal","Писсуар","Сантехника",.4,.35,1,"urinal","#f4f4f2"],["shower","Душевой поддон","Сантехника",.9,.9,2,"shower","#dbe9f0"],
     ["cubicle","Кабина с/у 1.2×1.8","Сантехника",1.2,1.8,2.1,"cubicle","#c7d7da"],
     ["wcset","С/у МГН — комплект (СП 59)","Сантехника",2.2,2.25,.9,"wcset","#f4f4f2"],
+    // шкафы и хранение (встроенные — в нишу до потолка; стандартная глубина: одежда 600, документы 400–450)
+    ["wardB","Шкаф встроенный распашной","Шкафы и хранение",1.8,.6,"H","wardB","#e6e1d7"],["wardS","Шкаф-купе встроенный (до потолка)","Шкафы и хранение",2.4,.65,"H","wardS","#e6e1d7"],
+    ["pantry","Шкаф-пенал","Шкафы и хранение",.6,.6,2.2,"wardB","#e6e1d7"],["shelfO","Стеллаж открытый","Шкафы и хранение",1.2,.4,2.0,"shelfO","#cdbfa8"],
+    ["bookW","Стеллаж во всю стену (встроенный)","Шкафы и хранение",3.6,.4,"H","shelfO","#cdbfa8"],["nicheTV","Встроенная стенка с нишей под ТВ","Шкафы и хранение",3.6,.45,"H","nicheTV","#e6e1d7"],
+    ["credenza","Тумба-кредеца","Шкафы и хранение",1.6,.45,.75,"credenza","#b89a78"],["pedestal","Тумба подкатная 3 ящика","Шкафы и хранение",.43,.55,.6,"pedestal","#d8d4cc"],
+    ["staffW","Шкаф для одежды персонала","Шкафы и хранение",.8,.6,2.0,"wardB","#c9ccd0"],["lockerP","Локеры персонала с замками","Шкафы и хранение",1.2,.5,1.9,"locker","#c9ccd0"],
+    ["docCab","Шкаф документов со стеклом","Шкафы и хранение",.9,.45,2.0,"glassCab","#dcd6cb"],["archM","Мобильный архив (стеллажи на рельсах)","Шкафы и хранение",3,2.4,2.2,"archM","#c3c7c9"],
+    // рабочие места и переговорные боксы
+    ["deskH","Стол с регулировкой высоты","Рабочие места",1.6,.8,.75,"table","#e8e2d6"],["chairE","Кресло руководителя","Рабочие места",.7,.7,1.2,"chair","#2f2f2f"],
+    ["deskC","Место консультации (стол + 3 стула)","Рабочие места",1.4,2.2,.75,"deskC","#e8e2d6"],["roundC","Стол консультации круглый на 3","Рабочие места",1.8,1.8,.75,"round","#e8e2d6"],
+    ["phoneB","Звукоизолированная кабина (фон-бокс)","Рабочие места",1.0,1.0,2.3,"pod","#3f4a52"],["meetPod","Переговорный бокс на 4","Рабочие места",2.2,2.0,2.3,"pod","#3f4a52"],
+    ["board","Маркерная доска","Рабочие места",1.8,.1,1.2,"board","#f7f7f5"],["partG","Мобильная стеклянная перегородка","Рабочие места",1.2,.06,2.0,"partG","#a9d3ee"],
+    ["acoust","Акустический экран","Рабочие места",1.4,.06,1.5,"partA","#8d9aa3"],
+    // мягкая мебель и лаунж
+    ["chairL","Кресло лаунж с оттоманкой","Мягкая мебель",.9,1.5,.8,"chairL","#8f7f6a"],["sofaM","Диван модульный","Мягкая мебель",3.0,1.0,.8,"sofa","#9fa6a8"],
+    ["booth","Диван-кабинка (booth) на 4","Мягкая мебель",1.6,1.9,1.1,"booth","#8f7f6a"],["sideT","Приставной столик","Мягкая мебель",.45,.45,.55,"stool","#d4c6b0"],
+    ["barT","Барный стол высокий + 2 стула","Мягкая мебель",1.3,1.3,1.1,"barT","#d4c6b0"],["chairC","Стул кафе","Мягкая мебель",.45,.5,.8,"chair","#8c6a4a"],
+    // шоурум и витрины
+    ["showcase","Витрина стеклянная","Шоурум и витрины",1.0,.5,1.8,"showcase","#dfe8ec"],["sampleW","Стенд образцов отделки","Шоурум и витрины",1.2,.5,2.0,"sampleW","#e9e2d2"],
+    ["sampleR","Карусель образцов (двери/плитка)","Шоурум и витрины",1.2,1.2,2.0,"sampleR","#e9e2d2"],["mockK","Мокап кухни (образец гарнитура)","Шоурум и витрины",2.4,.6,2.2,"mockK","#efe9df"],
+    ["mockB","Мокап ванной (образец)","Шоурум и витрины",1.8,1.6,2.2,"mockB","#e2eef2"],["brochure","Стойка для буклетов","Шоурум и витрины",.5,.4,1.6,"brochure","#d8d4cc"],
+    ["tvStand","Мобильная ТВ-стойка","Шоурум и витрины",1.2,.6,1.7,"tvStand","#2b2f33"],["vrZone","VR-площадка","Шоурум и витрины",2,2,.02,"vr","#b9c7cf"],
+    ["logoW","Лого-стена (подсветка)","Шоурум и витрины",3,.12,2.4,"logo","#2b2f33"],
+    // детская
+    ["kidSlide","Детская горка","Детская",1.6,.8,1.2,"kidSlide","#f28b6a"],["kidHouse","Игровой домик","Детская",1.2,1.2,1.4,"kidHouse","#8ec3e6"],
+    ["kidShelf","Стеллаж для игрушек","Детская",1.0,.35,.9,"shelfO","#f2d27a"],["kidChair","Детский стульчик","Детская",.35,.35,.55,"chair","#8ec3e6"],
+    ["kidSofa","Детский диванчик","Детская",1.0,.5,.5,"sofa","#f2a86a"],["kidBoard","Доска для рисования","Детская",1.0,.4,1.1,"board","#f7f7f5"],
+    // кухня (модули по стандарту: глубина 600, высота столешницы 900, шаг 150)
+    ["kBase","Модуль кухни нижний","Кухня и бар",.6,.6,.9,"kBase","#e9e6df"],["kSink","Мойка на тумбе","Кухня и бар",.8,.6,.9,"kSink","#e9e6df"],
+    ["kTall","Колонна-пенал (встроенная техника)","Кухня и бар",.6,.6,2.1,"wardB","#e9e6df"],["dish","Посудомоечная машина","Кухня и бар",.6,.6,.85,"kBase","#dfe2e4"],
+    ["kIsland","Кухонный остров","Кухня и бар",1.8,.9,.9,"kIsland","#e9e6df"],["dineR","Обеденный стол прямоугольный со стульями","Кухня и бар",2.2,1.9,.75,"meet","#e0d6c6"],
+    ["backBar","Бэк-бар (стеллаж за стойкой)","Кухня и бар",3,.45,2.2,"shelfO","#6b5a4a"],["microW","Микроволновка / кулер на тумбе","Кухня и бар",.6,.5,1.2,"cooler","#d8dbdd"],
+    // санузлы
+    ["sinkD","Столешница с двумя раковинами","Сантехника",1.2,.5,.85,"sinkD","#f4f4f2"],["urSep","Перегородка между писсуарами","Сантехника",.05,.45,1.2,"partA","#c7d7da"],
+    ["slop","Раковина КУИ (с трапом)","Сантехника",.5,.5,.6,"sink","#e9ecee"],["dryer","Сушилка для рук","Сантехника",.3,.15,.3,"cooler","#e9ecee"],
+    ["mirror","Зеркало","Сантехника",.8,.05,1.0,"board","#dfe8ec"],
+    // декор и навигация
+    ["plantT","Дерево в кадке","Декор и навигация",1.0,1.0,2.2,"plant","#4d7a3e"],["planter","Кашпо линейное","Декор и навигация",1.2,.35,.9,"planter","#5d8c4e"],
+    ["lampF","Торшер","Декор и навигация",.45,.45,1.6,"lamp","#e8d9a8"],["umbrella","Подставка для зонтов","Декор и навигация",.3,.3,.6,"stool","#55595c"],
+    ["trash","Урна","Декор и навигация",.3,.3,.7,"stool","#8f928d"],["fireC","Пожарный шкаф (ПК + огнетушитель)","Декор и навигация",.7,.25,1.5,"fireC","#c9302c"],
+    ["signT","Навигационная стойка","Декор и навигация",.5,.3,1.8,"brochure","#2b2f33"],
     // конструкции
     ["col","Колонна 400×400","Конструкции",.4,.4,"H","col","#8f928d"],["col3","Колонна 300×300","Конструкции",.3,.3,"H","col","#8f928d"],
     ["stair2","Лестница двухмаршевая","Конструкции",2.4,4,3.3,"stair2","#b9b6ae"],["stair1","Лестница одномаршевая","Конструкции",1.2,5.7,3.3,"stair1","#b9b6ae"],
@@ -472,7 +525,188 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     stair1: S_(["1000×5700", 1.0, 5.7], ["1200×5700", 1.2, 5.7], ["1500×6000", 1.5, 6.0]),
     col: S_(["300×300", .3, .3], ["400×400", .4, .4], ["500×500", .5, .5], ["600×600", .6, .6]),
     shower: S_(["800×800", .8, .8], ["900×900", .9, .9], ["1200×900 (МГН)", 1.2, .9]),
+    // шкафы и хранение
+    wardB: S_(["800 (2 двери)", .8, .6], ["1200 (3 двери)", 1.2, .6], ["1500", 1.5, .6], ["1800 (4 двери)", 1.8, .6], ["2400", 2.4, .6], ["3000", 3.0, .6], ["1200 под документы · гл. 450", 1.2, .45], ["1800 под документы · гл. 450", 1.8, .45]),
+    wardS: S_(["1500 (2 двери)", 1.5, .65], ["1800", 1.8, .65], ["2000", 2.0, .65], ["2400 (3 двери)", 2.4, .65], ["2700", 2.7, .65], ["3000", 3.0, .65], ["3600 (4 двери)", 3.6, .65]),
+    wardrobe: S_(["1200", 1.2, .6], ["1500", 1.5, .6], ["1800", 1.8, .6], ["2000", 2.0, .6], ["2400", 2.4, .6], ["2700", 2.7, .6]),
+    pantry: S_(["400×450", .4, .45], ["450×600", .45, .6], ["600×600", .6, .6]),
+    shelfO: S_(["800×350", .8, .35], ["1000×400", 1.0, .4], ["1200×400", 1.2, .4], ["1600×400", 1.6, .4], ["2000×400", 2.0, .4]),
+    bookW: S_(["2400", 2.4, .4], ["3000", 3.0, .4], ["3600", 3.6, .4], ["4800", 4.8, .4], ["6000", 6.0, .4]),
+    nicheTV: S_(["2400", 2.4, .45], ["3000", 3.0, .45], ["3600", 3.6, .45], ["4200", 4.2, .45]),
+    credenza: S_(["1200×450", 1.2, .45], ["1600×450", 1.6, .45], ["2000×450", 2.0, .45], ["2400×500", 2.4, .5]),
+    pedestal: S_(["430×550 (3 ящика)", .43, .55], ["430×600", .43, .6]),
+    staffW: S_(["600×600", .6, .6], ["800×600", .8, .6], ["1000×600", 1.0, .6]),
+    lockerP: S_(["2 секции 600", .6, .5], ["3 секции 900", .9, .5], ["4 секции 1200", 1.2, .5], ["6 секций 1800", 1.8, .5]),
+    docCab: S_(["800×400", .8, .4], ["900×450", .9, .45], ["1200×450", 1.2, .45]),
+    archM: S_(["3×2,4 м (6 стеллажей)", 3.0, 2.4], ["4×2,4 м (8 стеллажей)", 4.0, 2.4], ["5×3 м (10 стеллажей)", 5.0, 3.0]),
+    // рабочие места
+    deskH: S_(["1200×700", 1.2, .7], ["1400×800", 1.4, .8], ["1600×800", 1.6, .8], ["1800×800", 1.8, .8]),
+    deskC: S_(["стол 1200", 1.2, 2.2], ["стол 1400", 1.4, 2.2], ["стол 1600", 1.6, 2.3]),
+    roundC: S_(["на 3 (Ø800)", 1.7, 1.7], ["на 4 (Ø1000)", 2.0, 2.0]),
+    phoneB: S_(["1-местная 1000×1000", 1.0, 1.0], ["1-местная с рабочим местом 1200×1100", 1.2, 1.1], ["2-местная 2000×1300", 2.0, 1.3]),
+    meetPod: S_(["на 4 · 2200×2000", 2.2, 2.0], ["на 6 · 2800×2400", 2.8, 2.4]),
+    board: S_(["1200", 1.2, .1], ["1500", 1.5, .1], ["1800", 1.8, .1], ["2400", 2.4, .1]),
+    partG: S_(["1000", 1.0, .06], ["1200", 1.2, .06], ["1600", 1.6, .06]),
+    acoust: S_(["1200", 1.2, .06], ["1400", 1.4, .06], ["1600", 1.6, .06]),
+    // мягкая мебель
+    chairL: S_(["кресло + оттоманка", .9, 1.5], ["кресло без оттоманки", .9, .9]),
+    sofaM: S_(["2 модуля 2000", 2.0, 1.0], ["3 модуля 3000", 3.0, 1.0], ["4 модуля 4000", 4.0, 1.0], ["5 модулей 5000", 5.0, 1.0]),
+    booth: S_(["на 2 · 1200×1600", 1.2, 1.6], ["на 4 · 1600×1900", 1.6, 1.9], ["на 6 · 2000×2200", 2.0, 2.2]),
+    barT: S_(["Ø600 + 2 стула", 1.3, 1.3], ["Ø800 + 4 стула", 1.7, 1.7]),
+    sideT: S_(["Ø400", .4, .4], ["Ø450", .45, .45], ["Ø600", .6, .6]),
+    // шоурум
+    showcase: S_(["600×500", .6, .5], ["800×500", .8, .5], ["1000×500", 1.0, .5], ["1200×600", 1.2, .6], ["островная 1200×1200", 1.2, 1.2]),
+    sampleW: S_(["800", .8, .5], ["1200", 1.2, .5], ["1600", 1.6, .5], ["2400", 2.4, .5]),
+    sampleR: S_(["Ø1000", 1.0, 1.0], ["Ø1200", 1.2, 1.2]),
+    mockK: S_(["1800", 1.8, .6], ["2400", 2.4, .6], ["3000", 3.0, .6], ["угловой 2400×1800", 2.4, 1.8]),
+    mockB: S_(["1600×1500", 1.6, 1.5], ["1800×1600", 1.8, 1.6], ["2200×1800", 2.2, 1.8]),
+    tvStand: S_(["до 65\" 1200", 1.2, .6], ["до 86\" 1600", 1.6, .7]),
+    vrZone: S_(["2×2 м", 2, 2], ["2,5×2,5 м", 2.5, 2.5], ["3×3 м", 3, 3]),
+    logoW: S_(["2000", 2.0, .12], ["3000", 3.0, .12], ["4000", 4.0, .12]),
+    // детская
+    kidSlide: S_(["1600×800", 1.6, .8], ["2200×900", 2.2, .9]),
+    kidHouse: S_(["1000×1000", 1.0, 1.0], ["1200×1200", 1.2, 1.2], ["1500×1200", 1.5, 1.2]),
+    kidShelf: S_(["800", .8, .35], ["1000", 1.0, .35], ["1200", 1.2, .35]),
+    kidSofa: S_(["800", .8, .45], ["1000", 1.0, .5], ["1200", 1.2, .5]),
+    kidtab: S_(["на 2 · 600×500", .8, .6], ["на 4 · 1000×600", 1.0, .6], ["на 6 · 1200×700", 1.4, .8]),
+    // кухня (модули: шаг 150 мм, глубина 600)
+    kBase: S_(["300", .3, .6], ["400", .4, .6], ["450", .45, .6], ["500", .5, .6], ["600", .6, .6], ["800", .8, .6], ["900", .9, .6]),
+    kSink: S_(["500", .5, .6], ["600", .6, .6], ["800", .8, .6]),
+    kTall: S_(["450", .45, .6], ["600", .6, .6]),
+    dish: S_(["450 (узкая)", .45, .6], ["600", .6, .6]),
+    kIsland: S_(["1200×800", 1.2, .8], ["1800×900", 1.8, .9], ["2400×1000", 2.4, 1.0]),
+    dineR: S_(["на 4 · 1200×800", 1.8, 1.8], ["на 6 · 1800×900", 2.4, 1.9], ["на 8 · 2400×1000", 3.0, 2.0], ["на 10 · 3000×1000", 3.6, 2.0]),
+    backBar: S_(["2000", 2.0, .45], ["3000", 3.0, .45], ["4000", 4.0, .45]),
+    coffee: S_(["600", .6, .5], ["800 (с тумбой)", .8, .6]),
+    // санузлы
+    sinkD: S_(["1000 (1 раковина)", 1.0, .5], ["1200 (2 раковины)", 1.2, .5], ["1600 (2 раковины)", 1.6, .55]),
+    mirror: S_(["600", .6, .05], ["800", .8, .05], ["1200", 1.2, .05]),
+    // декор
+    plantT: S_(["Ø800", .8, .8], ["Ø1000", 1.0, 1.0], ["Ø1200", 1.2, 1.2]),
+    planter: S_(["800", .8, .3], ["1200", 1.2, .35], ["1600", 1.6, .4]),
   };
+  /* ---------- ГОТОВЫЕ НАБОРЫ мебели. Координаты — в локальной рамке набора: y = 0 у задней стены, y = h — сторона к двери/залу.
+   * Предмет: [ключ, x, y, поворот°, индекс типоразмера из KB.SIZES (или null — по умолчанию)]. Ковры и маты могут лежать под мебелью. */
+  const SI = (k, x, y, r = 0, i = null) => [k, x, y, r, i], KB_MODEL = KB.SIZES.model.map(m => [m[1], m[2]]);
+  KB.SETS = [
+    { key: "mgr", name: "Рабочее место менеджера", room: /кабинет менеджер|консульт|менеджер/i, align: "back", variants: [
+      { name: "Стол 1400 · кресло · 2 гостя", w: 2.4, h: 2.4, items: [SI("chairO", .9, .05), SI("desk", .5, .7, 0, 1), SI("pedestal", 1.95, .75), SI("chairV", .6, 1.75), SI("chairV", 1.3, 1.75)] },
+      { name: "Стол 1600 · тумба · шкаф · кредеца", w: 3.0, h: 2.9, items: [SI("credenza", 0, 0, 0, 0), SI("docCab", 2.1, 0, 0, 1), SI("chairO", .9, .6), SI("desk", .5, 1.25, 0, 2), SI("pedestal", 2.15, 1.3), SI("chairV", .7, 2.35), SI("chairV", 1.5, 2.35)] },
+      { name: "Угловой стол 1600 · шкаф", w: 2.9, h: 2.9, items: [SI("docCab", 2.0, 0, 0, 1), SI("deskL", .2, .45, 0, 1), SI("chairV", .5, 2.35), SI("chairV", 1.2, 2.35)] },
+      { name: "Стол с регулировкой высоты 1600 · локер", w: 3.0, h: 2.6, items: [SI("pantry", 2.4, 0, 0, 2), SI("chairO", .9, .15), SI("deskH", .5, .85, 0, 2), SI("pedestal", 2.15, .9), SI("chairV", .7, 2.0), SI("chairV", 1.5, 2.0)] },
+    ] },
+    { key: "cons", name: "Место консультации (открытое)", room: /консульт|мпп|open|зал/i, align: "center", variants: [
+      { name: "Стол 1400 · 3 стула", w: 1.4, h: 2.2, items: [SI("deskC", 0, 0, 0, 1)] },
+      { name: "Стол 1600 · тумба · стойка буклетов", w: 2.8, h: 2.3, items: [SI("deskC", 0, 0, 0, 2), SI("pedestal", 1.75, .1), SI("brochure", 2.3, .1)] },
+      { name: "Круглый стол на 3", w: 1.7, h: 1.7, items: [SI("roundC", 0, 0, 0, 0)] },
+      { name: "Круглый стол на 4 · растение", w: 2.8, h: 2.0, items: [SI("roundC", 0, 0, 0, 1), SI("plant", 2.2, .1, 0, 1)] },
+    ] },
+    { key: "rop", name: "Кабинет руководителя (РОП)", room: /руковод|роп|директор/i, align: "back", variants: [
+      { name: "узкий: стол 1600 · шкаф", w: 2.1, h: 2.9, items: [SI("docCab", 0, 0, 0, 1), SI("chairE", .7, .55), SI("deskB", .25, 1.35, 0, 0), SI("chairV", .35, 2.35), SI("chairV", 1.25, 2.35)] },
+      { name: "Компактный: стол 1600 · шкаф", w: 3.2, h: 2.9, items: [SI("docCab", 0, 0, 0, 1), SI("credenza", 1.4, 0, 0, 1), SI("chairE", 1.05, .55), SI("deskB", .6, 1.35, 0, 0), SI("chairV", .8, 2.35), SI("chairV", 1.6, 2.35)] },
+      { name: "Стол 1800 · приставной на 4", w: 4.0, h: 3.9, items: [SI("wardB", 0, 0, 0, 3), SI("credenza", 2.2, 0, 0, 1), SI("chairE", 1.15, .75), SI("deskB", .7, 1.55, 0, 1), SI("chairV", .9, 2.6), SI("chairV", 1.7, 2.6), SI("roundT", 2.6, 2.5, 0, 0)] },
+      { name: "Представительский: стол 2000 · диван", w: 5.0, h: 4.3, items: [SI("wardS", 0, 0, 0, 3), SI("credenza", 2.8, 0, 0, 2), SI("chairE", 1.35, .9), SI("deskB", .7, 1.75, 0, 2), SI("chairV", 1.0, 2.95), SI("chairV", 1.9, 2.95), SI("sofa2", 3.3, 3.35, 0, 1), SI("ctab", 3.7, 2.55, 0, 0), SI("plant", 4.4, 1.0, 0, 1)] },
+    ] },
+    { key: "meet", name: "Переговорная", room: /переговор|сделочн|vip/i, align: "center", variants: [{ name: "мини на 4 · стол 1400×900", w: 3.4, h: 2.6, items: [SI("tv", .95, 0, 0, 1), SI("meet6", .6, .3, 0, 0)] }].concat([4, 6, 8, 10, 12].map((n, i) => { const t = [[2.2, 2.0], [2.6, 2.1], [3.2, 2.2], [3.8, 2.3], [4.4, 2.3]][i], W = t[0] + 1.2, it = [SI("tv", (W - 1.45) / 2, 0, 0, 1), SI("meet6", .6, .45, 0, i)];
+      if (n >= 8) it.push(SI("board", .1, .45 + t[1] + .35, 0, 0), SI("credenza", W - 1.7, .45 + t[1] + .35, 0, 1)); return { name: `на ${n} · стол ${["1400×900", "1800×1000", "2400×1100", "3000×1200", "3600×1200"][i]}${n >= 8 ? " · доска · кредеца" : ""}`, w: W, h: .45 + t[1] + (n >= 8 ? .35 + .45 : .45), items: it }; })) },
+    { key: "vip", name: "Сделочная / VIP", room: /сделочн|vip/i, align: "center", variants: [
+      { name: "мини · стол на 4", w: 3.4, h: 2.6, items: [SI("tv", .95, 0, 0, 1), SI("meet6", .6, .3, 0, 0)] },
+      { name: "компактная · стол на 4 · ТВ", w: 3.4, h: 2.85, items: [SI("tv", .95, 0, 0, 1), SI("meet6", .6, .45, 0, 0), SI("plant", 2.95, .05, 0, 0)] },
+      { name: "Стол на 4 · ТВ · кредеца", w: 3.4, h: 3.6, items: [SI("tv", .95, 0, 0, 1), SI("meet6", .6, .5, 0, 0), SI("credenza", .6, 3.0, 0, 0), SI("plant", 2.8, 3.0, 0, 0)] },
+      { name: "Стол на 6 · диван для ожидания", w: 4.4, h: 4.3, items: [SI("tv", 1.5, 0, 0, 1), SI("meet6", .6, .5, 0, 1), SI("sofa2", 0, 3.3, 0, 0), SI("ctab", 1.6, 3.45, 0, 0), SI("credenza", 2.8, 3.8, 0, 0)] },
+    ] },
+    { key: "lounge", name: "Зона ожидания / лаунж", room: /ожидан|лаунж|зал/i, align: "center", variants: [
+      { name: "на 2 · два кресла + столик", w: 1.9, h: 1.55, items: [SI("arm", 0, 0, 0, 1), SI("arm", 1.1, 0, 0, 1), SI("ctab", .65, .95, 0, 0)] },
+      { name: "на 3 компакт · диван 2000", w: 2.2, h: 1.65, items: [SI("sofa3", .1, 0, 0, 0), SI("ctab", .6, 1.15, 0, 2)] },
+      { name: "на 3 · диван + столик", w: 2.6, h: 1.8, items: [SI("sofa3", 0, 0, 0, 0), SI("ctab", .5, 1.25, 0, 2), SI("plant", 2.15, .05, 0, 0)] },
+      { name: "на 4 · диван + 2 кресла", w: 3.0, h: 2.2, items: [SI("sofa2", .7, 0, 0, 1), SI("arm", 0, 1.1, 90, 1), SI("arm", 2.2, 1.1, 270, 1), SI("ctab", 1.1, 1.25, 0, 1)] },
+      { name: "на 6 · два дивана напротив + ковёр", w: 3.2, h: 3.4, items: [SI("rug", .1, .3, 0, 1), SI("sofa3", .5, 0, 0, 1), SI("sofa3", .5, 2.5, 180, 1), SI("ctab", 1.0, 1.4, 0, 3)] },
+      { name: "на 7 · угловой диван + кресло", w: 3.6, h: 2.8, items: [SI("rug", .9, .9, 90, 0), SI("sofaL", 0, 0, 0, 2), SI("arm", 2.8, 1.5, 270, 1), SI("ctab", 1.2, 1.0, 0, 1), SI("lampF", 3.1, .1)] },
+      { name: "на 8 · 2 дивана + 2 кресла", w: 4.2, h: 3.4, items: [SI("rug", .35, .45, 90, 2), SI("sofa3", 1.0, 0, 0, 1), SI("sofa3", 1.0, 2.5, 180, 1), SI("arm", 0, 1.3, 90, 1), SI("arm", 3.4, 1.3, 270, 1), SI("ctab", 1.5, 1.4, 0, 3)] },
+      { name: "лаунж с креслами и оттоманками", w: 3.4, h: 2.4, items: [SI("chairL", 0, 0, 0, 0), SI("chairL", 2.5, 0, 0, 0), SI("sideT", 1.45, .25, 0, 2), SI("lampF", 1.5, 1.2)] },
+    ] },
+    { key: "recep", name: "Ресепшен", room: /ресепшн|ресепшен|хостес/i, align: "back", variants: [
+      { name: "на 1 компакт · стойка 1800", w: 1.8, h: 1.7, items: [SI("chairO", .6, .1), SI("recep", 0, .9, 0, 0)] },
+      { name: "на 1 · стойка 1800", w: 2.2, h: 1.9, items: [SI("docCab", 1.3, 0, 0, 0), SI("chairO", .5, .2), SI("recep", 0, 1.05, 0, 0)] },
+      { name: "на 2 · стойка 2400", w: 2.6, h: 2.1, items: [SI("credenza", .7, 0, 0, 0), SI("chairO", .35, .6), SI("chairO", 1.45, .6), SI("recep", .1, 1.25, 0, 1)] },
+      { name: "на 3 · стойка 3600 · кулер", w: 4.2, h: 2.1, items: [SI("credenza", .8, 0, 0, 2), SI("chairO", .4, .6), SI("chairO", 1.5, .6), SI("chairO", 2.6, .6), SI("recep", 0, 1.25, 0, 3), SI("cooler", 3.8, .1)] },
+      { name: "угловая стойка 2600×1800", w: 3.2, h: 2.2, items: [SI("docCab", 2.4, 0, 0, 0), SI("chairO", .7, .6), SI("recepL", 0, .4, 180, 1)] },
+    ] },
+    { key: "kitchen", name: "Кухня персонала", room: /кухн|приём пищи|столов/i, align: "back", variants: [
+      { name: "узкая · 1200 + стол на 2", w: 1.9, h: 2.8, items: [SI("kitch", 0, 0, 0, 0), SI("fridge", 1.25, 0, 0, 0), SI("dine", .25, 1.3, 0, 0)] },
+      { name: "мини · 1800 + стол на 2", w: 2.5, h: 2.8, items: [SI("kitch", 0, 0, 0, 1), SI("fridge", 1.85, 0, 0, 0), SI("dine", .5, 1.2, 0, 0)] },
+      { name: "на 4 · 2400 + холодильник", w: 3.2, h: 3.3, items: [SI("kitch", 0, 0, 0, 2), SI("fridge", 2.45, 0, 0, 1), SI("dine", .7, 1.3, 0, 1)] },
+      { name: "на 6 · 3000 + пенал", w: 4.4, h: 3.4, items: [SI("kitch", 0, 0, 0, 3), SI("kTall", 3.05, 0, 0, 1), SI("fridge", 3.7, 0, 0, 1), SI("dineR", 1.0, 1.4, 0, 1)] },
+      { name: "модульная 3000 (модули 600) + стол на 4", w: 4.4, h: 3.2, items: [SI("kBase", 0, 0, 0, 4), SI("dish", .6, 0, 0, 1), SI("kSink", 1.2, 0, 0, 2), SI("kBase", 2.0, 0, 0, 4), SI("kBase", 2.6, 0, 0, 1), SI("kTall", 3.0, 0, 0, 1), SI("fridge", 3.65, 0, 0, 1), SI("dineR", 1.2, 1.3, 0, 0)] },
+      { name: "угловая + стол на 4", w: 3.3, h: 3.3, items: [SI("kitchL", 0, 0, 0, 1), SI("fridge", 2.5, 0, 0, 1), SI("dine", 1.3, 1.35, 0, 1)] },
+      { name: "с островом · стол на 4", w: 4.4, h: 4.2, items: [SI("kitch", 0, 0, 0, 3), SI("kTall", 3.05, 0, 0, 1), SI("fridge", 3.7, 0, 0, 1), SI("kIsland", 1.1, 1.3, 0, 1), SI("dineR", 1.1, 2.4, 0, 0)] },
+    ] },
+    { key: "back", name: "Бэк-офис", room: /бэк|back|open-space|опен/i, align: "back", variants: [
+      { name: "1 место · стол 1400 · шкаф", w: 2.4, h: 1.5, items: [SI("desk", 0, 0, 0, 1), SI("pedestal", 1.45, .05), SI("docCab", 1.5, .95, 180, 1), SI("chairO", .4, .8)] },
+      { name: "2 стола у стены · шкаф", w: 3.8, h: 1.5, items: [SI("desk", 0, 0, 0, 1), SI("desk", 1.45, 0, 0, 1), SI("chairO", .4, .8), SI("chairO", 1.85, .8), SI("docCab", 2.9, 0, 0, 1)] },
+    ].concat([2, 4, 6, 8].map((n, i) => { const bw = [1.4, 2.8, 4.2, 5.6][i], W = bw + 1.1;
+      const it = [SI("os4", 0, 0, 0, i), SI("mfp", bw + .4, .1)]; for (let j = 0; j < Math.max(1, Math.round(bw / 1.4)); j++) it.push(SI("docCab", j * 1.0, 2.9, 180, 1)); it.push(SI("plant", bw + .45, 2.75, 0, 0));
+      return { name: `бенч на ${n} · шкафы · МФУ`, w: W, h: 3.35, items: it }; })) },
+    { key: "kids", name: "Детский уголок", room: /детск/i, align: "center", variants: [
+      { name: "уголок · коврик 1,5 + 2 пуфа", w: 1.5, h: 1.5, items: [SI("kidmat", 0, 0, 0, 0), SI("pouf", .2, .2), SI("pouf", .8, .8)] },
+      { name: "мини · коврик + столик", w: 2.6, h: 1.5, items: [SI("kidmat", 0, 0, 0, 0), SI("kidtab", 1.75, .45, 0, 0)] },
+      { name: "стандарт · коврик 2×2 + столик + стеллаж", w: 3.4, h: 2.0, items: [SI("kidmat", 0, 0, 0, 1), SI("pouf", .3, .3), SI("pouf", 1.1, .3), SI("kidtab", 2.2, .15, 0, 1), SI("kidShelf", 2.2, 1.6, 0, 1)] },
+      { name: "игровая · горка + домик", w: 4.8, h: 3.0, items: [SI("kidmat", 0, 0, 0, 2), SI("kidSlide", .2, .2, 0, 0), SI("kidHouse", 1.6, 1.6, 0, 1), SI("kidtab", 3.3, .2, 0, 2), SI("kidShelf", 3.4, 1.4, 0, 2), SI("kidBoard", 3.5, 2.5)] },
+    ] },
+    { key: "cafe", name: "Кофе-поинт / бар", room: /кофе|бар|кафе/i, align: "back", variants: [
+      { name: "кофе-уголок · столик на 2", w: 1.6, h: 2.4, items: [SI("coffee", 0, 0, 0, 0), SI("cooler", .75, .05), SI("trash", 1.25, .05), SI("cafe4", .1, .95, 0, 0)] },
+      { name: "кофе-поинт · гарнитур 1200 + 2 стола", w: 3.6, h: 3.0, items: [SI("kitch", 0, 0, 0, 0), SI("fridge", 1.25, 0, 0, 0), SI("coffee", 1.9, 0, 0, 0), SI("cooler", 2.6, .05), SI("cafe4", 0, 1.05, 0, 1), SI("cafe4", 2.1, 1.3, 0, 0)] },
+      { name: "бар · стойка 3000 + бэк-бар + 4 стула", w: 3.0, h: 2.5, items: [SI("backBar", 0, 0, 0, 1), SI("bar", 0, 1.3, 0, 1), SI("stool", .3, 2.05), SI("stool", 1.0, 2.05), SI("stool", 1.7, 2.05), SI("stool", 2.4, 2.05)] },
+      { name: "бар + высокие столы", w: 5.0, h: 3.2, items: [SI("backBar", 0, 0, 0, 1), SI("bar", 0, 1.3, 0, 1), SI("stool", .3, 2.05), SI("stool", 1.0, 2.05), SI("stool", 1.7, 2.05), SI("stool", 2.4, 2.05), SI("barT", 3.3, 0, 0, 1), SI("barT", 3.5, 1.85, 0, 0)] },
+    ] },
+    { key: "ward", name: "Гардероб", room: /гардероб/i, align: "back", variants: [
+      { name: "вешалки + банкетка", w: 2.0, h: 1.3, items: [SI("coat", 0, 0), SI("coat", .75, 0), SI("coat", 1.5, 0), SI("bench", .4, .85, 0, 1)] },
+      { name: "шкаф-купе 1800 + банкетка", w: 1.8, h: 1.6, items: [SI("wardS", 0, 0, 0, 1), SI("bench", .3, 1.15, 0, 1)] },
+      { name: "встроенный 2400 + зеркало + зонты", w: 2.4, h: 1.7, items: [SI("wardS", 0, 0, 0, 3), SI("bench", .6, 1.25, 0, 1), SI("umbrella", 2.0, 1.3)] },
+      { name: "локеры персонала + шкаф", w: 3.0, h: 1.4, items: [SI("lockerP", 0, 0, 0, 3), SI("staffW", 2.1, 0, 0, 1), SI("bench", .3, .95, 0, 2)] },
+    ] },
+    { key: "show", name: "Шоурум материалов", room: /шоурум|образц/i, align: "back", variants: [
+      { name: "стенды образцов · витрина", w: 4.4, h: 1.6, items: [SI("sampleW", 0, 0, 0, 1), SI("sampleW", 1.3, 0, 0, 1), SI("sampleW", 2.6, 0, 0, 0), SI("showcase", 3.5, 0, 0, 1), SI("brochure", .2, 1.1)] },
+      { name: "мокап кухни + стенды + карусель", w: 5.4, h: 2.4, items: [SI("mockK", 0, 0, 0, 1), SI("sampleW", 2.6, 0, 0, 1), SI("sampleW", 3.9, 0, 0, 1), SI("sampleR", 2.0, 1.1, 0, 0)] },
+      { name: "полный: кухня + ванная + стол подбора", w: 6.6, h: 3.4, items: [SI("mockK", 0, 0, 0, 3), SI("mockB", 4.6, 0, 0, 1), SI("sampleW", 2.6, 0, 0, 2), SI("showcase", 2.6, .6, 0, 1), SI("round4", 2.45, 1.3, 0, 0)] },
+    ] },
+    { key: "maket", name: "Зона макета", room: /макет/i, align: "center", variants: [["2x1.5", 0], ["3x2", 1], ["4x3", 2], ["5x3", 3], ["6x4", 4], ["6x5", 5]].map(([nm, i]) => { const t = KB_MODEL[i], big = t[0] >= 5, W = t[0] + 2, H = t[1] + (big ? 2.4 : 2);   // обход стола ≥ 1 м; у большого — стенды и экран у задней стены
+      return { name: `стол макета ${nm.replace("x", "×")}${big ? " · стенды · экран" : ""}`, w: W, h: H, items: big ? [SI("model", 1, 1.2, 0, i), SI("stand", .1, 0, 0, 1), SI("stand", W - 1.3, 0, 0, 1), SI("tv", (W - 1.7) / 2, 0, 0, 2)] : [SI("model", 1, 1, 0, i)] }; }) },
+    { key: "arch", name: "Архив / склад", room: /архив|склад/i, align: "back", variants: [
+      { name: "2 стеллажа", w: 2.0, h: 1.0, items: [SI("shelf", 0, 0, 0, 1), SI("shelf", 1.0, 0, 0, 1)] },
+      { name: "3 стеллажа", w: 3.0, h: 1.0, items: [SI("shelf", 0, 0, 0, 1), SI("shelf", 1.0, 0, 0, 1), SI("shelf", 2.0, 0, 0, 1)] },
+      { name: "2 ряда стеллажей · проход 900", w: 3.0, h: 1.7, items: [SI("shelf", 0, 0, 0, 1), SI("shelf", 1.0, 0, 0, 1), SI("shelf", 2.0, 0, 0, 1), SI("shelf", 0, 1.3, 180, 1), SI("shelf", 1.0, 1.3, 180, 1), SI("shelf", 2.0, 1.3, 180, 1)] },
+      { name: "мобильный архив + сейф", w: 4.0, h: 2.4, items: [SI("archM", 0, 0, 0, 0), SI("safe", 3.3, 0), SI("docCab", 3.1, 1.9, 180, 0)] },
+    ] },
+    { key: "wc", name: "Санузел", room: /с\/у|санузел|туалет|мгн/i, align: "back", variants: [
+      { name: "кабина: унитаз + раковина", w: 1.2, h: 2.0, items: [SI("wc", .4, 0), SI("sink", .33, 1.55, 180)] },
+      { name: "универсальный МГН (СП 59)", w: 2.2, h: 2.25, items: [SI("wcset", 0, 0, 0, 0)] },
+      { name: "мужской · 2 кабины + 2 писсуара", w: 3.0, h: 2.6, items: [SI("cubicle", 0, 0, 0, 0), SI("cubicle", .9, 0, 0, 0), SI("urinal", 2.0, 0), SI("urSep", 2.45, 0), SI("urinal", 2.55, 0), SI("sinkD", 1.8, 2.1, 180, 1)] },
+      { name: "женский · 3 кабины + столешница", w: 3.0, h: 2.6, items: [SI("cubicle", 0, 0, 0, 1), SI("cubicle", 1.0, 0, 0, 1), SI("cubicle", 2.0, 0, 0, 1), SI("sinkD", 1.4, 2.05, 180, 2)] },
+    ] },
+    { key: "focus", name: "Фон-боксы и переговорные капсулы", room: /бокс|тишин|фокус|бэк|open/i, align: "back", variants: [
+      { name: "1 фон-бокс", w: 1.0, h: 1.0, items: [SI("phoneB", 0, 0, 0, 0)] },
+      { name: "2 фон-бокса рядом", w: 2.1, h: 1.0, items: [SI("phoneB", 0, 0, 0, 0), SI("phoneB", 1.1, 0, 0, 0)] },
+      { name: "переговорный бокс на 4", w: 2.2, h: 2.0, items: [SI("meetPod", 0, 0, 0, 0)] },
+      { name: "бокс на 6 + 2 фон-бокса", w: 5.0, h: 2.4, items: [SI("meetPod", 0, 0, 0, 1), SI("phoneB", 2.9, 0, 0, 0), SI("phoneB", 4.0, 0, 0, 0)] },
+    ] },
+  ];
+  // размер предмета набора: индекс типоразмера → [w, h]
+  KB.setItemSize = (k, i) => { const L = KB.SIZES[k], f = KB.FK[k]; if (i != null && L && L[i]) return [L[i][1], L[i][2]]; return f ? [f.w, f.h] : [1, 1]; };
+  // поставить набор в прямоугольник r (помещение или рамку): face — сторона, куда смотрит «перед» набора; возвращает новые предметы
+  KB.setItemsIn = function (r, key, vi = 0, face = "s", align) {
+    const set = KB.SETS.find(s => s.key === key); if (!set) throw new Error("Нет набора «" + key + "». Есть: " + KB.SETS.map(s => s.key).join(", "));
+    const v = set.variants[Math.max(0, Math.min(set.variants.length - 1, +vi || 0))], fr = frame(r, face);
+    const u0 = (fr.W - v.w) / 2, v0 = (align || set.align) === "back" ? Math.min(0.05, Math.max(0, fr.D - v.h)) : (fr.D - v.h) / 2;
+    return v.items.map(([k, x, y, rl, si]) => { const [w, h] = KB.setItemSize(k, si); return fr.put(k, u0 + x, v0 + y, rl || 0, { w, h }); });
+  };
+  // самый крупный вариант, который помещается в помещение (с запасом 0,1 м)
+  // W — ширина вдоль лицевой стороны, D — глубина от задней стены до двери
+  // name — название помещения: «Переговорная на 6» выбирает вариант «на 6», если он помещается
+  KB.bestSetVariant = function (key, W, D, name) { const set = KB.SETS.find(s => s.key === key); if (!set) return 0; let best = 0, area = -1;
+    const fit = v => v.w <= W + .01 && v.h <= D + .01, N = /на\s*(\d+)/i.exec(name || "");
+    if (N) { const i = set.variants.findIndex(v => fit(v) && new RegExp("на\\s*" + N[1] + "(?!\\d)").test(v.name)); if (i >= 0) return i; }
+    set.variants.forEach((v, i) => { if (fit(v) && v.w * v.h > area) { best = i; area = v.w * v.h; } }); return best; };
   KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {
@@ -1040,7 +1274,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       if (!items.some(i => i.t === "wall" && i.lv === 1 && i.kind === "rail")) add("yellow", "На краю антресоли нет ограждения (h ≥ 1,2 м).", "СП 118.13330.2022 п. 6.12");
     }
     // Бэк-офис: площадь на рабочее место
-    const seatsOf = it => ({ os1: 1, os4: 4, work3: 1 }[it.k] || 0);
+    const seatsOf = it => it.k === "os4" ? 2 * Math.max(1, Math.round(it.w / 1.4)) : ({ os1: 1, work3: 1, desk: 1, deskH: 1, deskL: 1, deskB: 1 }[it.k] || 0);   // бенч: 2 места на каждые 1,4 м
     for (const r of rooms.filter(r => has(r, "бэк-офис"))) {
       const n = items.filter(i => i.t === "item" && (i.lv || 0) === (r.lv || 0) && i.x >= r.x - .01 && i.y >= r.y - .01 && i.x <= r.x + r.w && i.y <= r.y + r.h).reduce((s, i) => s + seatsOf(i), 0);
       if (n && area(r) / n < 4.5) add("yellow", `«${r.name}»: ${(area(r) / n).toFixed(1)} м² на рабочее место < 4,5 м².`, "МР 2.2.0244-21 (рекомендация)", r.id);
@@ -1484,6 +1718,44 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       const f = KB.furnishRoom(S, r, { door: !hasDoor, face: a.face, seats: a.seats }); S.items.push(...f);
       return { msg: `«${r.name}»: расставлено ${f.length} предметов, лицевая сторона ${f._face}${f._note ? `, ${f._note}` : ""}`, ids: f.map(i => i.id) };
     },
+    // готовый набор мебели: {set:"meet", variant:2|"на 8"|"auto", room:"Переговорная"} или в точку {x,y,lv,face}
+    add_set(S, a) {
+      const set = KB.SETS.find(s => s.key === a.set || s.name === a.set); if (!set) throw new Error("Набор: " + KB.SETS.map(s => `${s.key} (${s.name})`).join(", "));
+      let r, face = a.face;
+      if (a.room || a.id) { r = findEl(S, a.room || a.id, "room"); face = face || (r.border === "none" ? faceSide(S, r) : KB.doorSide(S, r));   // зона без стен смотрит на вход
+        if (a.replace !== false) { const drop = new Set(KB.contents(S, r).filter(i => i.t === "item" && !isDoorK(i.k))); S.items = S.items.filter(i => !drop.has(i)); } }
+      const dims = f => (f === "e" || f === "w") ? [r.h, r.w] : [r.w, r.h], fitsIn = (v, f) => { const [W, D] = dims(f); return v.w <= W + .01 && v.h <= D + .01; };
+      let vi = a.variant == null || a.variant === "auto" ? (r ? KB.bestSetVariant(set.key, ...dims(face), r.name) : 0)
+        : typeof a.variant === "number" ? a.variant : Math.max(0, set.variants.findIndex(v => v.name.includes(String(a.variant))));
+      if (r && !a.face) {   // не влезает лицом к двери — пробуем повернуть набор на 90° (дверь окажется сбоку)
+        const want = set.variants[Math.max(0, Math.min(set.variants.length - 1, vi))];
+        if (!fitsIn(want, face)) for (const f of (face === "s" || face === "n") ? ["e", "w"] : ["s", "n"]) {
+          const alt = a.variant == null || a.variant === "auto" ? KB.bestSetVariant(set.key, ...dims(f), r.name) : vi;
+          if (fitsIn(set.variants[alt], f)) { face = f; vi = alt; break; } } }
+      const v = set.variants[Math.max(0, Math.min(set.variants.length - 1, vi))];
+      if (!r) { const x = +a.x || 0, y = +a.y || 0; face = face || "s"; const q = face === "e" || face === "w"; r = { x, y, w: q ? v.h : v.w, h: q ? v.w : v.h, lv: +a.lv || 0 }; }
+      // двери помещения: мебель не должна попадать в зону открывания — пробуем прижать набор к задней стене, затем сдвинуть вбок
+      const doors = r.id ? KB.contents(S, r).filter(i => i.t === "item" && isDoorK(i.k)).map(aabbOf) : [];
+      const hitDoor = its => its.filter(i => !/^(rug|kidmat|vrZone)$/.test(i.k)).some(i => { const a = aabbOf(i); return doors.some(d => Math.min(a.x + a.w, d.x + d.w) - Math.max(a.x, d.x) > .05 && Math.min(a.y + a.h, d.y + d.h) - Math.max(a.y, d.y) > .05); });
+      let items = KB.setItemsIn(r, set.key, vi, face), doorNote = "";
+      if (doors.length && hitDoor(items)) { const alt = KB.setItemsIn(r, set.key, vi, face, "back"); if (!hitDoor(alt)) items = alt; else {
+        const vv = set.variants[vi], [W] = dims(face), slack = Math.max(0, W - vv.w) / 2; let ok = null;
+        for (const dx of [slack, -slack, slack / 2, -slack / 2]) { if (!dx) continue; const t = KB.setItemsIn(r, set.key, vi, face, "back").map(i => { const q = face === "e" || face === "w"; return Object.assign(i, q ? { y: r3(i.y + dx) } : { x: r3(i.x + dx) }); }); if (!hitDoor(t)) { ok = t; break; } }
+        if (ok) items = ok; else doorNote = " · дверь задевает мебель — поверните дверь или выберите вариант меньше"; } }
+      S.items.push(...items);
+      const fits = r.w >= ((face === "e" || face === "w") ? v.h : v.w) - .01 && r.h >= ((face === "e" || face === "w") ? v.w : v.h) - .01;   // v пересчитан ниже
+      return { msg: `Набор «${set.name} — ${v.name}»: ${items.length} предметов${fits ? "" : " (больше помещения — проверьте проходы)"}${doorNote}`, ids: items.map(i => i.id) };
+    },
+    // обставить все помещения, для которых есть набор (подбор варианта по размеру)
+    sets_all(S, a = {}) { const out = []; let n = 0;
+      for (const r of S.items.filter(i => i.t === "room" && (a.lv == null || lvOf(i) === +a.lv))) { const st = KB.SETS.find(x => x.room.test(r.name)); if (!st) continue;
+        try { let res = KB.OPS.add_set(S, { set: st.key, room: r.id, variant: "auto" });
+          if (/дверь/.test(res.msg)) {   // дверь задевает — пробуем варианты поменьше
+            const cur = st.variants.findIndex(v => res.msg.includes(v.name)), order = st.variants.map((v, i) => i).filter(i => i !== cur && st.variants[i].w * st.variants[i].h <= st.variants[Math.max(0, cur)].w * st.variants[Math.max(0, cur)].h).sort((x, y) => st.variants[y].w * st.variants[y].h - st.variants[x].w * st.variants[x].h);
+            for (const i of order) { const drop = new Set(res.ids); S.items = S.items.filter(it => !drop.has(it.id)); const t = KB.OPS.add_set(S, { set: st.key, room: r.id, variant: i }); res = t; if (!/дверь|больше/.test(t.msg)) break; } }
+          n++; if (/больше|дверь/.test(res.msg)) out.push(`«${r.name}»: ${res.msg.split("»: ")[1]}`); } catch (e) { out.push(`«${r.name}»: ${e.message}`); } }
+      return { msg: `Обставлено наборами: ${n} помещений${out.length ? ". Проверьте: " + out.join("; ") : ""}` };
+    },
     clear(S, a) { const r = findEl(S, a.room || a.id || a.name, "room"); const drop = new Set(KB.contents(S, r).filter(i => i.t === "item" && (a.doors || !isDoorK(i.k))));
       S.items = S.items.filter(i => !drop.has(i)); return { msg: `«${r.name}»: убрано предметов ${drop.size}` }; },
     add_door(S, a) {
@@ -1510,7 +1782,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
   // Автоплан: размеры + вариант наполнения (S Базовый / M Стандарт / L Премиум) → зонирование заново
   KB.OPS.auto = function (S, a) { const r = KB.autoPlan(Object.assign({ w: S.b.w, d: S.b.d, h: S.b.h }, a)); Object.keys(S).forEach(k => delete S[k]); Object.assign(S, r.project);
     return { msg: `${r.brief}${r.log.length ? " Решения: " + r.log.join("; ") + "." : ""}${r.warnings.length ? " Замечания: " + r.warnings.join(" ") : ""}` }; };
-  KB.OP_ALIASES = { auto_plan: "auto", move: "update", resize: "update", edit: "update", remove: "delete", furnish_room: "furnish", add_furniture: "add_item", set_building: "building", new_office: "generate", set_floor: "floor", clear_room: "clear" };
+  KB.OP_ALIASES = { furnish_all: "sets_all", set: "add_set", furniture_set: "add_set", auto_plan: "auto", move: "update", resize: "update", edit: "update", remove: "delete", furnish_room: "furnish", add_furniture: "add_item", set_building: "building", new_office: "generate", set_floor: "floor", clear_room: "clear" };
   KB.apply = function (S, op) {
     const name = KB.OP_ALIASES[op.op] || op.op, fn = KB.OPS[name];
     if (!fn) throw new Error(`Неизвестная команда «${op.op}». Есть: ${Object.keys(KB.OPS).join(", ")}.`);
@@ -1560,7 +1832,8 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
   KB.catalogText = function (group) {
     const g = {}; for (const f of KB.FURN) { if (group && !norm(f[2]).includes(norm(group))) continue; (g[f[2]] = g[f[2]] || []).push(`${f[0]} — ${f[1]} ${f[3]}×${f[4]} м${KB.SIZES[f[0]] ? ` [size: ${KB.SIZES[f[0]].map((s, i) => `${i}=${s[0]}`).join("; ")}]` : ""}`); }
     const rt = KB.ROOM_TYPES.map(t => `${t.key}: ${t.size.join("×")} м, ${KB.CAT[t.cat].n}, ${t.border === "none" ? "зона без стен" : t.border === "glass" ? "стекло" : "стены"}`);
-    return Object.entries(g).map(([k, v]) => `${k}:\n  ${v.join("\n  ")}`).join("\n") + (group ? "" : `\n\nТипы помещений (распознаются по названию, задают мебель и размер по умолчанию):\n  ${rt.join("\n  ")}\nЦвета пола: ${KB.FLOORS.map(f => `${f[0]} ${f[1]}`).join("; ")}`);
+    const sets = "\n\nГотовые наборы (op add_set: {set, variant: номер | \"auto\" — самый крупный, что помещается, room}):\n  " + KB.SETS.map(st => `${st.key} — ${st.name}: ${st.variants.map((v, n) => `${n}=${v.name} (${v.w}×${v.h} м)`).join("; ")}`).join("\n  ");
+    return (Object.entries(g).map(([k, v]) => `${k}:\n  ${v.join("\n  ")}`).join("\n") + (group ? "" : `\n\nТипы помещений (распознаются по названию, задают мебель и размер по умолчанию):\n  ${rt.join("\n  ")}\nЦвета пола: ${KB.FLOORS.map(f => `${f[0]} ${f[1]}`).join("; ")}`)) + (group ? "" : sets);
   };
   KB.FLOORS = [["Керамогранит светлый", "#EDE8DE"], ["Керамогранит серый", "#C9C9C4"], ["Мрамор", "#F2F0EA"], ["Бетон / микроцемент", "#BDBAB2"], ["Ламинат дуб", "#D9B98E"], ["Паркет орех", "#A8784E"], ["Ковролин серый", "#9EA3A6"], ["Ковролин синий", "#5F7390"], ["Плитка санузла", "#CFE8E6"], ["Резиновое покрытие (детская)", "#F4D36B"], ["Тёмный керамогранит", "#5B5854"], ["Белый глянец", "#FAFAF7"]];
 
@@ -2057,6 +2330,55 @@ function sym(it, forCard){
       s+=R(fw,land,.2,run,"fill='var(--ink)' opacity='.35'")+`<path d='M${fw/2} ${h-.2} V${land+.2} M${fw/2-.12} ${land+.4} L${fw/2} ${land+.2} L${fw/2+.12} ${land+.4}' stroke='var(--ink)' stroke-width='.9' fill='none' ${k}/>`; return s; }
     case "stair1": { let s=R(0,0,w,h); const n=Math.max(3,Math.round(h/.3)); for(let i=1;i<n;i++) s+=`<line x1='0' y1='${h*i/n}' x2='${w}' y2='${h*i/n}' ${lt}/>`;
       return s+`<path d='M${w/2} ${h-.2} V.3' stroke='var(--ink)' stroke-width='.9' fill='none' ${k}/>`; }
+    // ---- шкафы и хранение
+    case "wardB": { const n=Math.max(1,Math.round(w/.45)); let s=R(0,0,w,h); for(let i=1;i<n;i++) s+=`<line x1='${w*i/n}' y1='${h*.82}' x2='${w*i/n}' y2='${h}' ${lt}/>`;
+      s+=`<line x1='0' y1='${h*.82}' x2='${w}' y2='${h*.82}' ${lt}/>`; if(h>=.5) s+=`<line x1='.06' y1='${h*.45}' x2='${w-.06}' y2='${h*.45}' stroke='var(--ink)' stroke-width='.5' stroke-dasharray='3 2' ${k}/>`;
+      for(let i=0;i<n;i++) s+=`<path d='M${w*i/n} ${h} A ${w/n} ${w/n} 0 0 ${i%2?0:1} ${w*(i+(i%2?0:1))/n} ${h+w/n*.35}' fill='none' stroke='var(--ink)' stroke-width='.35' opacity='.6' ${k}/>`; return s; }
+    case "wardS": { const n=Math.max(2,Math.round(w/.9)); let s=R(0,0,w,h)+`<line x1='.06' y1='${h*.42}' x2='${w-.06}' y2='${h*.42}' stroke='var(--ink)' stroke-width='.5' stroke-dasharray='3 2' ${k}/>`;
+      for(let i=0;i<n;i++){ const y=h-.09+(i%2?-.05:0); s+=`<line x1='${w*i/n}' y1='${y}' x2='${w*(i+1)/n+(i<n-1?.05:0)}' y2='${y}' stroke='var(--ink)' stroke-width='1.1' ${k}/>`; } return s; }
+    case "shelfO": { const n=Math.max(1,Math.round(w/.8)); let s=R(0,0,w,h); for(let i=1;i<n;i++) s+=`<line x1='${w*i/n}' y1='0' x2='${w*i/n}' y2='${h}' ${lt}/>`;
+      for(let i=0;i<n;i++) s+=R(w*i/n+.05,h*.2,w/n-.1,h*.6,"fill='var(--ink)' opacity='.12' stroke='none'"); return s; }
+    case "nicheTV": { const nw=Math.min(1.8,w*.45), x0=(w-nw)/2; return R(0,0,w,h)+R(x0,0,nw,h,"fill='var(--paper)' stroke='var(--ink)' stroke-width='.5' "+k)+R(x0+.1,.05,nw-.2,.08,"fill='#2b2f33' stroke='none'")+`<line x1='0' y1='${h}' x2='${x0}' y2='0' ${lt}/><line x1='${x0+nw}' y1='0' x2='${w}' y2='${h}' ${lt}/>`; }
+    case "credenza": { let s=R(0,0,w,h,"fill='#e3d4bf' stroke='var(--ink)' stroke-width='.8' "+k); const n=Math.max(2,Math.round(w/.4)); for(let i=1;i<n;i++) s+=`<line x1='${w*i/n}' y1='0' x2='${w*i/n}' y2='${h}' ${lt}/>`; return s; }
+    case "pedestal": return R(0,0,w,h)+[.3,.6].map(f=>`<line x1='0' y1='${h*f}' x2='${w}' y2='${h*f}' ${lt}/>`).join("")+`<circle cx='${w/2}' cy='${h*.15}' r='.025' fill='var(--ink)'/>`;
+    case "locker": { const n=Math.max(1,Math.round(w/.3)); let s=R(0,0,w,h); for(let i=1;i<n;i++) s+=`<line x1='${w*i/n}' y1='0' x2='${w*i/n}' y2='${h}' ${lt}/>`; for(let i=0;i<n;i++) s+=`<circle cx='${w*(i+.75)/n}' cy='${h*.8}' r='.02' fill='var(--ink)'/>`; return s; }
+    case "glassCab": return R(0,0,w,h)+R(.04,h-.08,w-.08,.05,"fill='var(--glass)' stroke='var(--glass-edge)' stroke-width='.4' "+k)+`<line x1='${w/2}' y1='${h-.1}' x2='${w/2}' y2='${h}' ${lt}/>`;
+    case "archM": { const n=Math.max(3,Math.round(h/.45)); let s=R(0,0,w,h,"fill='none' stroke='var(--ink)' stroke-width='.6' "+k); for(let i=0;i<n;i++){ const y=i*h/n+(i===Math.floor(n/2)?.25:0); s+=R(.05,y+.02,w-.1,Math.min(.4,h/n-.06),"fill='var(--paper)' stroke='var(--ink)' stroke-width='.5' "+k); }
+      return s+`<line x1='0' y1='.1' x2='0' y2='${h-.1}' stroke='var(--ink)' stroke-width='.4' stroke-dasharray='2 2' ${k}/><line x1='${w}' y1='.1' x2='${w}' y2='${h-.1}' stroke='var(--ink)' stroke-width='.4' stroke-dasharray='2 2' ${k}/>`; }
+    // ---- рабочие места
+    case "deskC": return chair(w/2,.3,.55,0)+R(0,.65,w,Math.min(.8,h-1.3))+[-.45,0,.45].slice(w>=1.4?0:1).map(dx=>chair(w/2+dx,h-.25,.42,180)).join("");
+    case "pod": return R(0,0,w,h,"fill='#dfe3e6' stroke='var(--ink)' stroke-width='1' "+k)+R(.06,h-.08,w-.12,.05,"fill='var(--glass)' stroke='var(--glass-edge)' stroke-width='.4' "+k)+(w>1.5?R(w*.2,h*.3,w*.6,h*.35)+chair(w*.35,h*.18,.4,0)+chair(w*.65,h*.18,.4,0)+chair(w*.35,h*.78,.4,180)+chair(w*.65,h*.78,.4,180):R(w*.15,.1,w*.7,.35)+chair(w/2,h*.62,.45,180));
+    case "board": return R(0,0,w,h,"fill='var(--paper)' stroke='var(--ink)' stroke-width='.8' "+k)+`<line x1='.05' y1='${h/2}' x2='${w-.05}' y2='${h/2}' stroke='#2a78b8' stroke-width='.6' ${k}/>`;
+    case "partG": return R(0,0,w,h,"fill='var(--glass)' stroke='var(--glass-edge)' stroke-width='.7' "+k)+R(0,0,.08,h,"fill='var(--ink)'")+R(w-.08,0,.08,h,"fill='var(--ink)'");
+    case "partA": return R(0,0,w,h,"fill='#8d9aa3' stroke='var(--ink)' stroke-width='.6' "+k);
+    // ---- мягкая мебель
+    case "chairL": { const a=Math.min(w,.9); return R(0,0,a,a)+R(0,0,a,a*.22,"fill='var(--ink)' opacity='.3'")+R(0,0,a*.15,a)+R(a*.85,0,a*.15,a)+(h>1.1?R(a*.12,a+.08,a*.76,h-a-.08):""); }
+    case "booth": { const d=.55; return R(0,0,w,d)+R(0,0,w,d*.35,"fill='var(--ink)' opacity='.25'")+R(0,h-d,w,d)+R(0,h-d*.35,w,d*.35,"fill='var(--ink)' opacity='.25'")+R(w*.1,d+.1,w*.8,h-2*d-.2,"fill='#e0d6c6' stroke='var(--ink)' stroke-width='.8' "+k); }
+    case "barT": { const D=Math.min(w,h)-.7, n=D>.7?4:2; let s=`<circle cx='${w/2}' cy='${h/2}' r='${D/2}' ${st}/>`; for(let i=0;i<n;i++){ const a=i*2*Math.PI/n; s+=`<circle cx='${w/2+Math.cos(a)*(D/2+.22)}' cy='${h/2+Math.sin(a)*(D/2+.22)}' r='.18' ${st}/>`; } return s; }
+    // ---- шоурум
+    case "showcase": return R(0,0,w,h,"fill='var(--glass)' stroke='var(--glass-edge)' stroke-width='.8' "+k)+R(w*.15,h*.25,w*.7,h*.5,"fill='var(--paper)' stroke='var(--ink)' stroke-width='.4' "+k);
+    case "sampleW": { const n=Math.max(2,Math.round(w/.3)); let s=R(0,0,w,.08,"fill='var(--ink)'"); const cols=["#d9c6a5","#b9b2a6","#e8e2d6","#9c8d70","#c9ccd0","#a9855f"];
+      for(let i=0;i<n;i++) s+=R(w*i/n+.02,.12,w/n-.04,h-.16,`fill='${cols[i%cols.length]}' stroke='var(--ink)' stroke-width='.4' ${k}`); return s; }
+    case "sampleR": { const r=Math.min(w,h)/2; let s=`<circle cx='${w/2}' cy='${h/2}' r='${r}' ${st}/>`; for(let i=0;i<8;i++){ const a=i*Math.PI/4; s+=`<line x1='${w/2}' y1='${h/2}' x2='${w/2+Math.cos(a)*r}' y2='${h/2+Math.sin(a)*r}' ${lt}/>`; } return s; }
+    case "mockK": { const d=Math.min(.6,h); let s=h>1?`<path d='M0 0 H${w} V${d} H${d} V${h} H0 Z' ${st}/>`:R(0,0,w,h); s+=`<ellipse cx='${Math.min(w-.4,.6)}' cy='${d/2}' rx='.2' ry='.15' ${lt}/>`+[0,1,2,3].map(i=>`<circle cx='${Math.min(w-.3,1.3)+(i%2)*.25}' cy='${d/2-.1+Math.floor(i/2)*.2}' r='.07' ${lt}/>`).join(""); return s+`<text x='${w/2}' y='${Math.min(h,d)+.25}' font-size='.18' text-anchor='middle' fill='var(--muted)'>образец</text>`; }
+    case "mockB": return R(0,0,w,h,"fill='#e2eef2' stroke='var(--ink)' stroke-width='.8' "+k)+R(.1,.1,.7,Math.min(1.4,h-.2),"fill='var(--paper)' stroke='var(--ink)' stroke-width='.5' "+k)+`<ellipse cx='${w-.35}' cy='.35' rx='.2' ry='.15' ${lt}/>`+R(w-.6,h-.8,.45,.7);
+    case "brochure": return R(0,0,w,h)+[.25,.5,.75].map(f=>`<line x1='${w*.1}' y1='${h*f}' x2='${w*.9}' y2='${h*f}' ${lt}/>`).join("");
+    case "tvStand": return R(w*.35,h*.3,w*.3,h*.4)+R(0,h*.42,w,.08,"fill='#2b2f33' stroke='none'");
+    case "vr": return `<rect x='0' y='0' width='${w}' height='${h}' rx='.1' fill='#b9c7cf' opacity='.6' stroke='#4d6a7a' stroke-width='.7' stroke-dasharray='4 2' ${k}/><circle cx='${w/2}' cy='${h/2}' r='${Math.min(w,h)*.12}' fill='none' stroke='#4d6a7a' stroke-width='.6' ${k}/>`;
+    case "logo": return R(0,0,w,h,"fill='#2b2f33' stroke='none'")+R(w*.3,0,w*.4,h,"fill='#ffd36b' opacity='.8' stroke='none'");
+    // ---- детская
+    case "kidSlide": return R(0,0,w*.3,h,"fill='#8ec3e6' stroke='var(--ink)' stroke-width='.7' "+k)+`<path d='M${w*.3} ${h*.25} H${w} V${h*.75} H${w*.3}' fill='#f28b6a' stroke='var(--ink)' stroke-width='.7' ${k}/>`+[1,2,3].map(i=>`<line x1='${w*.3*i/4}' y1='0' x2='${w*.3*i/4}' y2='${h}' ${lt}/>`).join("");
+    case "kidHouse": return R(0,0,w,h,"fill='#8ec3e6' stroke='var(--ink)' stroke-width='.8' "+k)+`<path d='M0 0 L${w} ${h} M${w} 0 L0 ${h}' ${lt}/>`+R(w*.35,h-.08,w*.3,.08,"fill='var(--paper)' stroke='none'");
+    // ---- кухня
+    case "kBase": return R(0,0,w,h)+`<line x1='0' y1='${h*.9}' x2='${w}' y2='${h*.9}' ${lt}/>`+(it.k==="dish"?`<text x='${w/2}' y='${h/2}' font-size='.16' text-anchor='middle' dominant-baseline='central' fill='var(--muted)'>ПММ</text>`:"");
+    case "kSink": return R(0,0,w,h)+`<rect x='${w*.12}' y='${h*.18}' width='${w*.76}' height='${h*.6}' rx='.05' ${lt}/><circle cx='${w/2}' cy='${h*.1}' r='.03' fill='var(--ink)'/>`;
+    case "kIsland": return R(0,0,w,h)+[0,1].map(i=>`<circle cx='${w*.3+i*.3}' cy='${h*.35}' r='.1' ${lt}/>`).join("")+Array.from({length:Math.max(2,Math.floor(w/.6))},(_,i)=>`<circle cx='${w*(i+.5)/Math.max(2,Math.floor(w/.6))}' cy='${h+.25}' r='.17' ${st}/>`).join("");
+    // ---- санузлы
+    case "sinkD": { const n=w>=1.1?2:1; let s=R(0,0,w,h); for(let i=0;i<n;i++) s+=`<ellipse cx='${w*(i+.5)/n}' cy='${h*.55}' rx='${Math.min(.22,w/n*.35)}' ry='${h*.28}' ${lt}/>`; return s; }
+    // ---- декор
+    case "planter": { let s=R(0,0,w,h,"fill='#e9e4da' stroke='var(--ink)' stroke-width='.6' "+k); const n=Math.max(2,Math.round(w/.3)); for(let i=0;i<n;i++) s+=`<circle cx='${w*(i+.5)/n}' cy='${h/2}' r='${Math.min(h*.45,w/n*.55)}' fill='#8fbf7a' stroke='#4d7a3e' stroke-width='.5' ${k}/>`; return s; }
+    case "lamp": return `<circle cx='${w/2}' cy='${h/2}' r='${Math.min(w,h)/2}' fill='#f6e7b4' stroke='var(--ink)' stroke-width='.6' ${k}/><circle cx='${w/2}' cy='${h/2}' r='.04' fill='var(--ink)'/>`;
+    case "fireC": return R(0,0,w,h,"fill='#e24a3b' stroke='var(--ink)' stroke-width='.7' "+k)+`<text x='${w/2}' y='${h/2}' font-size='.14' text-anchor='middle' dominant-baseline='central' fill='#fff'>ПК</text>`;
     default: return R(0,0,w,h);
   }
 }
@@ -2316,10 +2638,13 @@ function libCardIcon(kind, key){
   const f=FK[key]; const it={k:key,w:f.w,h:f.h}; const sc=Math.min(56/f.w,32/f.h);
   return `<svg viewBox='-2 -2 64 40'><g transform='translate(${30-f.w*sc/2} ${18-f.h*sc/2}) scale(${sc})'>${sym(it,true)}</g></svg>`;
 }
-const libOpen=new Set(["Клиентская зона"]);
+const libOpen=new Set(["Готовые наборы","Клиентская зона"]);
 function renderLib(){
   const q=$("#q").value.trim().toLowerCase(); const m=s=>!q||s.toLowerCase().includes(q);
   let o="";
+  const sets=OfficeKB.SETS.filter(st=>m(st.name)||st.variants.some(v=>m(v.name))||m("набор"));
+  if(sets.length) o+=`<details class="lg" ${q||libOpen.has("Готовые наборы")?"open":""} data-g="Готовые наборы"><summary>Готовые наборы <span>${sets.length}</span></summary><div class="cards">`+
+    sets.map(st=>`<button class="card setcard" draggable="true" data-set="${st.key}" title="Нажмите — выбрать вариант; перетащите на план — поставить">${setPlanSVG(st.key,Math.min(1,st.variants.length-1),"card")}<b>${esc(st.name)}</b><small>${st.variants.length} вариант${st.variants.length<5?"а":"ов"}</small></button>`).join("")+`</div></details>`;
   const rooms=ROOMS.map((p,i)=>[p,i]).filter(([p])=>m(p[0])||m(CAT[p[3]].n));
   if(rooms.length){ o+=`<h4>Помещения и зоны</h4><div class="cards">`+rooms.map(([p,i])=>`<button class="card ${tool&&tool.type==="room"&&tool.preset===p?"on":""}" draggable="true" data-add="room:${i}" title="Перетащите на план или нажмите, чтобы добавить. Shift+клик — нарисовать рамкой своего размера">${libCardIcon("room",i)}<b>${esc(p[0])}</b><small>${fmt(p[1],1)}×${fmt(p[2],1)} м · ${m2(p[1]*p[2])} м²</small></button>`).join("")+`</div>`; }
   const walls=Object.entries(WALLS).filter(([k,W])=>m(W.n));
@@ -2330,7 +2655,8 @@ function renderLib(){
       return `<button class="card" draggable="true" data-add="item:${f[0]}" aria-label="${esc(f[1])}">${libCardIcon("item",f[0])}<b>${esc(f[1])}</b><small>${Math.round(f[3]*1000)}×${Math.round(f[4]*1000)}${n>1?` · ${n} размеров`:""}</small></button>`; }).join("")+`</div></details>`; }
   $("#lib").innerHTML = o || `<p class="note">Ничего не найдено. Попробуйте «диван», «переговорная» или «витраж».</p>`;
 }
-$("#lib").addEventListener("dragstart", e=>{ const c=e.target.closest("[data-add]"); if(c) e.dataTransfer.setData("text/plain", c.dataset.add); });
+$("#lib").addEventListener("dragstart", e=>{ const c=e.target.closest("[data-add],[data-set]"); if(c) e.dataTransfer.setData("text/plain", c.dataset.add||("set:"+c.dataset.set+":"+Math.min(1,OfficeKB.SETS.find(s=>s.key===c.dataset.set).variants.length-1))); });
+$("#lib").addEventListener("click", e=>{ const c=e.target.closest("[data-set]"); if(!c) return; e.stopPropagation(); setDialog(c.dataset.set); }, true);
 $("#lib").addEventListener("click", e=>{ const c=e.target.closest("[data-add],[data-tool]"); if(!c) return;
   if(c.dataset.tool){ tool = (tool&&tool.kind===c.dataset.tool)?null:{type:"wall",kind:c.dataset.tool}; setToolUI(); return; }
   if(e.shiftKey && c.dataset.add.startsWith("room:")){ tool={type:"room",preset:ROOMS[+c.dataset.add.split(":")[1]]}; setToolUI(); return; }
@@ -2341,7 +2667,9 @@ $("#lib").addEventListener("click", e=>{ const c=e.target.closest("[data-add],[d
 $("#q").addEventListener("input", renderLib);
 $("#lib").addEventListener("toggle", e=>{ const d=e.target; if(d.dataset&&d.dataset.g){ d.open?libOpen.add(d.dataset.g):libOpen.delete(d.dataset.g); } }, true);
 function addFromLib(key, p){
-  const [kind,k]=key.split(":"); pushUndo(); let it;
+  const [kind,k,vi]=key.split(":");
+  if(kind==="set") return placeSet(k,+vi||0,p);
+  pushUndo(); let it;
   if(kind==="room"){ const pr=ROOMS[+k]; it=room(pr[0],snap(p.x-pr[1]/2),snap(p.y-pr[2]/2),pr[1],pr[2],pr[3],pr[4],{lv:level,sub:!!pr[5],color:pr[6]||CAT[pr[3]].c}); }
   else { const f=FK[k]; it=furn(k,snap(p.x-f.w/2),snap(p.y-f.h/2),0,{lv:level}); }
   const a=aabb(it), b=S.b; it.x=+Math.max(.3,Math.min(b.w-.3-a.w,it.x)).toFixed(3); it.y=+Math.max(.3,Math.min(b.d-.3-a.h,it.y)).toFixed(3);   // не за пределами здания
@@ -2377,7 +2705,7 @@ function renderPane0(){
     <h5>Покрытие пола</h5><div class="sw">${FLOORS.map(([n,c])=>`<button data-floor="${c}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join("")}</div>
     <div class="row"><label class="f">Свой цвет<input type="color" id="pC" value="${it.color}"></label><label class="f">Высота перегородок, м<input type="number" id="pPH" value="${it.ph??3}" step=".1"></label></div>
     <label class="c"><input type="checkbox" id="pSub" ${it.sub?"checked":""}> Зона внутри другого помещения (не суммируется в итог)</label>
-    <div class="actions"><button class="btn primary" id="aFurn" title="Убрать мебель внутри и расставить по размеру и типу помещения">Расставить мебель</button><button class="btn" id="aDup">Копия</button><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`+previewHTML(it);
+    <div class="actions"><button class="btn primary" id="aSet" title="Готовые наборы мебели стандартных размеров — с подбором варианта по размеру помещения">Набор мебели…</button><button class="btn" id="aFurn" title="Убрать мебель внутри и расставить по размеру и типу помещения">Расставить мебель</button><button class="btn" id="aDup">Копия</button><button class="btn" id="aRot">Повернуть 90°</button><button class="btn" id="aLv">На ${it.lv?"1 этаж":"антресоль"}</button><button class="btn danger" id="aDel">Удалить</button></div>`+previewHTML(it);
   } else if(it.t==="wall"){
     const L=Math.hypot(it.x2-it.x1,it.y2-it.y1);
     P.innerHTML=`<h3>${WALLS[it.kind].n}</h3>
@@ -2417,6 +2745,7 @@ function bindProps(it){
   act("aDel",()=>{ S.items=S.items.filter(i=>i.id!==it.id); sel=null; });
   act("aDup",()=>dup(it)); act("aRot",()=>rot(it)); act("aFlip",()=>it.flip=!it.flip);
   act("aStd",()=>{ const f=FK[it.k]; it.w=f.w; it.h=f.h; });
+  { const b=$("#aSet"); if(b) b.onclick=()=>setDialog(null,it.id); }
   act("aFurn",()=>{ const kids=OfficeKB.contents(S,it).filter(k=>k.t==="item"); S.items=S.items.filter(i=>!kids.includes(i)); const f=OfficeKB.furnishRoom(S,it); S.items.push(...f); toast(f.length?`Мебель расставлена: ${f.length} предм.`:"Для этого типа помещения стандартной мебели нет"); });
   act("aLv",()=>{ const kids=it.t==="room"?OfficeKB.contents(S,it):[]; it.lv=it.lv?0:1; for(const k of kids) k.lv=it.lv; level=it.lv; });
 }
@@ -2460,6 +2789,9 @@ function projectHTML(){
   <div class="row one"><label class="f">Фасад со стороны дороги<select id="jF"><option value="vitrage" ${b.front==="vitrage"?"selected":""}>Витраж, колонны шаг 5 м</option><option value="wall" ${b.front==="wall"?"selected":""}>Глухая стена</option><option value="custom" ${b.front==="custom"?"selected":""}>Свой контур (рисуется стенами)</option></select></label></div>
   <div class="row one"><label class="f">Верхний уровень<select id="jU"><option value="" ${b.upper!=="floor"?"selected":""}>Антресоль</option><option value="floor" ${b.upper==="floor"?"selected":""}>2 этаж</option></select></label></div>
   <p class="note">Длину и глубину можно менять и мышкой: синие ручки на правой и верхней стене здания.</p>
+  <h5>Мебель</h5>
+  <p class="note">Готовые наборы стандартных размеров: для каждого помещения подбирается самый крупный вариант, который помещается и не мешает двери.</p>
+  <div class="actions"><button class="btn primary" id="jSets">Обставить все помещения наборами</button><button class="btn" id="jSetsLv">Только ${level?upperName().toLowerCase():"1 этаж"}</button></div>
   <h5>Сетка и привязка</h5>
   <div class="row"><label class="f">Шаг сетки<select id="jG">${[.01,.05,.1,.25,.5].map(g=>`<option value="${g}" ${g===grid?"selected":""}>${Math.round(g*100)} см</option>`).join("")}</select></label>
   <label class="c" style="margin-top:18px"><input type="checkbox" id="jS" ${snapOn?"checked":""}> Привязка</label></div>
@@ -2474,7 +2806,8 @@ $("#pane").addEventListener("change", e=>{ const id=e.target.id; if(!id||!id.sta
   pushUndo(); const b=S.b;
   if(id==="jN") S.name=e.target.value; if(id==="jW") b.w=Math.max(4,n); if(id==="jD") b.d=Math.max(4,n); if(id==="jH") b.h=Math.max(2.5,n); if(id==="jM") b.mz=Math.max(2,Math.min(b.h-2,n));
   if(id==="jF") b.front=e.target.value; if(id==="jU") b.upper=e.target.value||undefined; if(id==="jT") S.notes=e.target.value; commit(); });
-$("#pane").addEventListener("click", e=>{ if(e.target.id==="jImp") $("#fileIn").click(); });
+$("#pane").addEventListener("click", e=>{ if(e.target.id==="jImp") $("#fileIn").click();
+  if(e.target.id==="jSets"||e.target.id==="jSetsLv"){ pushUndo(); const [r]=OfficeKB.applyAll(S,[e.target.id==="jSets"?{op:"sets_all"}:{op:"sets_all",lv:level}]); if(r.error){ undo.pop(); toast(r.error); return; } commit(); toast(r.msg.length>140?r.msg.slice(0,140)+"…":r.msg); } });
 
 /* ============================================================ клавиатура и кнопки */
 document.addEventListener("keydown", e=>{
@@ -2651,6 +2984,53 @@ function item3D(it,base,box,H,root=R3&&R3.root){
           part(fw,h1,run/10,-W/2+fw/2,h1/2,D/2-run/10*(i+.5),f.c); part(fw,h2,run/10,W/2-fw/2,h2/2,-D/2+land+run/10*(i+.5),f.c); }
         part(W,1.65,land,0,1.65/2,-D/2+land/2,f.c); } break; }
     case "cubicle": part(.04,2,D,-W/2,1.1,0,"#c7d7da"); part(.04,2,D,W/2,1.1,0,"#c7d7da"); part(W,2,.04,0,1.1,D/2,"#c7d7da",.6); break;
+    // ---- шкафы и хранение: корпус + фасады с ручками / полки
+    case "wardB": case "wardS": case "glassCab": case "locker": { const hh=Math.min(z,H-.02), n=f.d==="wardS"?Math.max(2,Math.round(W/.9)):f.d==="locker"?Math.max(1,Math.round(W/.3)):Math.max(1,Math.round(W/.45));
+      part(W,hh,D-.02,0,hh/2,-.01,f.c); const fc=f.d==="glassCab"?"#bcd9e8":f.d==="wardS"?"#d8d2c6":f.c, op=f.d==="glassCab"?.5:1;
+      for(let i=0;i<n;i++){ const x=-W/2+W*(i+.5)/n; part(W/n-.012,hh-.04,.02,x,hh/2,D/2-.01,fc,op); if(f.d!=="wardS") part(.015,f.d==="locker"?.08:.35,.03,x+(i%2?-1:1)*(W/n/2-.05),hh*(f.d==="locker"?.75:.5),D/2+.01,"#6f6f6a"); }
+      if(f.d==="locker") for(let j=1;j<3;j++) part(W,.01,.022,0,hh*j/3,D/2,"#9aa0a4"); break; }
+    case "shelfO": { const hh=Math.min(z,H-.02), n=Math.max(1,Math.round(W/.8)), sh=Math.max(3,Math.round(hh/.38));
+      for(let i=0;i<=n;i++) part(.025,hh,D,-W/2+W*i/n,hh/2,0,f.c); for(let j=0;j<=sh;j++) part(W,.025,D,0,Math.min(hh-.012,j*hh/sh+.012),0,f.c);
+      for(let i=0;i<n;i++) for(let j=0;j<sh;j++) if((i+j)%3!==2) part(W/n*.55,hh/sh*.55,D*.7,-W/2+W*(i+.5)/n-(j%2?.05:-.05),j*hh/sh+hh/sh*.3,0,["#b9b2a6","#9c8d70","#d8d2c6","#7a8a95"][(i+j)%4]); break; }
+    case "nicheTV": { const hh=Math.min(z,H-.02), nw=Math.min(1.8,W*.45); for(const sx of [-1,1]) part((W-nw)/2,hh,D,sx*(W/2-(W-nw)/4),hh/2,0,f.c); part(nw,.4,D,0,.2,0,f.c); part(nw,hh-2.1>0?hh-2.1:.3,D,0,hh-.15,0,f.c); part(Math.min(1.6,nw-.1),.9,.05,0,1.35,-D/2+.08,"#1f2326"); break; }
+    case "credenza": part(W,.7,D,0,.37,0,f.c); for(const sx of [-1,1]) part(.03,.04,D*.9,sx*(W/2-.1),.02,0,"#333"); { const n=Math.max(2,Math.round(W/.4)); for(let i=1;i<n;i++) part(.006,.66,.01,-W/2+W*i/n,.37,D/2,"#8a7a66"); } break;
+    case "pedestal": part(W,.56,D,0,.3,0,f.c); for(const y of [.2,.38]) part(W*.98,.006,.01,0,y,D/2,"#9a9a96"); break;
+    case "archM": { const n=Math.max(3,Math.round(D/.45)); for(let i=0;i<n;i++){ const zz=-D/2+D*(i+.5)/n+(i===Math.floor(n/2)?.12:0); part(W-.1,Math.min(z,H-.05),.4,0,Math.min(z,H-.05)/2,zz,i%2?"#c3c7c9":"#b7bcbf"); part(.06,.12,.06,W/2-.1,Math.min(z,H-.05)*.55,zz+.2,"#555"); } part(W,.02,.04,0,.01,-D/2+.1,"#777"); part(W,.02,.04,0,.01,D/2-.1,"#777"); break; }
+    // ---- рабочие места
+    case "deskC": pdesk(W,.8,.75,0,-D/2+1.05,f.c); part(.55,.5,.55,0,.25,-D/2+.3,"#3c4146"); for(const dx of (W>=1.4?[-.45,0,.45]:[-.25,.25])) part(.42,.45,.42,dx,.225,D/2-.25,"#6b7075"); break;
+    case "pod": { const hh=Math.min(z,H-.05); part(W,.06,D,0,hh-.03,0,"#dfe3e6"); for(const sx of [-1,1]) part(.05,hh,D,sx*(W/2-.025),hh/2,0,f.c); part(W,hh,.05,0,hh/2,-D/2+.025,f.c); part(W-.1,hh-.1,.03,0,hh/2,D/2-.02,"#a9d3ee",.35);
+      if(W>1.5){ part(W*.55,.04,D*.35,0,.74,0,"#e8e2d6"); for(const [x,zz] of [[-W*.18,-D*.3],[W*.18,-D*.3],[-W*.18,D*.3],[W*.18,D*.3]]) part(.4,.45,.4,x,.225,zz,"#6b7075"); } else { part(W*.7,.04,.35,0,1.0,-D/2+.25,"#e8e2d6"); part(.4,.7,.4,0,.35,D*.1,"#3c4146"); } break; }
+    case "board": part(W,Math.min(z,1.2),.03,0,1.45,0,f.c); part(W+.04,.03,.06,0,.84,0,"#bbb"); if(it.k!=="mirror"&&it.k!=="kidBoard"){ for(const sx of [-1,1]) part(.04,1.9,.04,sx*(W/2-.05),.95,0,"#999"); } break;
+    case "partG": part(W,z,.02,0,z/2,0,"#a9d3ee",.35); for(const sx of [-1,1]) part(.05,z,.05,sx*(W/2-.025),z/2,0,"#444"); part(W,.04,.35,0,.02,0,"#444"); break;
+    case "partA": part(W,z,D,0,z/2+ (it.k==="urSep"?.3:0),0,f.c); break;
+    // ---- мягкая мебель
+    case "chairL": seat(Math.min(W,.9),Math.min(D,.9),0,-D/2+Math.min(D,.9)/2,f.c); if(D>1.1) part(W*.76,.38,D-.98,0,.19,D/2-(D-.98)/2,f.c); break;
+    case "booth": { const d=.55; part(W,.45,d,0,.225,-D/2+d/2,f.c); part(W,.65,.15,0,.78,-D/2+.075,f.c); part(W,.45,d,0,.225,D/2-d/2,f.c); part(W,.65,.15,0,.78,D/2-.075,f.c); tbl(W*.8,D-2*d-.2,.74,0,0,"#e0d6c6"); break; }
+    case "barT": { const Dm=Math.min(W,D)-.7, [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.CylinderGeometry(Dm/2,Dm/2,.04,28),new THREE.MeshStandardMaterial({color:f.c})); m.position.set(px,base+1.08,pz); m.castShadow=true; root.add(m);
+      part(.07,1.06,.07,0,.53,0,"#444"); const n=Dm>.7?4:2; for(let i=0;i<n;i++){ const a=i*2*Math.PI/n; part(.36,.05,.36,Math.cos(a)*(Dm/2+.22),.76,Math.sin(a)*(Dm/2+.22),"#555"); part(.05,.74,.05,Math.cos(a)*(Dm/2+.22),.37,Math.sin(a)*(Dm/2+.22),"#333"); } break; }
+    // ---- шоурум
+    case "showcase": part(W,.8,D,0,.4,0,"#e8e2d6"); part(W,Math.min(z,H)-.8,D,0,.8+(Math.min(z,H)-.8)/2,0,"#bcd9e8",.35); part(W*.6,.25,D*.5,0,1.0,0,"#d9c6a5"); break;
+    case "sampleW": { part(W,.05,D,0,.025,0,"#555"); part(.05,z,.05,0,z/2,0,"#555"); const n=Math.max(2,Math.round(W/.3)), cols=["#d9c6a5","#b9b2a6","#e8e2d6","#9c8d70","#c9ccd0","#a9855f"]; for(let i=0;i<n;i++) part(W/n-.03,z*.8,.03,-W/2+W*(i+.5)/n,z*.5,(i%2?.06:-.06),cols[i%cols.length]); break; }
+    case "sampleR": { part(.08,z,.08,0,z/2,0,"#555"); const cols=["#d9c6a5","#b9b2a6","#e8e2d6","#9c8d70","#c9ccd0","#a9855f","#8c6a4a","#f2f0ea"]; for(let i=0;i<8;i++){ const a=i*Math.PI/4, r=Math.min(W,D)*.28; const [px,pz]=local(Math.cos(a)*r,Math.sin(a)*r); box(Math.min(W,D)*.45,z*.8,.025,px,base+z*.5,pz,cols[i],1,ry-a); } break; }
+    case "mockK": { const d=Math.min(.6,D); part(W,.86,d,0,.43,-D/2+d/2,f.c); part(W,.04,d+.02,0,.88,-D/2+d/2,"#3b3b38"); part(W,.72,.35,0,1.85,-D/2+.18,f.c); part(W,1.4,.04,0,1.55,-D/2+.02,"#cfc8bb"); if(D>1){ part(d,.86,D-d,-W/2+d/2,.43,d/2,f.c); part(d,.04,D-d,-W/2+d/2,.88,d/2,"#3b3b38"); } break; }
+    case "mockB": part(W,2.2,.05,0,1.1,-D/2+.025,"#cfe2ea"); part(.05,2.2,D,-W/2+.025,1.1,0,"#cfe2ea"); part(.7,.55,Math.min(1.4,D-.2),-W/2+.45,.28,-D/2+.1+Math.min(1.4,D-.2)/2,"#f4f4f2"); part(.4,.4,.55,W/2-.35,.2,D/2-.4,"#f4f4f2"); part(.5,.12,.4,W/2-.35,.85,-D/2+.3,"#f4f4f2"); break;
+    case "brochure": part(W,.05,D,0,.025,0,"#555"); part(.04,z,.04,0,z/2,-D/4,"#555"); for(const y of [.6,.95,1.3]) part(W*.9,.25,.04,0,y,-D/4+.06,"#f1efe9"); break;
+    case "tvStand": part(W*.3,.05,D,0,.025,0,"#333"); part(.08,1.3,.08,0,.65,0,"#333"); part(W,.72,.05,0,1.35,.05,"#1f2326"); break;
+    case "vr": part(W,.012,D,0,.006,0,f.c); for(const [x,zz] of [[-W/2+.05,-D/2+.05],[W/2-.05,D/2-.05]]) part(.06,2.2,.06,x,1.1,zz,"#333"); break;
+    case "logo": part(W,z,D,0,z/2,0,f.c); part(W*.4,z*.25,.02,0,z*.6,D/2+.01,"#ffd36b"); break;
+    // ---- детская
+    case "kidSlide": part(W*.3,z,D,-W/2+W*.15,z/2,0,"#8ec3e6"); { const [px,pz]=local(W*.15+ -W/2+W*.3/2+W*.35-.1,0); const L=Math.hypot(W*.7,z), m=new THREE.Mesh(new THREE.BoxGeometry(L,.05,D*.5),new THREE.MeshStandardMaterial({color:"#f28b6a"})); m.position.set(px,base+z/2,pz); m.rotation.order="YXZ"; m.rotation.y=ry; m.rotation.z=-Math.atan2(z,W*.7)*(it.flip?-1:1); root.add(m); } break;
+    case "kidHouse": part(W,z*.65,D,0,z*.325,0,f.c); part(W*.35,z*.45,.02,0,z*.23,D/2+.005,"#fff"); { const [px,pz]=local(0,0); const g=new THREE.ConeGeometry(Math.max(W,D)*.75,z*.4,4); const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:"#f28b6a"})); m.position.set(px,base+z*.65+z*.2,pz); m.rotation.y=ry+Math.PI/4; root.add(m); } break;
+    // ---- кухня
+    case "kBase": part(W,.82,D-.04,0,.45,-.02,f.c); part(W,.04,D,0,.88,0,"#cfc8bb"); part(W-.02,.08,D-.08,0,.04,-.06,"#555"); if(it.k==="dish") part(W*.9,.02,.01,0,.78,D/2,"#888"); else part(W*.4,.015,.02,0,.8,D/2,"#888"); break;
+    case "kSink": part(W,.82,D-.04,0,.45,-.02,f.c); part(W,.04,D,0,.88,0,"#cfc8bb"); part(W*.7,.03,D*.55,0,.9,0,"#b8bec2"); part(.03,.3,.03,0,1.05,-D*.35,"#999"); break;
+    case "kIsland": part(W,.86,D,0,.43,0,f.c); part(W+.1,.04,D+.3,0,.88,.15,"#cfc8bb"); { const n=Math.max(2,Math.floor(W/.6)); for(let i=0;i<n;i++){ part(.36,.05,.36,-W/2+W*(i+.5)/n,.76,D/2+.3,"#555"); part(.05,.74,.05,-W/2+W*(i+.5)/n,.37,D/2+.3,"#333"); } } break;
+    // ---- санузлы
+    case "sinkD": { part(W,.12,D,0,.8,0,"#e8e2d6"); const n=W>=1.1?2:1; for(let i=0;i<n;i++) part(Math.min(.44,W/n*.7),.1,D*.55,-W/2+W*(i+.5)/n,.88,0,"#f4f4f2"); part(W,.9,.03,0,1.5,-D/2+.02,"#dfe8ec"); break; }
+    // ---- декор
+    case "planter": part(W,.5,D,0,.25,0,"#e9e4da"); { const n=Math.max(2,Math.round(W/.3)); for(let i=0;i<n;i++){ const [px,pz]=local(-W/2+W*(i+.5)/n,0); const m=new THREE.Mesh(new THREE.SphereGeometry(Math.min(D*.6,W/n*.6),10,8),new THREE.MeshStandardMaterial({color:"#5d8c4e",roughness:.9})); m.position.set(px,base+.6,pz); m.scale.y=1.3; root.add(m); } } break;
+    case "lamp": part(.3,.03,.3,0,.015,0,"#333"); part(.03,1.4,.03,0,.7,0,"#333"); { const [px,pz]=local(0,0); const m=new THREE.Mesh(new THREE.CylinderGeometry(.14,.22,.3,20,1,true),new THREE.MeshStandardMaterial({color:f.c,side:THREE.DoubleSide})); m.position.set(px,base+1.45,pz); root.add(m); } break;
+    case "fireC": part(W,z,D,0,.3+z/2,0,f.c); part(W*.8,z*.8,.01,0,.3+z/2,D/2,"#f4f4f2",.4); break;
     default: part(W,z,D,0,z/2,0,f.c);
   }
 }
@@ -2760,6 +3140,44 @@ const libSheet=o=>{ const L=$(".lib"); L.classList.toggle("open",o); document.qu
   if(o){ const b=document.createElement("div"); b.className="libback"; b.onclick=()=>libSheet(false); document.body.appendChild(b); } };
 $("#bLib").hidden=false; $("#bLib").onclick=()=>libSheet(true);
 $("#lib").addEventListener("click",e=>{ if(e.target.closest("[data-add]")&&matchMedia("(max-width:980px)").matches&&!e.shiftKey) setTimeout(()=>libSheet(false),60); },true);
+/* ---------- готовые наборы мебели */
+function setPlanSVG(key,vi,cls){ const st=OfficeKB.SETS.find(s=>s.key===key), v=st.variants[vi], p=.25;
+  const its=OfficeKB.setItemsIn({x:0,y:0,w:v.w,h:v.h,lv:0},key,vi,"s");
+  const body=its.map(it=>`<g transform='${itemTf(it)}'>${sym(it)}</g>`).join("");
+  return `<svg viewBox='${-p} ${-p} ${v.w+2*p} ${v.h+2*p}' class='${cls==="card"?"":"setsvg"}' preserveAspectRatio='xMidYMid meet'><rect x='${-p}' y='${-p}' width='${v.w+2*p}' height='${v.h+2*p}' fill='var(--paper)'/><rect x='0' y='0' width='${v.w}' height='${v.h}' fill='none' stroke='var(--muted)' stroke-width='.6' stroke-dasharray='3 2' class='nss'/>${body}</svg>`; }
+function setIsoPNG(key,vi){ const st=OfficeKB.SETS.find(s=>s.key===key), v=st.variants[vi]; const its=OfficeKB.setItemsIn({x:0,y:0,w:v.w,h:v.h,lv:0},key,vi,"s");
+  return isoPNG(its,{x:0,y:0,w:v.w,h:v.h},{key:`set:${key}:${vi}`,floor:"#efece5"}); }
+function placeSet(key,vi,p,roomId){ pushUndo();
+  const st=OfficeKB.SETS.find(s=>s.key===key), v=st.variants[vi];
+  const op=roomId?{op:"add_set",set:key,variant:vi,room:roomId}:{op:"add_set",set:key,variant:vi,x:snap(p.x-v.w/2),y:snap(p.y-v.h/2),lv:level};
+  if(!roomId){ const b=S.b; op.x=+Math.max(.3,Math.min(b.w-.3-v.w,op.x)).toFixed(2); op.y=+Math.max(.3,Math.min(b.d-.3-v.h,op.y)).toFixed(2); }
+  const [r]=OfficeKB.applyAll(S,[op]); if(r.error){ undo.pop(); toast(r.error); return; }
+  sel=r.ids&&r.ids[0]||null; commit(); toast(r.msg); }
+function setDialog(key,roomId){
+  const room=roomId&&byId(roomId); let cur=key||null, pick=0;
+  const sets=room? OfficeKB.SETS.slice().sort((a,b)=>(b.room.test(room.name)?1:0)-(a.room.test(room.name)?1:0)) : OfficeKB.SETS;
+  const m=document.createElement("div"); m.className="modal";
+  const draw=()=>{ const st=OfficeKB.SETS.find(s=>s.key===cur);
+    if(room&&st&&pick==null) pick=0;
+    m.innerHTML=`<div class="dlg setdlg" role="dialog" aria-label="Готовые наборы"><h3>${room?`Набор мебели в «${esc(room.name)}» · ${fmt(room.w,1)}×${fmt(room.h,1)} м`:"Готовые наборы мебели"}</h3>
+      <div class="settabs">${sets.map(s=>`<button class="${s.key===cur?"on":""} ${room&&s.room.test(room.name)?"fit":""}" data-k="${s.key}">${esc(s.name)}</button>`).join("")}</div>
+      ${st?`<p class="note">Все размеры — по стандартам (${esc(st.name.toLowerCase())}): мебель стандартных типоразмеров, проходы ≥ 0,6–0,9 м. Выберите вариант${room?" — «влезает» подсвечен зелёным":""}.</p>
+      <div class="setgrid">${st.variants.map((v,i)=>{ const fitsS=room?((v.w<=room.w+.01&&v.h<=room.h+.01)||(v.h<=room.w+.01&&v.w<=room.h+.01)):true;
+        return `<button class="setv ${i===pick?"on":""} ${room?(fitsS?"ok":"no"):""}" data-v="${i}"><div class="sv2">${setPlanSVG(cur,i)}<img alt="" data-iso="${i}"></div><b>${esc(v.name)}</b><small>${fmt(v.w,1)} × ${fmt(v.h,1)} м · ${v.items.length} предм.${room?(fitsS?" · влезает":" · больше помещения"):""}</small></button>`; }).join("")}</div>`:""}
+      <div class="actions">${st?(room?`<button class="btn primary" id="sRoom">Поставить в «${esc(room.name)}»</button><button class="btn" id="sAuto">Подобрать вариант по размеру</button>`:`<button class="btn primary" id="sPlan">Поставить на план</button>${sel&&byId(sel)&&byId(sel).t==="room"?`<button class="btn" id="sSel">В выбранное помещение</button>`:""}`):""}<span class="spacer"></span><button class="btn" id="sClose">Закрыть</button></div></div>`;
+    // изометрия — после отрисовки, чтобы окно открылось сразу
+    setTimeout(()=>m.querySelectorAll("[data-iso]").forEach(img=>{ const u=setIsoPNG(cur,+img.dataset.iso); if(u) img.src=u; else img.remove(); }),20); };
+  if(!cur) cur=(room&&sets.find(s=>s.room.test(room.name))||sets[0]).key;
+  if(room){ const st=OfficeKB.SETS.find(s=>s.key===cur); pick=OfficeKB.bestSetVariant(cur,Math.max(room.w,room.h),Math.min(room.w,room.h),room.name); }
+  draw(); document.body.appendChild(m);
+  m.addEventListener("click",e=>{ const t=e.target; if(t===m||t.id==="sClose") return m.remove();
+    const k=t.closest("[data-k]"); if(k){ cur=k.dataset.k; pick=room?OfficeKB.bestSetVariant(cur,Math.max(room.w,room.h),Math.min(room.w,room.h),room.name):0; draw(); return; }
+    const v=t.closest("[data-v]"); if(v){ pick=+v.dataset.v; m.querySelectorAll(".setv").forEach(b=>b.classList.toggle("on",+b.dataset.v===pick)); return; }
+    if(t.id==="sRoom"){ m.remove(); placeSet(cur,pick,null,room.id); }
+    if(t.id==="sAuto"){ m.remove(); pushUndo(); const [r]=OfficeKB.applyAll(S,[{op:"add_set",set:cur,variant:"auto",room:room.id}]); if(r.error){ undo.pop(); toast(r.error); } else { commit(); toast(r.msg); } }
+    if(t.id==="sSel"){ m.remove(); placeSet(cur,pick,null,sel); }
+    if(t.id==="sPlan"){ m.remove(); if(view!=="2d") setView("2d"); const r=svg.getBoundingClientRect(); placeSet(cur,pick,{x:(r.width/2-V.tx)/V.s,y:(r.height/2-V.ty)/V.s}); } });
+}
 function helpDialog(){ const m=document.createElement("div"); m.className="modal";
   const K=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
   m.innerHTML=`<div class="dlg" role="dialog" aria-label="Справка"><h3>Как управлять</h3><table class="keys">
@@ -3146,6 +3564,7 @@ const AI_SYS=()=>`Ты — архитектор-планировщик офис�
 {"op":"delete","id":"<id или название>"}
 {"op":"add_item","k":"<ключ>","size":"<типоразмер, напр. «на 8»>","x":..,"y":..,"rot":0,"room":"<помещение>","count":1,"dir":"x|y"} — ключи: ${OfficeKB.FURN.filter(f=>!/Конструкции/.test(f[2])).map(f=>f[0]+" "+f[3]+"×"+f[4]).join(", ")}
 {"op":"furnish","room":"<помещение>"} — расставить мебель по типу; {"op":"clear","room":".."}
+{"op":"add_set","set":"mgr|cons|rop|meet|vip|lounge|recep|kitchen|back|kids|cafe|ward|show|maket|arch|wc|focus","room":"..","variant":"auto"|номер|"на 8"} — готовый набор мебели стандартных размеров (или "x","y" вместо room); {"op":"sets_all"} — обставить наборами все помещения
 {"op":"add_door","room":"..","side":"n|s|e|w","width":0.9}; {"op":"add_wall","kind":"part|glass|block|rail","x1":..,"y1":..,"x2":..,"y2":..}
 {"op":"auto","pkg":"S|M|L","w":..,"d":..,"h":..} — собрать зонирование заново по размерам и варианту наполнения (S Базовый — максимум мест продаж, M Стандарт, L Премиум); {"op":"building","w":..,"d":..,"h":..}
 Верни ТОЛЬКО JSON: {"say":"коротко по-русски, что сделал и что посоветуешь","ops":[...]}. Если просьба непонятна или невыполнима — ops пустой, say с вопросом.`;

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* ТЗ заказчика (brief.json) → план офиса продаж для houz planner.
  *
- *   node brief_to_plan.js brief.json --out plan.json [--sheet plan.png]
+ *   node brief_to_plan.js brief.json --out plan.json [--sheet plan.png] [--sets]
  *
  * brief.json — состав помещений по опроснику (формат: references/brief-format.md).
  * Скрипт превращает ТЗ в «пакет наполнения» T для движка зонирования (KB.autoPlan),
@@ -166,6 +166,8 @@ else {   // типичные глубины помещений офиса про
 const S = r.project;
 
 /* ---------- отчёт ---------- */
+// --sets: обставить помещения готовыми наборами (кабинет, переговорная, кухня, бэк-офис…) — мебели больше и она «представительнее»
+let setsMsg = ""; if (args.includes("--sets") || B.sets) { const [sr] = KB.applyAll(S, [{ op: "sets_all" }]); setsMsg = sr.msg || sr.error || ""; }
 const fact = KB.programFact(S), checks = KB.checks(S);
 const a0 = (w - 0.6) * (d - 0.6);   // пол 1 этажа внутри стен (помещения-зоны лежат внутри зала — их не суммируем)
 const a1 = S.items.filter(i => i.t === "room" && i.lv === 1 && !i.sub).reduce((s, i) => s + i.w * i.h, 0);
@@ -193,6 +195,7 @@ const warns = r.warnings.filter(x => { const m = /^Не поместилось: 
 if (warns.length) L.push("", "Замечания раскладки:", ...warns.map(x => "- " + x));
 const red = checks.filter(c => c.level === "red"), yel = checks.filter(c => c.level === "yellow" || c.level === "warn");
 L.push("", `Проверки норм: красных ${red.length}, жёлтых ${yel.length}`, ...red.concat(yel).map(c => `- [${c.level}] ${c.text || c.msg || c.title}${c.ref ? " (" + c.ref + ")" : ""}`));
+if (setsMsg) L.push("", "Мебель наборами: " + setsMsg);
 L.push("", `Файл проекта: ${out}`);
 console.log(L.join("\n"));
 

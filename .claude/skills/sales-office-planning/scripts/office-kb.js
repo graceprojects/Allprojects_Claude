@@ -94,7 +94,9 @@
     // места консультаций: «равная посадка» — менеджер за общим столом с гостями (ноутбук), «руководитель» — менеджер за рабочим столом
     ["consSq","Консультация: квадратный стол на 4 (равная посадка)","Места консультаций",2.1,2.1,.75,"consSq","#e0d6c6"],
     ["consRd","Консультация: круглый стол на 4–5 (равная посадка)","Места консультаций",2.2,2.2,.75,"consRd","#e0d6c6"],
-    ["consRect","Консультация: стол 2 + 2 (равная посадка)","Места консультаций",1.4,2.0,.75,"consRect","#e0d6c6"],
+    ["consRect","Стол менеджеров: посадка по длинным сторонам (4–8 мест)","Места консультаций",1.6,2.1,.75,"consRect","#e0d6c6"],
+    ["consRectE","Стол менеджеров: место во главе стола (5–7 мест)","Места консультаций",2.2,2.1,.75,"consRectE","#e0d6c6"],
+    ["consRectEE","Стол менеджеров: места с двух торцов (6–8 мест)","Места консультаций",2.8,2.1,.75,"consRectEE","#e0d6c6"],
     ["consScr","Консультация: стол у экрана на 4–6","Места консультаций",2.1,2.25,.75,"consScr","#e0d6c6"],
     ["consL","Менеджер: Г-образный стол, гости напротив","Места консультаций",1.6,2.5,.75,"consL","#e8e2d6"],
     ["consLs","Менеджер: Г-образный стол, гости сбоку","Места консультаций",2.3,2.1,.75,"consLs","#e8e2d6"],
@@ -252,7 +254,12 @@
     plantT: S_(["Ø800", .8, .8], ["Ø1000", 1.0, 1.0], ["Ø1200", 1.2, 1.2]),
     consSq: S_(["стол 800×800 · компакт", 2.0, 2.0], ["стол 900×900", 2.1, 2.1], ["стол 1000×1000", 2.2, 2.2], ["стол 1200×1200 · просторный", 2.4, 2.4]),
     consRd: S_(["Ø900 на 4", 2.1, 2.1], ["Ø1000 на 4", 2.2, 2.2], ["Ø1100 на 4", 2.3, 2.3], ["Ø1200 на 5", 2.4, 2.4]),
-    consRect: S_(["стол 1200×800", 1.2, 2.0], ["стол 1400×800", 1.4, 2.0], ["стол 1600×900", 1.6, 2.1]),
+    consRect: S_(["стол 1200×800 на 4 · компакт", 1.2, 2.0], ["стол 1400×800 на 4", 1.4, 2.0], ["стол 1600×900 на 4", 1.6, 2.1], ["стол 1600×800 на 4", 1.6, 2.0],
+      ["стол 1800×900 на 4 · просторно", 1.8, 2.1], ["стол 1800×1200 на 4 · широкий, под документы", 1.8, 2.4], ["стол 2000×900 на 6 · компакт", 2.0, 2.1],
+      ["стол 2200×1000 на 6", 2.2, 2.2], ["стол 2400×1000 на 6 · просторно", 2.4, 2.2], ["стол 2800×1100 на 8", 2.8, 2.3]),
+    // место во главе / с двух торцов: +0,6 м на каждый торцевой стул; на торце во главе — менеджер
+    consRectE: S_(["стол 1400×800 на 5", 2.0, 2.0], ["стол 1600×900 на 5", 2.2, 2.1], ["стол 1800×900 на 5", 2.4, 2.1], ["стол 2000×1000 на 7", 2.6, 2.2], ["стол 2400×1000 на 7", 3.0, 2.2]),
+    consRectEE: S_(["стол 1600×900 на 6", 2.8, 2.1], ["стол 1800×900 на 6", 3.0, 2.1], ["стол 2200×1000 на 8", 3.4, 2.2], ["стол 2400×1000 на 8", 3.6, 2.2]),
     consScr: S_(["стол 1400×800 на 4", 2.0, 2.05], ["стол 1600×900 на 4", 2.1, 2.25], ["стол 2000×900 на 6", 2.1, 2.65]),
     consL: S_(["стол 1400 + приставка · 2 гостя", 1.4, 2.5], ["стол 1600 + приставка · 2 гостя", 1.6, 2.5], ["стол 1800 + приставка · 3 гостя", 1.8, 2.6]),
     consLs: S_(["1400×1400 · 2 гостя сбоку", 2.1, 2.1], ["1600×1400 · 2 гостя сбоку", 2.3, 2.1], ["1800×1800 · 3 гостя сбоку", 2.5, 2.6]),
@@ -289,7 +296,7 @@
   };
   const MAT = { sofa: "textile", sofaL: "textile", arm: "textile", lounge: "textile", chairL: "textile", booth: "textile", stool: "textile", chair: "textile",
     table: "wood", meet: "wood", cafe4: "wood", round: "wood", barT: "wood", deskC: "wood", work3: "wood", os1: "wood", os4: "wood", deskL: "wood", credenza: "wood", recep: "wood", recepL: "wood", bar: "wood", shelfO: "wood", kidtab: "wood",
-    wardB: "lacquer", wardS: "lacquer", locker: "lacquer", glassCab: "lacquer", nicheTV: "lacquer", pedestal: "lacquer", kitch: "lacquer", kitchL: "lacquer", kBase: "lacquer", kSink: "lacquer", kIsland: "lacquer", mockK: "lacquer", cab: "lacquer", shelf: "metal", archM: "metal", safe: "metal", sinkD: "stone", consSq: "wood", consRd: "wood", consRect: "wood", consScr: "wood", consL: "wood", consLs: "wood", consT: "wood", consD: "wood", wardC: "lacquer", wardH: "lacquer", wardOpen: "wood", recepR: "wood", recepM: "wood", cashDesk: "metal", meetO: "wood", rtable: "wood", cafe2: "wood", beanbag: "textile", babyChg: "lacquer" };
+    wardB: "lacquer", wardS: "lacquer", locker: "lacquer", glassCab: "lacquer", nicheTV: "lacquer", pedestal: "lacquer", kitch: "lacquer", kitchL: "lacquer", kBase: "lacquer", kSink: "lacquer", kIsland: "lacquer", mockK: "lacquer", cab: "lacquer", shelf: "metal", archM: "metal", safe: "metal", sinkD: "stone", consSq: "wood", consRd: "wood", consRect: "wood", consRectE: "wood", consRectEE: "wood", consScr: "wood", consL: "wood", consLs: "wood", consT: "wood", consD: "wood", wardC: "lacquer", wardH: "lacquer", wardOpen: "wood", recepR: "wood", recepM: "wood", cashDesk: "metal", meetO: "wood", rtable: "wood", cafe2: "wood", beanbag: "textile", babyChg: "lacquer" };
   KB.matOf = k => { const f = KB.FK && KB.FK[k]; return f ? (MAT[k] || MAT[f.d] || null) : null; };
   // стили наборов: какой цвет у каждого материала
   KB.STYLES = [
@@ -307,6 +314,17 @@
    * Предмет: [ключ, x, y, поворот°, индекс типоразмера из KB.SIZES (или null — по умолчанию)]. Ковры и маты могут лежать под мебелью. */
   const SI = (k, x, y, r = 0, i = null) => [k, x, y, r, i], KB_MODEL = KB.SIZES.model.map(m => [m[1], m[2]]);
   KB.SETS = [
+    // кабинет менеджеров 10–12 м² с общим столом: стол по центру или торцом к стене, 4–8 мест, менеджер сидит вместе с гостями
+    { key: "mRoom", name: "Кабинет менеджеров — общий стол (4–8 мест)", room: /кабинет\s*менеджеров|общ\S* стол/i, align: "center", pad: .4, auto: /^(по центру|торцом к стене) · .*на 4/, variants: [].concat(
+      KB.SIZES.consRect.map((sz, i) => ({ name: `по центру · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI("consRect", 0, 0, 0, i)] })),
+      KB.SIZES.consRect.map((sz, i) => ({ name: `торцом к стене · ${sz[0]}`, align: "back", w: sz[2], h: sz[1], items: [SI("consRect", 0, 0, 90, i)] })),
+      KB.SIZES.consRectE.map((sz, i) => ({ name: `место во главе · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI("consRectE", 0, 0, 0, i)] })),
+      KB.SIZES.consRectE.map((sz, i) => ({ name: `во главе у стены, менеджер лицом к двери · ${sz[0]}`, align: "back", w: sz[2], h: sz[1], items: [SI("consRectE", 0, 0, 90, i)] })),
+      KB.SIZES.consRectEE.map((sz, i) => ({ name: `места с двух торцов · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI("consRectEE", 0, 0, 0, i)] })),
+      KB.SIZES.consT.map((sz, i) => ({ name: `Т-образный: стол менеджера у стены · ${sz[0]}`, align: "back", w: sz[1], h: sz[2], items: [SI("consT", 0, 0, 0, i)] })),
+      [{ name: "стол 1600×900 на 4 · кредеца у стены", align: "back", w: 1.6, h: 2.65, items: [SI("credenza", 0, 0, 0, 1), SI("consRect", 0, .55, 0, 2)] },
+       { name: "стол 1800×900 на 4 · экран на стене у торца", align: "back", w: 2.1, h: 2.55, items: [SI("tv", .33, 0, 0, 1), SI("consRect", 0, .75, 90, 4)] },
+       { name: "стол 2400×1000 на 6 · экран у торца · шкаф", align: "back", w: 3.2, h: 3.15, items: [SI("tv", .25, 0, 0, 2), SI("docCab", 2.3, 0, 0, 1), SI("consRect", 0, .75, 90, 8)] }]) },
     { key: "mgr", name: "Рабочее место менеджера", room: /кабинет менеджер|консульт|менеджер/i, align: "back", variants: [
       { name: "Стол 1400 · кресло · 2 гостя", w: 2.4, h: 2.4, items: [SI("chairO", .9, .05), SI("desk", .5, .7, 0, 1), SI("pedestal", 1.95, .75), SI("chairV", .6, 1.75), SI("chairV", 1.3, 1.75)] },
       { name: "Стол 1600 · тумба · шкаф · кредеца", w: 3.0, h: 2.9, items: [SI("credenza", 0, 0, 0, 0), SI("docCab", 2.1, 0, 0, 1), SI("chairO", .9, .6), SI("desk", .5, 1.25, 0, 2), SI("pedestal", 2.15, 1.3), SI("chairV", .7, 2.35), SI("chairV", 1.5, 2.35)] },
@@ -315,7 +333,7 @@
       { name: "Стол с регулировкой высоты 1600 · локер", w: 3.0, h: 2.6, items: [SI("pantry", 2.4, 0, 0, 2), SI("chairO", .9, .15), SI("deskH", .5, .85, 0, 2), SI("pedestal", 2.15, .9), SI("chairV", .7, 2.0), SI("chairV", 1.5, 2.0)] },
     ] },
     { key: "consEq", name: "Консультация — равная посадка (стол на 4)", room: /консульт|менеджер|мпп|переговор|зал/i, align: "center", variants: [].concat(
-      ...[["consSq", "квадратный"], ["consRd", "круглый"], ["consRect", "прямоугольный 2 + 2"], ["consScr", "у экрана"]].map(([k, nm]) => KB.SIZES[k].map((sz, i) => ({ name: `${nm} · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI(k, 0, 0, 0, i)] }))),
+      ...[["consSq", "квадратный"], ["consRd", "круглый"], ["consRect", "прямоугольный 2 + 2"], ["consScr", "у экрана"]].map(([k, nm]) => KB.SIZES[k].map((sz, i) => ({ name: `${nm} · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI(k, 0, 0, 0, i)] })).filter(v => k !== "consRect" || /на 4/.test(v.name))),
       [{ name: "квадратный 900 · кредеца для документов", w: 2.1, h: 2.65, items: [SI("credenza", .25, 0, 0, 1), SI("consSq", 0, .55, 0, 1)] },
        { name: "круглый Ø1000 · стойка буклетов · растение", w: 2.9, h: 2.2, items: [SI("consRd", 0, 0, 0, 1), SI("brochure", 2.35, .1), SI("plant", 2.3, 1.55, 0, 0)] }]) },
     { key: "consBoss", name: "Менеджер — посадка «руководитель»", room: /консульт|менеджер|мпп|кабинет/i, align: "back", variants: [].concat(
@@ -467,16 +485,21 @@
   KB.setItemsIn = function (r, key, vi = 0, face = "s", align) {
     const set = KB.SETS.find(s => s.key === key); if (!set) throw new Error("Нет набора «" + key + "». Есть: " + KB.SETS.map(s => s.key).join(", "));
     const v = set.variants[Math.max(0, Math.min(set.variants.length - 1, +vi || 0))], fr = frame(r, face);
-    const u0 = (fr.W - v.w) / 2, v0 = (align || set.align) === "back" ? Math.min(0.05, Math.max(0, fr.D - v.h)) : (fr.D - v.h) / 2;
+    const u0 = (fr.W - v.w) / 2, v0 = (align || v.align || set.align) === "back" ? Math.min(0.05, Math.max(0, fr.D - v.h)) : (fr.D - v.h) / 2;
     return v.items.map(([k, x, y, rl, si]) => { const [w, h] = KB.setItemSize(k, si); return fr.put(k, u0 + x, v0 + y, rl || 0, { w, h }); });
   };
   // самый крупный вариант, который помещается в помещение (с запасом 0,1 м)
   // W — ширина вдоль лицевой стороны, D — глубина от задней стены до двери
   // name — название помещения: «Переговорная на 6» выбирает вариант «на 6», если он помещается
-  KB.bestSetVariant = function (key, W, D, name) { const set = KB.SETS.find(s => s.key === key); if (!set) return 0; let best = 0, area = -1;
-    const fit = v => v.w <= W + .01 && v.h <= D + .01, N = /на\s*(\d+)/i.exec(name || "");
-    if (N) { const i = set.variants.findIndex(v => fit(v) && new RegExp("на\\s*" + N[1] + "(?!\\d)").test(v.name)); if (i >= 0) return i; }
-    set.variants.forEach((v, i) => { if (fit(v) && v.w * v.h > area) { best = i; area = v.w * v.h; } }); return best; };
+  KB.bestSetVariant = function (key, W, D, name) { const set = KB.SETS.find(s => s.key === key); if (!set) return 0;
+    const pad = set.pad || 0, fit = (v, p = 0) => v.w + p <= W + .01 && v.h + p <= D + .01, N = /на\s*(\d+)/i.exec(name || "");
+    const pick = ok => { let best = -1, area = -1; set.variants.forEach((v, i) => { if (ok(v) && v.w * v.h > area) { best = i; area = v.w * v.h; } }); return best; };
+    let i;   // pad — проход за стульями при автоподборе; auto — какие варианты брать без «на N» в названии
+    if (N) { const re = new RegExp("на\\s*" + N[1] + "(?!\\d)");
+      if (pad && (i = pick(v => fit(v, pad) && re.test(v.name))) >= 0) return i;
+      if ((i = set.variants.findIndex(v => fit(v) && re.test(v.name))) >= 0) return i; }
+    if (set.auto && (i = pick(v => fit(v, pad) && set.auto.test(v.name))) >= 0) return i;
+    return Math.max(0, pick(v => fit(v))); };
   KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {

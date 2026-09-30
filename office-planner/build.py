@@ -36,6 +36,9 @@ open(os.path.join(site, '.nojekyll'), 'w').write('')
 skill = os.path.join(ROOT, '.claude', 'skills', 'sales-office-planning', 'scripts')
 if os.path.isdir(skill):
     shutil.copy(os.path.join(HERE, 'src', 'office-kb.js'), os.path.join(skill, 'office-kb.js'))
+for _sk in ('sales-office-zoning',):
+    _d = os.path.join(ROOT, '.claude', 'skills', _sk, 'scripts')
+    if os.path.isdir(_d): shutil.copy(os.path.join(HERE, 'src', 'office-kb.js'), os.path.join(_d, 'office-kb.js'))
 skill2 = os.path.join(ROOT, '.claude', 'skills', 'office-brief-to-plan', 'scripts')
 if os.path.isdir(skill2):
     shutil.copy(os.path.join(HERE, 'src', 'office-kb.js'), os.path.join(skill2, 'office-kb.js'))

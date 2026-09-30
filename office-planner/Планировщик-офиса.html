@@ -1496,7 +1496,105 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     return out.sort((a, c) => order[a.level] - order[c.level]);
   };
   /* Планировочные проверки: правила зонирования из реальных проектов (см. скилл sales-office-zoning). Уровень advice — совет, не норма. */
+  // Геометрия: вход по стороне y = d (витраж), глухая стена y = 0. Правила и числа — скилл sales-office-zoning (references/rules/*.md).
+  const dz = (() => {
+    const N = s => norm(s || "");
+    const RX = { cab: /кабинет менеджер|ячейк|место консультац|мпп|менеджеры по продажам/, deal: /vip|сделочн|банк|ипотек|касс/, rop: /(^|[^а-я])роп([^а-я]|$)|руководител[ья] отдела продаж/,
+      wc: /(^|\s)с\/у|санузел|туалет|(^|\s)wc/, kit: /кухн|приём пищи|прием пищи/, pub: /зал|ожидан|лаунж|макет|бар|кафе|кофе|ресепшен|ресепшн|холл|детск|фото|медиа|vr/,
+      maket: /макет/, rec: /ресепшен|ресепшн|хостес/, kids: /детск/, bar: /(^|[^а-я])бар/, barback: /подсобк/, call: /колл|call/, meet: /переговор|vip|сделоч/, back: /колл|call|бухгалт|бэк|склад|маркет|задолж|архив/,
+      wait: /ожидан|лаунж|мягк/ };
+    const is = (r, k) => RX[k].test(N(r.name));
+    const rooms = (S, lv = 0) => S.items.filter(i => i.t === "room" && (i.lv || 0) === lv);
+    const touch = (a, b) => { const gx = Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w), gy = Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h);
+      return (gx <= 0.35 && gx >= -0.35 && -gy >= 0.8) || (gy <= 0.35 && gy >= -0.35 && -gx >= 0.8); };
+    const cx = r => r.x + r.w / 2, cy = r => r.y + r.h / 2;
+    const gapR = (a, b) => Math.hypot(Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w)), Math.max(0, Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h)));
+    const entrance = S => { const d = +S.b.d, it = S.items.find(i => i.t === "item" && !(i.lv || 0) && /вход/i.test(i.label || "") && !/служеб/i.test(i.label || ""));
+      if (it) return { x: it.x + ((it.rot || 0) % 180 ? it.h : it.w) / 2, y: d };
+      const t = rooms(S).find(r => /тамбур/.test(N(r.name)) && r.y + r.h >= d - 0.6); if (t) return { x: cx(t), y: d };
+      const rc = rooms(S).find(r => is(r, "rec")); return rc ? { x: cx(rc), y: d } : null; };
+    const contains = (r, it) => { const q = (it.rot || 0) % 180, w = q ? it.h : it.w, h = q ? it.w : it.h, x = it.x + w / 2, y = it.y + h / 2; return x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h && (it.lv || 0) === (r.lv || 0); };
+    // куда ведут двери помещения: у двери берём ближайшую грань и смотрим, какое помещение за ней (null — дверей нет, судим по общим стенам)
+    const doorTo = (S, r) => { const lv = r.lv || 0, out = [];
+      const doors = S.items.filter(i => i.t === "item" && (i.lv || 0) === lv && /^(door|slide|auto)/.test(i.k));
+      for (const dI of doors) { const q = (dI.rot || 0) % 180, w = q ? dI.h : dI.w, h = q ? dI.w : dI.h, px = dI.x + w / 2, py = dI.y + h / 2;
+        if (px < r.x - 0.8 || px > r.x + r.w + 0.8 || py < r.y - 0.8 || py > r.y + r.h + 0.8) continue;
+        const E = [["n", Math.abs(py - r.y), px >= r.x && px <= r.x + r.w], ["s", Math.abs(py - (r.y + r.h)), px >= r.x && px <= r.x + r.w],
+          ["w", Math.abs(px - r.x), py >= r.y && py <= r.y + r.h], ["e", Math.abs(px - (r.x + r.w)), py >= r.y && py <= r.y + r.h]].filter(e => e[2] && e[1] <= 0.8).sort((a, b) => a[1] - b[1]);
+        if (!E.length) continue; const sd = E[0][0], o = 0.6;
+        const P = sd === "n" ? [px, r.y - o] : sd === "s" ? [px, r.y + r.h + o] : sd === "w" ? [r.x - o, py] : [r.x + r.w + o, py];
+        const nb = S.items.filter(i => i.t === "room" && (i.lv || 0) === lv && i !== r && P[0] > i.x && P[0] < i.x + i.w && P[1] > i.y && P[1] < i.y + i.h).sort((a, b) => a.w * a.h - b.w * b.h)[0];
+        out.push(nb || { name: "улица" }); }
+      return out.length ? out : null; };
+    return { N, is, rooms, touch, cx, cy, gapR, entrance, contains, doorTo };
+  })();
+  const R_ = (key, title, ref, check) => KB.DESIGN_RULES.push({ key, title, ref: "Как в проектах houz · " + ref, check });
   KB.DESIGN_RULES = [];
+  R_("sales_row_back_wall", "Места продаж у глухой стены, фронтом к залу", "3-sales: ряд у стены напротив витража", (S, add) => { const d = +S.b.d;
+    const bad = dz.rooms(S).filter(r => dz.is(r, "cab") && !r.sub && r.y + r.h >= d - 0.65 && r.y > 0.65);
+    if (bad.length) add(`Места продаж у витража (${bad.length}): в реальных офисах ряд кабинетов стоит у глухой или тыльной стены, фронтом к макету, а витраж отдают ожиданию, детской и кафе.`, bad[0].id); });
+  R_("sales_off_entrance_axis", "Кабинеты не на оси входа", "3-sales: ряд начинается ≥ 3 м сбоку от оси входа", (S, add) => { const e = dz.entrance(S); if (!e) return;
+    const bad = dz.rooms(S).filter(r => dz.is(r, "cab") && !r.sub && Math.abs(dz.cx(r) - e.x) < 1.5 + r.w / 2 && e.y - (r.y + r.h) < 6);
+    if (bad.length) add("Кабинет менеджера на оси входа, у двери: с порога клиент должен видеть стойку и макет, а до кабинетов доходить через ожидание.", bad[0].id); });
+  R_("sales_ground_level", "Места продаж на уровне входа и макета", "3-sales: 24 из 24 кабинетов на уровне входа", (S, add) => {
+    const up = S.items.filter(i => i.t === "room" && (i.lv || 0) !== 0 && dz.is(i, "cab"));
+    if (up.length) add("Места продаж вынесены на другой уровень. В проектах наверх уходят только переговорные, VIP, РОП и бэк-офис; кабинеты менеджеров — всегда в зале с макетом.", up[0].id); });
+  R_("sales_row_continuous", "Кабинеты одним рядом", "3-sales: 3–5 кабинетов одним непрерывным рядом", (S, add) => {
+    const row = dz.rooms(S).filter(r => dz.is(r, "cab") && !r.sub && r.y <= 0.65).sort((a, b) => a.x - b.x); if (row.length < 3) return;
+    let groups = 1; for (let i = 1; i < row.length; i++) if (row[i].x - (row[i - 1].x + row[i - 1].w) > 0.6) groups++;
+    if (groups > 2) add(`Ряд кабинетов разорван на ${groups} части: в проектах кабинеты стоят одним рядом, а бар, гардероб и сделочные — отдельными группами.`, row[0].id); });
+  R_("sales_shared_table", "Общий стол на 4 в кабинете", "3-sales: 24 из 24 кабинетов — общий стол 1800×1200 на 2 + 2", (S, add) => {
+    const cabs = dz.rooms(S).filter(r => dz.is(r, "cab") && !r.sub && r.border !== "none");
+    const single = cabs.filter(r => { const its = S.items.filter(i => i.t === "item" && dz.contains(r, i)); return its.some(i => /^(work3|desk|deskC)$/.test(i.k)) && !its.some(i => /^cons/.test(i.k)); });
+    if (single.length >= 2) add(`В ${single.length} кабинетах стол «руководителя» с гостями напротив. В реальных офисах продаж — общий стол на 4 (менеджер сидит вместе с гостями): формат «кабинеты с общим столом» или набор «Кабинет менеджеров — общий стол».`, single[0].id); });
+  R_("deal_far_from_entrance", "Сделочные в конце пути", "1-path: VIP, банк и касса в 17–30 м от входа, за макетом", (S, add) => { const e = dz.entrance(S); if (!e) return; const W = +S.b.w, D = +S.b.d;
+    const lim = W / D >= 2.5 ? Math.min(12, 0.35 * W) : 6;
+    const bad = dz.rooms(S).filter(r => dz.is(r, "deal") && !dz.is(r, "rop") && Math.abs(dz.cx(r) - e.x) + (e.y - dz.cy(r)) < lim);
+    if (bad.length) add(`«${bad[0].name}» слишком близко ко входу (< ${lim.toFixed(0)} м по пути). В проектах VIP, банк и касса — в дальнем конце маршрута, за макетом, двери выходят в зал.`, bad[0].id); });
+  R_("reception_on_axis", "Ресепшен виден с порога", "1-path: стойка на оси входа в 2,5–5 м от двери", (S, add) => { const e = dz.entrance(S); const rc = dz.rooms(S).find(r => dz.is(r, "rec")); if (!e || !rc) return;
+    const dx = Math.abs(dz.cx(rc) - e.x), dy = e.y - (rc.y + rc.h);
+    if (dx > 6 || dy > 9) add(`Ресепшен в ${dx.toFixed(1)} м от оси входа и в ${Math.max(0, dy).toFixed(1)} м от витража. В проектах стойка стоит «в лоб» по оси входа в 2,5–5 м от двери — её первой видит гость.`, rc.id); });
+  R_("entrance_long_facade", "Вход смещён по длинному фасаду", "7-site: в линейном доме вход на 0,24–0,44 длины от торца", (S, add) => { const e = dz.entrance(S); const W = +S.b.w, D = +S.b.d; if (!e || W / D < 2.5) return;
+    const t = e.x / W, sm = Math.min(t, 1 - t);
+    if (sm > 0.46) add(`Вход по центру длинного фасада (${(t * 100).toFixed(0)} % длины). В линейных офисах houz он смещён на 24–44 % от торца: короткое плечо — гостеприимство или служебное, длинное — маршрут «ожидание → макет → кабинеты → сделка».`); });
+  R_("maket_near", "Макет — центр зала", "4-public: макет в 4–8 м по оси (компактный план) или в 11–15 м вдоль фасада (линейный)", (S, add) => { const e = dz.entrance(S); const m = dz.rooms(S).find(r => dz.is(r, "maket")); if (!e) return;
+    if (!m) { if (S.items.some(i => i.t === "room" && dz.is(i, "cab"))) add("Нет зоны макета: во всех проектах макет — центр зала, к нему обращены кабинеты продаж."); return; }
+    const dist = Math.abs(dz.cx(m) - e.x) + (e.y - dz.cy(m)); if (dist > 20) add(`Макет в ${dist.toFixed(0)} м пути от входа. В проектах — 4–8 м по оси (компактный зал) или 11–15 м вдоль фасада (линейный).`, m.id); });
+  R_("wc_via_buffer", "Санузлы через шлюз", "2-privacy: дверь С/у не выходит в ожидание, макет, бар или к стойке", (S, add) => {
+    for (const lv of [0, 1]) { const rs = dz.rooms(S, lv), pub = rs.filter(r => dz.is(r, "pub") && !dz.is(r, "wc"));
+      const opens = r => { const to = dz.doorTo(S, r); return to ? to.filter(p => dz.is(p, "pub") && !dz.is(p, "wc") && !/проход|коридор|шлюз|санхолл/.test(dz.N(p.name))) : pub.filter(p => dz.touch(r, p) && !/проход|коридор|холл/.test(dz.N(p.name))); };
+      const bad = rs.filter(r => dz.is(r, "wc") && opens(r).length);
+      if (bad.length) { add(`«${bad[0].name}» открывается прямо в клиентскую зону. В проектах санузлы — за шлюзом, санхоллом или служебным коридором, их дверей не видно из зала.`, bad[0].id); return; } } });
+  R_("kitchen_service_side", "Кухня персонала — только со служебной стороны", "5-staff: дверь кухни только в служебный коридор", (S, add) => {
+    for (const lv of [0, 1]) { const rs = dz.rooms(S, lv), pub = rs.filter(r => dz.is(r, "pub"));
+      const opens = r => { const to = dz.doorTo(S, r); return to ? to.filter(p => dz.is(p, "pub") && !/коридор|проход/.test(dz.N(p.name))) : pub.filter(p => dz.touch(r, p) && !/коридор|проход/.test(dz.N(p.name))); };
+      const bad = rs.filter(r => dz.is(r, "kit") && opens(r).length);
+      if (bad.length) { add(`Дверь «${bad[0].name}» ведёт в клиентскую зону («${opens(bad[0])[0].name}»). В проектах кухня открывается только в служебный коридор или карман за стеллажом.`, bad[0].id); return; } } });
+  R_("kids_away_from_sales", "Детская не у кабинетов", "3-sales: от детской до ближайшего кабинета ≥ 7–10 м", (S, add) => {
+    const rs = dz.rooms(S), k = rs.find(r => dz.is(r, "kids")); if (!k) return; const cabs = rs.filter(r => dz.is(r, "cab"));
+    const near = cabs.map(c => dz.gapR(k, c)).sort((a, b) => a - b)[0];
+    if (near != null && near < 5) add(`Детская в ${near.toFixed(1)} м от кабинета менеджера — шум мешает переговорам. В проектах между ними ожидание, макет или ресепшен, 7–12 м.`, k.id); });
+  R_("bar_backroom", "У бара подсобка", "4-public: подсобка бара 5–6,5 м² за спиной бармена", (S, add) => {
+    const rs = S.items.filter(i => i.t === "room"), b = rs.find(r => dz.is(r, "bar") && !/кофе-корнер|кофе-поинт/.test(dz.N(r.name)));
+    if (b && !rs.some(r => dz.is(r, "barback"))) add("У бара нет подсобки. В проектах за спиной бармена — подсобка 5–6,5 м², лучше рядом со служебной дверью (загрузка минуя зал).", b.id); });
+  R_("wet_core", "Мокрые точки одним узлом", "2-privacy: С/у, ПУИ и кухня — 1–2 узла у глухой стены", (S, add) => {
+    const wet = dz.rooms(S).filter(r => dz.is(r, "wc") || /пуи|куи|кухн/.test(dz.N(r.name))); if (wet.length < 3) return;
+    const grp = []; for (const r of wet) { const g = grp.find(g => g.some(q => dz.gapR(q, r) <= 3)); g ? g.push(r) : grp.push([r]); }
+    for (let i = 0; i < grp.length; i++) for (let j = grp.length - 1; j > i; j--) if (grp[j].some(a => grp[i].some(b => dz.gapR(a, b) <= 3))) { grp[i].push(...grp[j]); grp.splice(j, 1); }
+    if (grp.length > 2) add(`Санузлы, ПУИ и кухня разбросаны на ${grp.length} узла. В проектах их собирают в 1–2 узла у глухой стены — это стояки и вентиляция.`, wet[0].id); });
+  R_("call_vs_meeting", "Колл-центр не рядом с переговорными", "2-privacy: колл-центр без общей стены с VIP и переговорными", (S, add) => {
+    for (const lv of [0, 1]) { const rs = dz.rooms(S, lv), cc = rs.filter(r => dz.is(r, "call")), mm = rs.filter(r => dz.is(r, "meet"));
+      const bad = cc.find(c => mm.some(m => dz.touch(c, m))); if (bad) { add("Колл-центр через стену с переговорной: в проектах его ставят в глубине бэк-офиса, двери не напротив, ≥ 5 м по коридору.", bad.id); return; } } });
+  R_("upper_level_mixed", "Второй уровень — одного типа", "2-privacy: наверху либо бэк-офис, либо клиентские переговорные", (S, add) => {
+    const rs = dz.rooms(S, 1); if (!rs.length) return;
+    if (rs.some(r => dz.is(r, "meet")) && rs.some(r => dz.is(r, "back"))) add("На втором уровне вместе переговорные и бэк-офис. В проектах уровень одного типа; если смешан — переговорные ближе к лестнице, колл-центр и склады в глубине, клиент не идёт мимо них."); });
+  R_("rop_client_zone", "РОП с дверью из зала", "3-sales: РОП в клиентской зоне, ≤ 10 м от кабинетов", (S, add) => {
+    const rs = S.items.filter(i => i.t === "room"), rop = rs.find(r => dz.is(r, "rop")); if (!rop) return;
+    const same = rs.filter(r => (r.lv || 0) === (rop.lv || 0) && r !== rop);
+    if (!same.some(r => dz.touch(rop, r) && (dz.is(r, "pub") || /проход вдоль|галере/.test(dz.N(r.name))))) add("Кабинет РОП спрятан в бэк-офисе. В проектах РОП — клиентская комната с дверью из зала, рядом с рядом кабинетов или сделочным блоком.", rop.id); });
+  R_("waiting_on_glass", "Ожидание у витража", "1-path: к витражу обращены ожидание, детская, кафе; диваны спинкой к стеклу", (S, add) => { const d = +S.b.d;
+    const w = dz.rooms(S).filter(r => dz.is(r, "wait")); if (w.length && !w.some(r => r.y + r.h >= d - 0.8)) add("Ни одна зона ожидания не стоит у витража. В проектах мягкие группы — вдоль остекления спинкой к стеклу, лицом к макету и кабинетам.", w[0].id); });
+
   KB.designChecks = function (S) { const out = []; for (const r of KB.DESIGN_RULES) { try { r.check(S, (text, id) => out.push({ level: "advice", text, ref: r.ref || r.title, id, key: r.key })); } catch (e) {} } return out; };
 
   /* ------------------------------------------------------------ текстовая сводка (для Claude и CLI) */
@@ -2311,7 +2409,12 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     for (const k of ["kui", "elec"]) { const r = get(k); if (r) coreBack.push({ r, w: wOf(r, rb, k === "kui" ? 1.2 : 1.4) }); }
     for (const k of ["server", "archive", "storage", "security", "prayer"]) { const r = get(k); if (r && !upKeys.includes(k)) coreBack.push({ r, w: wOf(r, rb, 1.4) }); }   // мелкие — в задний ряд
     const coreFront = [];
-    for (const k of ["kitchen", "backoffice", "director"].concat(STAFFX)) if (!upKeys.includes(k)) for (const r of copies(k)) coreFront.push({ r });
+    // РОП — клиентская комната у ряда кабинетов (дверь из зала), если в ряду у глухой стены есть для него место; иначе — в служебном блоке
+    const dirR = get("director"), wBack0 = coreBack.reduce((s, c) => s + c.w, 0);
+    const bandNeed = ["cafe", "barback", "wardrobe", "showroom", "cabinet", "meet", "bank", "vip", "cashier"].filter(k => !upKeys.includes(k) && !(k === "cabinet" && cab && cab.cells))
+      .reduce((s, k) => s + copies(k).reduce((t, r) => t + (r.key === "cabinet" ? (r.w || 3) : Math.max(1.5, areaOf(r) / rb)), 0), 0);
+    const dirInBand = !!dirR && !upKeys.includes("director") && Lin - Math.max(3.6, wBack0) - (mezz ? 2.8 : 0) - 1.2 - bandNeed >= Math.max(3.4, areaOf(dirR) / rb);
+    for (const k of ["kitchen", "backoffice", "director"].concat(STAFFX)) if (!upKeys.includes(k) && !(k === "director" && dirInBand)) for (const r of copies(k)) coreFront.push({ r });
     // малый офис: служебное — одной колонкой в торце на всю глубину (без коридора): так в неглубоком зале остаётся место клиентам
     const colCore = p.coreMode === "column", wing = p.coreMode === "wing";
     let Wc, xc, coreBottom; const toBand = [], passW = colCore ? 1.2 : 0;
@@ -2375,7 +2478,8 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     push("cafe", 2.4); push("barback", 1.8); push("wardrobe", 1.5); push("showroom", 4); const mkT = get("maket") && (KB.MAKET[pp.maket] || KB.MAKET["3x2"]), frontNeed = Math.max(3.0, mkT ? mkT[1] + 2 * (colCore ? 0.8 : compact ? 1.0 : 1.2) + 0.3 : 0);   // у витража: вход, ожидание и зона макета
     const cellsOK = !!(cab && cab.cells && Y1 - (Y0 + rb + a) - frontNeed >= (cab.h || 2.6));   // зал мелкий — ячейки встают вдоль стены
     if (cab && cab.cells && !cellsOK) warn.push("Зал неглубокий для ячеек в центре — места продаж поставлены вдоль глухой стены.");
-    if (!cellsOK) push("cabinet"); if (!upKeys.includes("meet")) push("meet", 4.2); push("bank", 3); if (!upKeys.includes("vip")) push("vip", 3.2); push("cashier", 2.6);
+    if (!cellsOK) push("cabinet"); if (dirInBand) push("director", 3.4);   // РОП — клиентская комната у кабинетов, дверь из зала
+    if (!upKeys.includes("meet")) push("meet", 4.2); push("bank", 3); if (!upKeys.includes("vip")) push("vip", 3.2); push("cashier", 2.6);
     const stairW = mezz ? 2.8 : 0;
     const eDepth = Y1 - coreBottom, frontBlock = [];
     // блок под служебным коридором: у витража ряд клиентских помещений; если глубины хватает — второй ряд у коридора и холл между ними

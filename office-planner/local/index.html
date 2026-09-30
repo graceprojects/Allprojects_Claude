@@ -298,6 +298,11 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
 .setv.on{box-shadow:0 0 0 2.5px var(--accent),var(--shadow)} .setv.no{opacity:.55} .setv.ok small{color:var(--ok)}
 .setv b{font-size:13px;font-weight:600} .setv small{color:var(--muted);font-size:11.5px}
 .setv svg{--paper:#fff;--ink:#222;--muted:#999;--wall:#3a3f3b;--glass:#9fd3f0;--glass-edge:#2a78b8}
+.lcv{display:block;width:100%;height:58px} .lcv img,.lcv svg{width:100%!important;height:58px!important;object-fit:contain;display:block}
+.setcard .lcv,.setcard .lcv img,.setcard .lcv svg{height:64px!important}
+.pv.pv3{grid-template-columns:2fr 1fr} .pv.pv3 img{height:170px} .pv.pv3 figure:not(.big) img{height:110px}
+.pv.pv1{grid-template-columns:1fr} .pv.pv1 img{height:180px;width:100%;object-fit:contain}
+.setv .sv2{grid-template-columns:2fr 1fr!important;align-items:center} .setv .sv2 img{height:130px!important} .setv .sv2 svg{height:70px!important;opacity:.85}
 :focus-visible{outline:none!important;box-shadow:0 0 0 3px var(--accent-soft),0 0 0 1.5px var(--accent)!important}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -2631,7 +2636,21 @@ svg.addEventListener("drop", e=>{ e.preventDefault(); const key=e.dataTransfer.g
 function fit(){ const r=svg.getBoundingClientRect(); if(!r.width) return; const pad=70; V.s=Math.min((r.width-2*pad)/S.b.w,(r.height-2*pad-60)/(S.b.d+4)); V.tx=(r.width-S.b.w*V.s)/2; V.ty=(r.height-(S.b.d+4)*V.s)/2+30; }
 
 /* ============================================================ библиотека */
-function libCardIcon(kind, key){
+function libCardIcon(kind, key){ return `<span class="lcv" data-iso="${kind}:${key}">${libCardSVG(kind,key)}</span>`; }
+// ленивый рендер изометрии для видимых карточек (порциями, чтобы не тормозить)
+const ISOQ=[]; let isoBusy=false;
+const isoObs=("IntersectionObserver" in window)?new IntersectionObserver(es=>{ for(const e of es) if(e.isIntersecting){ isoObs.unobserve(e.target); ISOQ.push(e.target); } pumpIso(); },{root:null,rootMargin:"200px"}):null;
+function isoFor(tag){ const i=tag.indexOf(":"), kind=tag.slice(0,i), key=tag.slice(i+1);
+  if(kind==="item"){ const f=FK[key]; return f?itemIso(key,f.w,f.h):null; }
+  if(kind==="room") return presetIso(ROOMS[+key]);
+  if(kind==="wall") return wallIso(key);
+  if(kind==="set"){ const st=OfficeKB.SETS.find(s=>s.key===key.split("|")[0]); return st?setIsoPNG(st.key,+key.split("|")[1]||0):null; } return null; }
+function pumpIso(){ if(isoBusy||!ISOQ.length) return; isoBusy=true;
+  requestAnimationFrame(()=>{ const t0=performance.now();
+    while(ISOQ.length&&performance.now()-t0<24){ const el=ISOQ.shift(); if(!document.contains(el)) continue; const u=isoFor(el.dataset.iso); if(u) el.innerHTML=`<img src="${u}" alt="" draggable="false">`; }
+    isoBusy=false; if(ISOQ.length) pumpIso(); }); }
+function hydrateIso(root){ const els=(root||document).querySelectorAll(".lcv[data-iso]"); if(!miniInit()) return; for(const el of els){ if(isoObs) isoObs.observe(el); else ISOQ.push(el); } pumpIso(); }
+function libCardSVG(kind, key){
   if(kind==="room"){ const p=ROOMS[key]; const w=p[1],h=p[2],sc=Math.min(56/w,30/h);
     return `<svg viewBox='-2 -2 64 40'><rect x='${30-w*sc/2}' y='${18-h*sc/2}' width='${w*sc}' height='${h*sc}' fill='${p[6]||CAT[p[3]].c}' stroke='${p[4]==="glass"?"#2a78b8":p[4]==="wall"?"#3a3f3b":"#999"}' stroke-width='${p[4]==="none"?1:2}' ${p[4]==="none"?"stroke-dasharray='3 2'":""}/></svg>`; }
   if(kind==="wall"){ const W=WALLS[key]; return `<svg viewBox='0 0 64 40'><rect x='4' y='${20-W.th*20}' width='56' height='${Math.max(2,W.th*40)}' fill='${W.glass?"var(--glass)":"var(--wall)"}' stroke='${W.glass?"var(--glass-edge)":"none"}'/></svg>`; }
@@ -2644,7 +2663,7 @@ function renderLib(){
   let o="";
   const sets=OfficeKB.SETS.filter(st=>m(st.name)||st.variants.some(v=>m(v.name))||m("набор"));
   if(sets.length) o+=`<details class="lg" ${q||libOpen.has("Готовые наборы")?"open":""} data-g="Готовые наборы"><summary>Готовые наборы <span>${sets.length}</span></summary><div class="cards">`+
-    sets.map(st=>`<button class="card setcard" draggable="true" data-set="${st.key}" title="Нажмите — выбрать вариант; перетащите на план — поставить">${setPlanSVG(st.key,Math.min(1,st.variants.length-1),"card")}<b>${esc(st.name)}</b><small>${st.variants.length} вариант${st.variants.length<5?"а":"ов"}</small></button>`).join("")+`</div></details>`;
+    sets.map(st=>`<button class="card setcard" draggable="true" data-set="${st.key}" title="Нажмите — выбрать вариант; перетащите на план — поставить"><span class="lcv" data-iso="set:${st.key}|${Math.min(1,st.variants.length-1)}">${setPlanSVG(st.key,Math.min(1,st.variants.length-1),"card")}</span><b>${esc(st.name)}</b><small>${st.variants.length} вариант${st.variants.length<5?"а":"ов"}</small></button>`).join("")+`</div></details>`;
   const rooms=ROOMS.map((p,i)=>[p,i]).filter(([p])=>m(p[0])||m(CAT[p[3]].n));
   if(rooms.length){ o+=`<h4>Помещения и зоны</h4><div class="cards">`+rooms.map(([p,i])=>`<button class="card ${tool&&tool.type==="room"&&tool.preset===p?"on":""}" draggable="true" data-add="room:${i}" title="Перетащите на план или нажмите, чтобы добавить. Shift+клик — нарисовать рамкой своего размера">${libCardIcon("room",i)}<b>${esc(p[0])}</b><small>${fmt(p[1],1)}×${fmt(p[2],1)} м · ${m2(p[1]*p[2])} м²</small></button>`).join("")+`</div>`; }
   const walls=Object.entries(WALLS).filter(([k,W])=>m(W.n));
@@ -2654,6 +2673,7 @@ function renderLib(){
     o+=`<details class="lg" ${q||libOpen.has(g)?"open":""} data-g="${esc(g)}"><summary>${g} <span>${list.length}</span></summary><div class="cards">`+list.map(f=>{ const n=(OfficeKB.SIZES[f[0]]||[]).length;
       return `<button class="card" draggable="true" data-add="item:${f[0]}" aria-label="${esc(f[1])}">${libCardIcon("item",f[0])}<b>${esc(f[1])}</b><small>${Math.round(f[3]*1000)}×${Math.round(f[4]*1000)}${n>1?` · ${n} размеров`:""}</small></button>`; }).join("")+`</div></details>`; }
   $("#lib").innerHTML = o || `<p class="note">Ничего не найдено. Попробуйте «диван», «переговорная» или «витраж».</p>`;
+  hydrateIso($("#lib"));
 }
 $("#lib").addEventListener("dragstart", e=>{ const c=e.target.closest("[data-add],[data-set]"); if(c) e.dataTransfer.setData("text/plain", c.dataset.add||("set:"+c.dataset.set+":"+Math.min(1,OfficeKB.SETS.find(s=>s.key===c.dataset.set).variants.length-1))); });
 $("#lib").addEventListener("click", e=>{ const c=e.target.closest("[data-set]"); if(!c) return; e.stopPropagation(); setDialog(c.dataset.set); }, true);
@@ -2665,7 +2685,7 @@ $("#lib").addEventListener("click", e=>{ const c=e.target.closest("[data-add],[d
   if(r.bottom<0||r.top>innerHeight) $(".main").scrollIntoView({behavior:"smooth",block:"start"}); });
 
 $("#q").addEventListener("input", renderLib);
-$("#lib").addEventListener("toggle", e=>{ const d=e.target; if(d.dataset&&d.dataset.g){ d.open?libOpen.add(d.dataset.g):libOpen.delete(d.dataset.g); } }, true);
+$("#lib").addEventListener("toggle", e=>{ const d=e.target; if(d.dataset&&d.dataset.g){ d.open?libOpen.add(d.dataset.g):libOpen.delete(d.dataset.g); if(d.open) pumpIso(); } }, true);
 function addFromLib(key, p){
   const [kind,k,vi]=key.split(":");
   if(kind==="set") return placeSet(k,+vi||0,p);
@@ -2987,7 +3007,9 @@ function item3D(it,base,box,H,root=R3&&R3.root){
     // ---- шкафы и хранение: корпус + фасады с ручками / полки
     case "wardB": case "wardS": case "glassCab": case "locker": { const hh=Math.min(z,H-.02), n=f.d==="wardS"?Math.max(2,Math.round(W/.9)):f.d==="locker"?Math.max(1,Math.round(W/.3)):Math.max(1,Math.round(W/.45));
       part(W,hh,D-.02,0,hh/2,-.01,f.c); const fc=f.d==="glassCab"?"#bcd9e8":f.d==="wardS"?"#d8d2c6":f.c, op=f.d==="glassCab"?.5:1;
-      for(let i=0;i<n;i++){ const x=-W/2+W*(i+.5)/n; part(W/n-.012,hh-.04,.02,x,hh/2,D/2-.01,fc,op); if(f.d!=="wardS") part(.015,f.d==="locker"?.08:.35,.03,x+(i%2?-1:1)*(W/n/2-.05),hh*(f.d==="locker"?.75:.5),D/2+.01,"#6f6f6a"); }
+      for(let i=0;i<n;i++){ const x=-W/2+W*(i+.5)/n; part(W/n-.012,hh-.04,.02,x,hh/2,D/2-.01+(f.d==="wardS"&&i%2?-.03:0),fc,op); if(f.d!=="wardS") part(.015,f.d==="locker"?.08:.35,.03,x+(i%2?-1:1)*(W/n/2-.05),hh*(f.d==="locker"?.75:.5),D/2+.01,"#6f6f6a");
+        else { part(.03,hh-.04,.035,-W/2+W*(i+1)/n-.015,hh/2,D/2,"#9a9488"); part(.012,hh*.5,.03,x+W/n/2-.08,hh*.5,D/2+.005,"#8a847a"); } }
+      if(f.d==="wardS"){ part(W,.05,.05,0,hh-.025,D/2,"#9a9488"); part(W,.05,.05,0,.025,D/2,"#9a9488"); }
       if(f.d==="locker") for(let j=1;j<3;j++) part(W,.01,.022,0,hh*j/3,D/2,"#9aa0a4"); break; }
     case "shelfO": { const hh=Math.min(z,H-.02), n=Math.max(1,Math.round(W/.8)), sh=Math.max(3,Math.round(hh/.38));
       for(let i=0;i<=n;i++) part(.025,hh,D,-W/2+W*i/n,hh/2,0,f.c); for(let j=0;j<=sh;j++) part(W,.025,D,0,Math.min(hh-.012,j*hh/sh+.012),0,f.c);
@@ -3055,33 +3077,46 @@ function isoPNG(items, bb, o={}){
   if(o.walls&&o.walls!=="none"){ const gl=o.walls==="glass", c=gl?"#a9d3ee":"#efece5", op=gl?.35:1, t=gl?.06:.1, h=1.1; top=Math.max(top,h);
     box(bb.w,h,t,bb.x+bb.w/2,h/2,bb.y,c,op); box(t,h,bb.h,bb.x,h/2,bb.y+bb.h/2,c,op); box(t,h,bb.h,bb.x+bb.w,h/2,bb.y+bb.h/2,c,op); }
   for(const it of items){ try{ item3D(it,0,box,H,root); const f=FK[it.k]; if(f) top=Math.max(top,f.z==="H"?2.8:Math.min(+f.z||0,2.8)); }catch(e){} }
-  const az=-0.75, el=0.62, cx=bb.x+bb.w/2, cz=bb.y+bb.h/2, dist=60;
+  if(o.draw){ try{ top=Math.max(top,o.draw(box)||0); }catch(e){} }
+  const az=o.az!=null?o.az:-0.75, el=o.el!=null?o.el:0.62, cx=bb.x+bb.w/2, cz=bb.y+bb.h/2, dist=60;
   cam.position.set(cx+Math.sin(az)*Math.cos(el)*dist, Math.sin(el)*dist, cz+Math.cos(az)*Math.cos(el)*dist); cam.up.set(0,1,0); cam.lookAt(cx, top*.35, cz);
   cam.updateMatrixWorld(); let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; const v=new THREE.Vector3();
-  for(const X of [bb.x,bb.x+bb.w]) for(const Y of [0,top]) for(const Z of [bb.y,bb.y+bb.h]){ v.set(X,Y,Z).applyMatrix4(cam.matrixWorldInverse); x0=Math.min(x0,v.x); x1=Math.max(x1,v.x); y0=Math.min(y0,v.y); y1=Math.max(y1,v.y); }
+  // кадр — по реальным габаритам модели (мелкие предметы не теряются), но не меньше рамки пола
+  const B=new THREE.Box3().setFromObject(root); if(!B.isEmpty()){ const hasFloor=!!o.floor; bb={x:Math.min(hasFloor?bb.x:1e9,B.min.x),y:Math.min(hasFloor?bb.y:1e9,B.min.z),w:0,h:0,x1:Math.max(hasFloor?bb.x+bb.w:-1e9,B.max.x),y1:Math.max(hasFloor?bb.y+bb.h:-1e9,B.max.z)}; bb.w=bb.x1-bb.x; bb.h=bb.y1-bb.y; top=B.max.y; }
+  const yb=B.isEmpty()?0:Math.max(0,B.min.y);
+  for(const X of [bb.x,bb.x+bb.w]) for(const Y of [yb,top]) for(const Z of [bb.y,bb.y+bb.h]){ v.set(X,Y,Z).applyMatrix4(cam.matrixWorldInverse); x0=Math.min(x0,v.x); x1=Math.max(x1,v.x); y0=Math.min(y0,v.y); y1=Math.max(y1,v.y); }
   const asp=360/270, mx=(x0+x1)/2, my=(y0+y1)/2, half=Math.max((x1-x0)/2/asp,(y1-y0)/2)*1.1+.05;
   Object.assign(cam,{left:mx-half*asp,right:mx+half*asp,top:my+half,bottom:my-half}); cam.updateProjectionMatrix();
-  r.render(scene,cam); const url=r.domElement.toDataURL("image/png"); if(key){ MINI.cache.set(key,url); if(MINI.cache.size>300) MINI.cache.delete(MINI.cache.keys().next().value); } return url;
+  r.render(scene,cam); const url=r.domElement.toDataURL("image/png"); if(key){ MINI.cache.set(key,url); if(MINI.cache.size>800) MINI.cache.delete(MINI.cache.keys().next().value); } return url;
 }
-function itemIso(k,w,h){ const f=FK[k]; if(!f) return null; const it={id:"_p",t:"item",lv:0,k,x:0,y:0,w,h,rot:0,flip:false}; return isoPNG([it],{x:0,y:0,w,h},{key:`i:${k}:${w}:${h}`}); }
+function itemIso(k,w,h,az){ const f=FK[k]; if(!f) return null; const it={id:"_p",t:"item",lv:0,k,x:0,y:0,w,h,rot:0,flip:false}; return isoPNG([it],{x:0,y:0,w,h},{key:`i:${k}:${w}:${h}:${az||""}`,az}); }
+function presetIso(p){ // карточка помещения: коробка с полом, стенами и типовой мебелью
+  const w=p[1],h=p[2], r={id:"_r",t:"room",lv:0,name:p[0],x:1,y:1,w,h,cat:p[3],border:p[4],sub:!!p[5],color:p[6]||CAT[p[3]].c};
+  let kids=[]; try{ const tmp={b:{w:w+2,d:h+2,h:3,mz:3.3,front:"vitrage"},items:[r]}; kids=OfficeKB.furnishRoom(tmp,r).filter(i=>i.t==="item"); }catch(e){}
+  return isoPNG(kids,{x:1,y:1,w,h},{floor:r.color,walls:p[4]==="none"?"none":p[4],key:"p:"+p[0]+w+h}); }
+function wallIso(k){ const W=WALLS[k]; return isoPNG([],{x:0,y:0,w:2,h:.6},{key:"w:"+k,draw:box=>{ const hh=W.h==="H"?2.6:Math.min(+W.h||2.6,2.6); box(2,hh,Math.max(W.th,.04),1,hh/2,.3,W.glass?"#a9d3ee":"#e9e6df",W.glass?.45:1); if(W.glass){ for(const x of [.02,1,1.98]) box(.05,hh,.08,x,hh/2,.3,"#55595c"); } return hh; }}); }
 function itemPlanSVG(k,w,h){ const it={k,w,h}; const p=.35; return `<svg viewBox='${-p} ${-p} ${w+2*p} ${h+2*p+.25}' class='pv2d'>${sym(it)}<text x='${w/2}' y='${h+p+.12}' font-size='${Math.max(.12,Math.min(.24,(w+h)/14))}' text-anchor='middle' fill='var(--muted)'>${mm(w)} × ${mm(h)}</text></svg>`; }
-function roomIso(r){ const kids=S.items.filter(i=>i.t==="item"&&(i.lv||0)===(r.lv||0)&&(()=>{ const a=aabb(i), cx=a.x+a.w/2, cy=a.y+a.h/2; return cx>=r.x-.3&&cx<=r.x+r.w+.3&&cy>=r.y-.3&&cy<=r.y+r.h+.3; })());
-  const key="r:"+JSON.stringify([r.x,r.y,r.w,r.h,r.color,r.border,kids.map(i=>[i.k,i.x,i.y,i.w,i.h,i.rot,i.flip])]);
-  return isoPNG(kids,{x:r.x,y:r.y,w:r.w,h:r.h},{floor:r.color,walls:r.sub?"none":r.border,key}); }
+function roomIso(r,az){ const kids=S.items.filter(i=>i.t==="item"&&(i.lv||0)===(r.lv||0)&&(()=>{ const a=aabb(i), cx=a.x+a.w/2, cy=a.y+a.h/2; return cx>=r.x-.3&&cx<=r.x+r.w+.3&&cy>=r.y-.3&&cy<=r.y+r.h+.3; })());
+  const key="r:"+(az||"")+JSON.stringify([r.x,r.y,r.w,r.h,r.color,r.border,kids.map(i=>[i.k,i.x,i.y,i.w,i.h,i.rot,i.flip])]);
+  return isoPNG(kids,{x:r.x,y:r.y,w:r.w,h:r.h},{floor:r.color,walls:r.sub?"none":r.border,key,az}); }
 function roomPlanSVG(r){ return `<svg viewBox='${r.x-.4} ${r.y-.4} ${r.w+.8} ${r.h+.8}' class='pv2d'>${planMarkup(r.lv||0,{export:true})}</svg>`; }
 function previewHTML(it){
   if(it.t==="wall") return "";
-  const iso = it.t==="room" ? roomIso(it) : itemIso(it.k,it.w,it.h);
-  const plan = it.t==="room" ? roomPlanSVG(it) : itemPlanSVG(it.k,it.w,it.h);
-  return `<h5>Вид</h5><div class="pv"><figure>${plan}<figcaption>сверху</figcaption></figure><figure>${iso?`<img src="${iso}" alt="Изометрия">`:`<p class="note">3D недоступно</p>`}<figcaption>изометрия</figcaption></figure></div>`;
+  const iso = it.t==="room" ? roomIso(it) : itemIso(it.k,it.w,it.h), iso2 = it.t==="room" ? roomIso(it,2.35) : itemIso(it.k,it.w,it.h,2.35);
+  if(!iso){ const plan = it.t==="room" ? roomPlanSVG(it) : itemPlanSVG(it.k,it.w,it.h); return `<h5>Вид</h5><div class="pv"><figure>${plan}<figcaption>сверху (3D недоступно)</figcaption></figure></div>`; }
+  return `<h5>Вид в 3D</h5><div class="pv pv3"><figure class="big"><img src="${iso}" alt="Изометрия спереди"><figcaption>изометрия · спереди-слева</figcaption></figure><figure><img src="${iso2||iso}" alt="Изометрия сзади"><figcaption>с другой стороны</figcaption></figure></div>`;
 }
 // подсказка при наведении на карточку библиотеки
 let libTipT=null;
 function libTip(card){ const tip=$("#libtip"); if(!card){ tip.hidden=true; return; }
-  const key=card.dataset.add; if(!key||!key.startsWith("item:")){ tip.hidden=true; return; } const k=key.slice(5), f=FK[k]; if(!f){ tip.hidden=true; return; }
-  const sz=OfficeKB.SIZES[k]||[];
-  tip.innerHTML=`<b>${esc(f.n)}</b><div class="pv">${`<figure>${itemPlanSVG(k,f.w,f.h)}<figcaption>сверху</figcaption></figure>`}<figure><img src="${itemIso(k,f.w,f.h)||""}" alt=""><figcaption>изометрия</figcaption></figure></div>`+
-    (sz.length?`<small>Типоразмеры: ${sz.map(s=>esc(s[0])).join(" · ")}</small>`:`<small>${mm(f.w)} × ${mm(f.h)} мм · h ${f.z==="H"?"до потолка":mm(+f.z)}</small>`);
+  const key=card.dataset.add||(card.dataset.set?"set:"+card.dataset.set:"");
+  if(key.startsWith("set:")){ const st=OfficeKB.SETS.find(s=>s.key===key.slice(4)); if(!st){ tip.hidden=true; return; } const vi=Math.min(1,st.variants.length-1);
+    tip.innerHTML=`<b>${esc(st.name)}</b><div class="pv pv1"><figure><img src="${setIsoPNG(st.key,vi)||""}" alt=""><figcaption>${esc(st.variants[vi].name)}</figcaption></figure></div><small>Варианты: ${st.variants.map(v=>esc(v.name)).join(" · ")}</small>`; }
+  else if(key.startsWith("room:")){ const pr=ROOMS[+key.slice(5)]; tip.innerHTML=`<b>${esc(pr[0])}</b><div class="pv pv1"><figure><img src="${presetIso(pr)||""}" alt=""><figcaption>${fmt(pr[1],1)} × ${fmt(pr[2],1)} м · ${m2(pr[1]*pr[2])} м² · с типовой мебелью</figcaption></figure></div>`; }
+  else if(key.startsWith("item:")){ const k=key.slice(5), f=FK[k]; if(!f){ tip.hidden=true; return; } const sz=OfficeKB.SIZES[k]||[];
+    tip.innerHTML=`<b>${esc(f.n)}</b><div class="pv pv1"><figure><img src="${itemIso(k,f.w,f.h)||""}" alt=""><figcaption>${mm(f.w)} × ${mm(f.h)} мм · h ${f.z==="H"?"до потолка":mm(+f.z)}</figcaption></figure></div>`+
+      (sz.length?`<small>Типоразмеры: ${sz.map(s=>esc(s[0])).join(" · ")}</small>`:""); }
+  else { tip.hidden=true; return; }
   const r=card.getBoundingClientRect(); tip.style.left=Math.min(innerWidth-300,r.right+8)+"px"; tip.style.top=Math.max(8,Math.min(innerHeight-300,r.top-20))+"px"; tip.hidden=false; }
 $("#lib").addEventListener("mouseover",e=>{ const c=e.target.closest(".card"); clearTimeout(libTipT); libTipT=setTimeout(()=>libTip(c),220); });
 $("#lib").addEventListener("mouseleave",()=>{ clearTimeout(libTipT); libTip(null); });
@@ -3163,7 +3198,7 @@ function setDialog(key,roomId){
       <div class="settabs">${sets.map(s=>`<button class="${s.key===cur?"on":""} ${room&&s.room.test(room.name)?"fit":""}" data-k="${s.key}">${esc(s.name)}</button>`).join("")}</div>
       ${st?`<p class="note">Все размеры — по стандартам (${esc(st.name.toLowerCase())}): мебель стандартных типоразмеров, проходы ≥ 0,6–0,9 м. Выберите вариант${room?" — «влезает» подсвечен зелёным":""}.</p>
       <div class="setgrid">${st.variants.map((v,i)=>{ const fitsS=room?((v.w<=room.w+.01&&v.h<=room.h+.01)||(v.h<=room.w+.01&&v.w<=room.h+.01)):true;
-        return `<button class="setv ${i===pick?"on":""} ${room?(fitsS?"ok":"no"):""}" data-v="${i}"><div class="sv2">${setPlanSVG(cur,i)}<img alt="" data-iso="${i}"></div><b>${esc(v.name)}</b><small>${fmt(v.w,1)} × ${fmt(v.h,1)} м · ${v.items.length} предм.${room?(fitsS?" · влезает":" · больше помещения"):""}</small></button>`; }).join("")}</div>`:""}
+        return `<button class="setv ${i===pick?"on":""} ${room?(fitsS?"ok":"no"):""}" data-v="${i}"><div class="sv2"><img alt="" data-iso="${i}">${setPlanSVG(cur,i)}</div><b>${esc(v.name)}</b><small>${fmt(v.w,1)} × ${fmt(v.h,1)} м · ${v.items.length} предм.${room?(fitsS?" · влезает":" · больше помещения"):""}</small></button>`; }).join("")}</div>`:""}
       <div class="actions">${st?(room?`<button class="btn primary" id="sRoom">Поставить в «${esc(room.name)}»</button><button class="btn" id="sAuto">Подобрать вариант по размеру</button>`:`<button class="btn primary" id="sPlan">Поставить на план</button>${sel&&byId(sel)&&byId(sel).t==="room"?`<button class="btn" id="sSel">В выбранное помещение</button>`:""}`):""}<span class="spacer"></span><button class="btn" id="sClose">Закрыть</button></div></div>`;
     // изометрия — после отрисовки, чтобы окно открылось сразу
     setTimeout(()=>m.querySelectorAll("[data-iso]").forEach(img=>{ const u=setIsoPNG(cur,+img.dataset.iso); if(u) img.src=u; else img.remove(); }),20); };

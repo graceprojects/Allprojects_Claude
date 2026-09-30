@@ -91,6 +91,15 @@
     ["deskC","Место консультации (стол + 3 стула)","Рабочие места",1.4,2.2,.75,"deskC","#e8e2d6"],["roundC","Стол консультации круглый на 3","Рабочие места",1.8,1.8,.75,"round","#e8e2d6"],
     ["phoneB","Звукоизолированная кабина (фон-бокс)","Рабочие места",1.0,1.0,2.3,"pod","#3f4a52"],["meetPod","Переговорный бокс на 4","Рабочие места",2.2,2.0,2.3,"pod","#3f4a52"],
     ["board","Маркерная доска","Рабочие места",1.8,.1,1.2,"board","#f7f7f5"],["meetO","Стол переговоров «бочка» со стульями","Рабочие места",4.2,2.4,.75,"meetO","#d8cdb8"],
+    // места консультаций: «равная посадка» — менеджер за общим столом с гостями (ноутбук), «руководитель» — менеджер за рабочим столом
+    ["consSq","Консультация: квадратный стол на 4 (равная посадка)","Места консультаций",2.1,2.1,.75,"consSq","#e0d6c6"],
+    ["consRd","Консультация: круглый стол на 4–5 (равная посадка)","Места консультаций",2.2,2.2,.75,"consRd","#e0d6c6"],
+    ["consRect","Консультация: стол 2 + 2 (равная посадка)","Места консультаций",1.4,2.0,.75,"consRect","#e0d6c6"],
+    ["consScr","Консультация: стол у экрана на 4–6","Места консультаций",2.1,2.25,.75,"consScr","#e0d6c6"],
+    ["consL","Менеджер: Г-образный стол, гости напротив","Места консультаций",1.6,2.5,.75,"consL","#e8e2d6"],
+    ["consLs","Менеджер: Г-образный стол, гости сбоку","Места консультаций",2.3,2.1,.75,"consLs","#e8e2d6"],
+    ["consT","Менеджер: Т-образный стол с приставным","Места консультаций",2.2,3.0,.75,"consT","#e8e2d6"],
+    ["consD","Менеджер: стол с полукруглой приставкой","Места консультаций",2.2,2.7,.75,"consD","#e8e2d6"],
     ["deskT","Стол для тренингов складной","Рабочие места",1.4,.6,.75,"table","#e8e2d6"],["chairI","Стул ISO / посетителя","Рабочие места",.55,.55,.85,"chair","#55595c"],
     ["projector","Экран проекционный","Рабочие места",2.4,.12,1.8,"board","#f7f7f5"],["partG","Мобильная стеклянная перегородка","Рабочие места",1.2,.06,2.0,"partG","#a9d3ee"],
     ["acoust","Акустический экран","Рабочие места",1.4,.06,1.5,"partA","#8d9aa3"],
@@ -241,6 +250,14 @@
     mirror: S_(["600", .6, .05], ["800", .8, .05], ["1200", 1.2, .05]),
     // декор
     plantT: S_(["Ø800", .8, .8], ["Ø1000", 1.0, 1.0], ["Ø1200", 1.2, 1.2]),
+    consSq: S_(["стол 800×800 · компакт", 2.0, 2.0], ["стол 900×900", 2.1, 2.1], ["стол 1000×1000", 2.2, 2.2], ["стол 1200×1200 · просторный", 2.4, 2.4]),
+    consRd: S_(["Ø900 на 4", 2.1, 2.1], ["Ø1000 на 4", 2.2, 2.2], ["Ø1100 на 4", 2.3, 2.3], ["Ø1200 на 5", 2.4, 2.4]),
+    consRect: S_(["стол 1200×800", 1.2, 2.0], ["стол 1400×800", 1.4, 2.0], ["стол 1600×900", 1.6, 2.1]),
+    consScr: S_(["стол 1400×800 на 4", 2.0, 2.05], ["стол 1600×900 на 4", 2.1, 2.25], ["стол 2000×900 на 6", 2.1, 2.65]),
+    consL: S_(["стол 1400 + приставка · 2 гостя", 1.4, 2.5], ["стол 1600 + приставка · 2 гостя", 1.6, 2.5], ["стол 1800 + приставка · 3 гостя", 1.8, 2.6]),
+    consLs: S_(["1400×1400 · 2 гостя сбоку", 2.1, 2.1], ["1600×1400 · 2 гостя сбоку", 2.3, 2.1], ["1800×1800 · 3 гостя сбоку", 2.5, 2.6]),
+    consT: S_(["1600 + приставной на 2", 2.2, 2.4], ["1600 + приставной на 4", 2.2, 3.0], ["1800 + приставной на 6", 2.2, 3.7]),
+    consD: S_(["1600 + приставка Ø1000 · 3 гостя", 2.2, 2.7], ["1800 + приставка Ø1200 · 3 гостя", 2.4, 2.8], ["2000 + приставка Ø1400 · 4 гостя", 2.6, 2.9]),
     wardC: S_(["900×900", .9, .9], ["1000×1000", 1.0, 1.0], ["1200×1200", 1.2, 1.2]),
     wardH: S_(["800", .8, .45], ["1200", 1.2, .45], ["1600", 1.6, .45], ["2000", 2.0, .45]),
     wardOpen: S_(["1600", 1.6, .5], ["2000", 2.0, .5], ["2400", 2.4, .5], ["3000", 3.0, .5]),
@@ -272,7 +289,7 @@
   };
   const MAT = { sofa: "textile", sofaL: "textile", arm: "textile", lounge: "textile", chairL: "textile", booth: "textile", stool: "textile", chair: "textile",
     table: "wood", meet: "wood", cafe4: "wood", round: "wood", barT: "wood", deskC: "wood", work3: "wood", os1: "wood", os4: "wood", deskL: "wood", credenza: "wood", recep: "wood", recepL: "wood", bar: "wood", shelfO: "wood", kidtab: "wood",
-    wardB: "lacquer", wardS: "lacquer", locker: "lacquer", glassCab: "lacquer", nicheTV: "lacquer", pedestal: "lacquer", kitch: "lacquer", kitchL: "lacquer", kBase: "lacquer", kSink: "lacquer", kIsland: "lacquer", mockK: "lacquer", cab: "lacquer", shelf: "metal", archM: "metal", safe: "metal", sinkD: "stone", wardC: "lacquer", wardH: "lacquer", wardOpen: "wood", recepR: "wood", recepM: "wood", cashDesk: "metal", meetO: "wood", rtable: "wood", cafe2: "wood", beanbag: "textile", babyChg: "lacquer" };
+    wardB: "lacquer", wardS: "lacquer", locker: "lacquer", glassCab: "lacquer", nicheTV: "lacquer", pedestal: "lacquer", kitch: "lacquer", kitchL: "lacquer", kBase: "lacquer", kSink: "lacquer", kIsland: "lacquer", mockK: "lacquer", cab: "lacquer", shelf: "metal", archM: "metal", safe: "metal", sinkD: "stone", consSq: "wood", consRd: "wood", consRect: "wood", consScr: "wood", consL: "wood", consLs: "wood", consT: "wood", consD: "wood", wardC: "lacquer", wardH: "lacquer", wardOpen: "wood", recepR: "wood", recepM: "wood", cashDesk: "metal", meetO: "wood", rtable: "wood", cafe2: "wood", beanbag: "textile", babyChg: "lacquer" };
   KB.matOf = k => { const f = KB.FK && KB.FK[k]; return f ? (MAT[k] || MAT[f.d] || null) : null; };
   // стили наборов: какой цвет у каждого материала
   KB.STYLES = [
@@ -297,6 +314,15 @@
       { name: "Стол 1600 · навесные полки · кредеца", w: 3.0, h: 2.6, items: [SI("credenza", .6, 0, 0, 1), SI("wallShelf", .6, 0, 0, 3), SI("chairO", .9, .6), SI("desk", .5, 1.25, 0, 2), SI("chairV", .7, 2.1), SI("chairV", 1.5, 2.1)] },
       { name: "Стол с регулировкой высоты 1600 · локер", w: 3.0, h: 2.6, items: [SI("pantry", 2.4, 0, 0, 2), SI("chairO", .9, .15), SI("deskH", .5, .85, 0, 2), SI("pedestal", 2.15, .9), SI("chairV", .7, 2.0), SI("chairV", 1.5, 2.0)] },
     ] },
+    { key: "consEq", name: "Консультация — равная посадка (стол на 4)", room: /консульт|менеджер|мпп|переговор|зал/i, align: "center", variants: [].concat(
+      ...[["consSq", "квадратный"], ["consRd", "круглый"], ["consRect", "прямоугольный 2 + 2"], ["consScr", "у экрана"]].map(([k, nm]) => KB.SIZES[k].map((sz, i) => ({ name: `${nm} · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI(k, 0, 0, 0, i)] }))),
+      [{ name: "квадратный 900 · кредеца для документов", w: 2.1, h: 2.65, items: [SI("credenza", .25, 0, 0, 1), SI("consSq", 0, .55, 0, 1)] },
+       { name: "круглый Ø1000 · стойка буклетов · растение", w: 2.9, h: 2.2, items: [SI("consRd", 0, 0, 0, 1), SI("brochure", 2.35, .1), SI("plant", 2.3, 1.55, 0, 0)] }]) },
+    { key: "consBoss", name: "Менеджер — посадка «руководитель»", room: /консульт|менеджер|мпп|кабинет/i, align: "back", variants: [].concat(
+      KB.SIZES.work3.map((sz, i) => ({ name: `прямой стол · ${sz[0]} · 2 гостя`, w: sz[1], h: sz[2], items: [SI("work3", 0, 0, 0, i)] })),
+      ...[["consL", "Г-образный, гости напротив"], ["consLs", "Г-образный, гости сбоку"], ["consT", "Т-образный с приставным"], ["consD", "с полукруглой приставкой"]].map(([k, nm]) => KB.SIZES[k].map((sz, i) => ({ name: `${nm} · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI(k, 0, 0, 0, i)] }))),
+      [{ name: "Г-образный 1600 · шкаф и кредеца у стены", w: 2.6, h: 2.95, items: [SI("docCab", 0, 0, 0, 1), SI("credenza", 1.0, 0, 0, 0), SI("consL", .5, .45, 0, 1)] },
+       { name: "Т-образный на 4 · стеллаж за спиной", w: 2.2, h: 3.45, items: [SI("shelfO", .5, 0, 0, 2), SI("consT", 0, .45, 0, 1)] }]) },
     { key: "cons", name: "Место консультации (открытое)", room: /консульт|мпп|open|зал/i, align: "center", variants: [
       { name: "Стол 1400 · 3 стула", w: 1.4, h: 2.2, items: [SI("deskC", 0, 0, 0, 1)] },
       { name: "Стол 1600 · тумба · стойка буклетов", w: 2.8, h: 2.3, items: [SI("deskC", 0, 0, 0, 2), SI("pedestal", 1.75, .1), SI("brochure", 2.3, .1)] },

@@ -456,6 +456,15 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     ["deskC","Место консультации (стол + 3 стула)","Рабочие места",1.4,2.2,.75,"deskC","#e8e2d6"],["roundC","Стол консультации круглый на 3","Рабочие места",1.8,1.8,.75,"round","#e8e2d6"],
     ["phoneB","Звукоизолированная кабина (фон-бокс)","Рабочие места",1.0,1.0,2.3,"pod","#3f4a52"],["meetPod","Переговорный бокс на 4","Рабочие места",2.2,2.0,2.3,"pod","#3f4a52"],
     ["board","Маркерная доска","Рабочие места",1.8,.1,1.2,"board","#f7f7f5"],["meetO","Стол переговоров «бочка» со стульями","Рабочие места",4.2,2.4,.75,"meetO","#d8cdb8"],
+    // места консультаций: «равная посадка» — менеджер за общим столом с гостями (ноутбук), «руководитель» — менеджер за рабочим столом
+    ["consSq","Консультация: квадратный стол на 4 (равная посадка)","Места консультаций",2.1,2.1,.75,"consSq","#e0d6c6"],
+    ["consRd","Консультация: круглый стол на 4–5 (равная посадка)","Места консультаций",2.2,2.2,.75,"consRd","#e0d6c6"],
+    ["consRect","Консультация: стол 2 + 2 (равная посадка)","Места консультаций",1.4,2.0,.75,"consRect","#e0d6c6"],
+    ["consScr","Консультация: стол у экрана на 4–6","Места консультаций",2.1,2.25,.75,"consScr","#e0d6c6"],
+    ["consL","Менеджер: Г-образный стол, гости напротив","Места консультаций",1.6,2.5,.75,"consL","#e8e2d6"],
+    ["consLs","Менеджер: Г-образный стол, гости сбоку","Места консультаций",2.3,2.1,.75,"consLs","#e8e2d6"],
+    ["consT","Менеджер: Т-образный стол с приставным","Места консультаций",2.2,3.0,.75,"consT","#e8e2d6"],
+    ["consD","Менеджер: стол с полукруглой приставкой","Места консультаций",2.2,2.7,.75,"consD","#e8e2d6"],
     ["deskT","Стол для тренингов складной","Рабочие места",1.4,.6,.75,"table","#e8e2d6"],["chairI","Стул ISO / посетителя","Рабочие места",.55,.55,.85,"chair","#55595c"],
     ["projector","Экран проекционный","Рабочие места",2.4,.12,1.8,"board","#f7f7f5"],["partG","Мобильная стеклянная перегородка","Рабочие места",1.2,.06,2.0,"partG","#a9d3ee"],
     ["acoust","Акустический экран","Рабочие места",1.4,.06,1.5,"partA","#8d9aa3"],
@@ -606,6 +615,14 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     mirror: S_(["600", .6, .05], ["800", .8, .05], ["1200", 1.2, .05]),
     // декор
     plantT: S_(["Ø800", .8, .8], ["Ø1000", 1.0, 1.0], ["Ø1200", 1.2, 1.2]),
+    consSq: S_(["стол 800×800 · компакт", 2.0, 2.0], ["стол 900×900", 2.1, 2.1], ["стол 1000×1000", 2.2, 2.2], ["стол 1200×1200 · просторный", 2.4, 2.4]),
+    consRd: S_(["Ø900 на 4", 2.1, 2.1], ["Ø1000 на 4", 2.2, 2.2], ["Ø1100 на 4", 2.3, 2.3], ["Ø1200 на 5", 2.4, 2.4]),
+    consRect: S_(["стол 1200×800", 1.2, 2.0], ["стол 1400×800", 1.4, 2.0], ["стол 1600×900", 1.6, 2.1]),
+    consScr: S_(["стол 1400×800 на 4", 2.0, 2.05], ["стол 1600×900 на 4", 2.1, 2.25], ["стол 2000×900 на 6", 2.1, 2.65]),
+    consL: S_(["стол 1400 + приставка · 2 гостя", 1.4, 2.5], ["стол 1600 + приставка · 2 гостя", 1.6, 2.5], ["стол 1800 + приставка · 3 гостя", 1.8, 2.6]),
+    consLs: S_(["1400×1400 · 2 гостя сбоку", 2.1, 2.1], ["1600×1400 · 2 гостя сбоку", 2.3, 2.1], ["1800×1800 · 3 гостя сбоку", 2.5, 2.6]),
+    consT: S_(["1600 + приставной на 2", 2.2, 2.4], ["1600 + приставной на 4", 2.2, 3.0], ["1800 + приставной на 6", 2.2, 3.7]),
+    consD: S_(["1600 + приставка Ø1000 · 3 гостя", 2.2, 2.7], ["1800 + приставка Ø1200 · 3 гостя", 2.4, 2.8], ["2000 + приставка Ø1400 · 4 гостя", 2.6, 2.9]),
     wardC: S_(["900×900", .9, .9], ["1000×1000", 1.0, 1.0], ["1200×1200", 1.2, 1.2]),
     wardH: S_(["800", .8, .45], ["1200", 1.2, .45], ["1600", 1.6, .45], ["2000", 2.0, .45]),
     wardOpen: S_(["1600", 1.6, .5], ["2000", 2.0, .5], ["2400", 2.4, .5], ["3000", 3.0, .5]),
@@ -637,7 +654,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
   };
   const MAT = { sofa: "textile", sofaL: "textile", arm: "textile", lounge: "textile", chairL: "textile", booth: "textile", stool: "textile", chair: "textile",
     table: "wood", meet: "wood", cafe4: "wood", round: "wood", barT: "wood", deskC: "wood", work3: "wood", os1: "wood", os4: "wood", deskL: "wood", credenza: "wood", recep: "wood", recepL: "wood", bar: "wood", shelfO: "wood", kidtab: "wood",
-    wardB: "lacquer", wardS: "lacquer", locker: "lacquer", glassCab: "lacquer", nicheTV: "lacquer", pedestal: "lacquer", kitch: "lacquer", kitchL: "lacquer", kBase: "lacquer", kSink: "lacquer", kIsland: "lacquer", mockK: "lacquer", cab: "lacquer", shelf: "metal", archM: "metal", safe: "metal", sinkD: "stone", wardC: "lacquer", wardH: "lacquer", wardOpen: "wood", recepR: "wood", recepM: "wood", cashDesk: "metal", meetO: "wood", rtable: "wood", cafe2: "wood", beanbag: "textile", babyChg: "lacquer" };
+    wardB: "lacquer", wardS: "lacquer", locker: "lacquer", glassCab: "lacquer", nicheTV: "lacquer", pedestal: "lacquer", kitch: "lacquer", kitchL: "lacquer", kBase: "lacquer", kSink: "lacquer", kIsland: "lacquer", mockK: "lacquer", cab: "lacquer", shelf: "metal", archM: "metal", safe: "metal", sinkD: "stone", consSq: "wood", consRd: "wood", consRect: "wood", consScr: "wood", consL: "wood", consLs: "wood", consT: "wood", consD: "wood", wardC: "lacquer", wardH: "lacquer", wardOpen: "wood", recepR: "wood", recepM: "wood", cashDesk: "metal", meetO: "wood", rtable: "wood", cafe2: "wood", beanbag: "textile", babyChg: "lacquer" };
   KB.matOf = k => { const f = KB.FK && KB.FK[k]; return f ? (MAT[k] || MAT[f.d] || null) : null; };
   // стили наборов: какой цвет у каждого материала
   KB.STYLES = [
@@ -662,6 +679,15 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       { name: "Стол 1600 · навесные полки · кредеца", w: 3.0, h: 2.6, items: [SI("credenza", .6, 0, 0, 1), SI("wallShelf", .6, 0, 0, 3), SI("chairO", .9, .6), SI("desk", .5, 1.25, 0, 2), SI("chairV", .7, 2.1), SI("chairV", 1.5, 2.1)] },
       { name: "Стол с регулировкой высоты 1600 · локер", w: 3.0, h: 2.6, items: [SI("pantry", 2.4, 0, 0, 2), SI("chairO", .9, .15), SI("deskH", .5, .85, 0, 2), SI("pedestal", 2.15, .9), SI("chairV", .7, 2.0), SI("chairV", 1.5, 2.0)] },
     ] },
+    { key: "consEq", name: "Консультация — равная посадка (стол на 4)", room: /консульт|менеджер|мпп|переговор|зал/i, align: "center", variants: [].concat(
+      ...[["consSq", "квадратный"], ["consRd", "круглый"], ["consRect", "прямоугольный 2 + 2"], ["consScr", "у экрана"]].map(([k, nm]) => KB.SIZES[k].map((sz, i) => ({ name: `${nm} · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI(k, 0, 0, 0, i)] }))),
+      [{ name: "квадратный 900 · кредеца для документов", w: 2.1, h: 2.65, items: [SI("credenza", .25, 0, 0, 1), SI("consSq", 0, .55, 0, 1)] },
+       { name: "круглый Ø1000 · стойка буклетов · растение", w: 2.9, h: 2.2, items: [SI("consRd", 0, 0, 0, 1), SI("brochure", 2.35, .1), SI("plant", 2.3, 1.55, 0, 0)] }]) },
+    { key: "consBoss", name: "Менеджер — посадка «руководитель»", room: /консульт|менеджер|мпп|кабинет/i, align: "back", variants: [].concat(
+      KB.SIZES.work3.map((sz, i) => ({ name: `прямой стол · ${sz[0]} · 2 гостя`, w: sz[1], h: sz[2], items: [SI("work3", 0, 0, 0, i)] })),
+      ...[["consL", "Г-образный, гости напротив"], ["consLs", "Г-образный, гости сбоку"], ["consT", "Т-образный с приставным"], ["consD", "с полукруглой приставкой"]].map(([k, nm]) => KB.SIZES[k].map((sz, i) => ({ name: `${nm} · ${sz[0]}`, w: sz[1], h: sz[2], items: [SI(k, 0, 0, 0, i)] }))),
+      [{ name: "Г-образный 1600 · шкаф и кредеца у стены", w: 2.6, h: 2.95, items: [SI("docCab", 0, 0, 0, 1), SI("credenza", 1.0, 0, 0, 0), SI("consL", .5, .45, 0, 1)] },
+       { name: "Т-образный на 4 · стеллаж за спиной", w: 2.2, h: 3.45, items: [SI("shelfO", .5, 0, 0, 2), SI("consT", 0, .45, 0, 1)] }]) },
     { key: "cons", name: "Место консультации (открытое)", room: /консульт|мпп|open|зал/i, align: "center", variants: [
       { name: "Стол 1400 · 3 стула", w: 1.4, h: 2.2, items: [SI("deskC", 0, 0, 0, 1)] },
       { name: "Стол 1600 · тумба · стойка буклетов", w: 2.8, h: 2.3, items: [SI("deskC", 0, 0, 0, 2), SI("pedestal", 1.75, .1), SI("brochure", 2.3, .1)] },
@@ -2440,6 +2466,21 @@ function sym(it, forCard){
       s+=R(fw,land,.2,run,"fill='var(--ink)' opacity='.35'")+`<path d='M${fw/2} ${h-.2} V${land+.2} M${fw/2-.12} ${land+.4} L${fw/2} ${land+.2} L${fw/2+.12} ${land+.4}' stroke='var(--ink)' stroke-width='.9' fill='none' ${k}/>`; return s; }
     case "stair1": { let s=R(0,0,w,h); const n=Math.max(3,Math.round(h/.3)); for(let i=1;i<n;i++) s+=`<line x1='0' y1='${h*i/n}' x2='${w}' y2='${h*i/n}' ${lt}/>`;
       return s+`<path d='M${w/2} ${h-.2} V.3' stroke='var(--ink)' stroke-width='.9' fill='none' ${k}/>`; }
+    // ---- места консультаций: менеджер (кресло .55 + ноутбук/монитор) и гости (.45)
+    case "consSq": { const t=w-1.2, lap=R(w/2-.17,.62,.34,.22,"fill='#2b2f33' stroke='none'");
+      return R(.6,.6,t,t)+lap+chair(w/2,.3,.52,0)+chair(w/2,h-.3,.45,180)+chair(.3,h/2,.45,270)+chair(w-.3,h/2,.45,90); }
+    case "consRd": { const D=w-1.2, n=D>=1.15?5:4; let s=`<circle cx='${w/2}' cy='${h/2}' r='${D/2}' ${st}/>`+R(w/2-.17,h/2-D/2+.08,.34,.22,"fill='#2b2f33' stroke='none'");
+      for(let i=0;i<n;i++){ const a=-Math.PI/2+i*2*Math.PI/n; s+=chair(w/2+Math.cos(a)*(D/2+.3),h/2+Math.sin(a)*(D/2+.3),i?.45:.52,a*180/Math.PI+90); } return s; }
+    case "consRect": { const td=h-1.2; return R(0,.6,w,td)+R(w*.25-.17,.62,.34,.22,"fill='#2b2f33' stroke='none'")+chair(w*.25,.3,.52,0)+chair(w*.75,.3,.45,0)+chair(w*.25,h-.3,.45,180)+chair(w*.75,h-.3,.45,180); }
+    case "consScr": { const tw=w-1.2, tl=h-.65, n=Math.max(2,Math.round(tl/.7)); let s=R((w-Math.min(w,1.6))/2,0,Math.min(w,1.6),.08,"fill='#2b2f33' stroke='none'")+R(.6,.35,tw,tl)+R(.62,.5,.22,.34,"fill='#2b2f33' stroke='none'");
+      for(let i=0;i<n;i++){ const y=.35+tl*(i+.5)/n; s+=chair(.3,y,i?.45:.52,270)+chair(w-.3,y,.45,90); } return s; }
+    case "consL": { const n=w>=1.75?3:2; return chair(w*.4,.45,.55,0)+R(0,.9,w,.8)+R(w-.6,.1,.6,.8)+R(w-.55,.25,.5,.1,"fill='#2b2f33' stroke='none'")+Array.from({length:n},(_,i)=>chair(w*(i+.5)/n,h-.3,.45,180)).join(""); }
+    case "consLs": { const A=w-.75, n=h>=2.4?3:2; let s=R(0,0,A,.7)+R(A-.7,.7,.7,h-.8)+R(A*.3,.05,.5,.1,"fill='#2b2f33' stroke='none'")+chair(A*.4,1.05,.55,180);
+      for(let i=0;i<n;i++) s+=chair(A+.35,.9+(h-1)*(i+.5)/n,.45,90); return s; }
+    case "consT": { const tw=h>3.5?1.8:1.6, L=h-1.55, n=Math.max(1,Math.round(L/.65)); let s=chair(w/2,.3,.55,0)+R((w-tw)/2,.65,tw,.8)+R(w/2-.2,.7,.4,.1,"fill='#2b2f33' stroke='none'")+R(w/2-.35,1.45,.7,L);
+      for(let i=0;i<n;i++){ const y=1.45+L*(i+.5)/n; s+=chair(w/2-.7,y,.45,270)+chair(w/2+.7,y,.45,90); } return s; }
+    case "consD": { const tw=w-.6, D=w-1.2, n=D>=1.35?4:3; let s=chair(w/2,.3,.55,0)+R(.3,.65,tw,.8)+`<path d='M${w/2-D/2} 1.45 A ${D/2} ${D/2} 0 0 0 ${w/2+D/2} 1.45 Z' ${st}/>`+R(w/2-.2,.7,.4,.1,"fill='#2b2f33' stroke='none'");
+      for(let i=0;i<n;i++){ const a=Math.PI*(.15+.7*(i+.5)/n); s+=chair(w/2+Math.cos(a)*(D/2+.3),1.45+Math.sin(a)*(D/2+.3),.45,a*180/Math.PI+90); } return s; }
     // ---- навесное и угловое (навесное — пунктиром: выше плоскости разреза)
     case "wardC": { const d=Math.min(.6,w*.5,h*.5); return `<path d='M0 0 H${w} V${d} H${d} V${h} H0 Z' ${st}/><line x1='${d}' y1='${d}' x2='${w}' y2='${d}' ${lt}/><path d='M${d} ${d} L${w} ${d*.35} M${d} ${d} L${d*.35} ${h}' ${lt}/>`; }
     case "wardH": return R(0,0,w,h,"fill='none' stroke='var(--ink)' stroke-width='.7' stroke-dasharray='4 2.5' "+k)+`<line x1='0' y1='0' x2='${w}' y2='${h}' stroke='var(--ink)' stroke-width='.4' stroke-dasharray='4 2.5' ${k}/>`;
@@ -3145,6 +3186,22 @@ function item3D(it,base,box,H,root=R3&&R3.root){
           part(fw,h1,run/10,-W/2+fw/2,h1/2,D/2-run/10*(i+.5),f.c); part(fw,h2,run/10,W/2-fw/2,h2/2,-D/2+land+run/10*(i+.5),f.c); }
         part(W,1.65,land,0,1.65/2,-D/2+land/2,f.c); } break; }
     case "cubicle": part(.04,2,D,-W/2,1.1,0,"#c7d7da"); part(.04,2,D,W/2,1.1,0,"#c7d7da"); part(W,2,.04,0,1.1,D/2,"#c7d7da",.6); break;
+    // ---- места консультаций (x,z — от центра предмета; y плана = z)
+    case "consSq": case "consRd": case "consRect": case "consScr": case "consL": case "consLs": case "consT": case "consD": {
+      const X=u=>u-W/2, Z=v=>v-D/2, lap=(u,v,mon)=>{ if(mon){ part(.5,.32,.03,X(u),.95,Z(v),"#1f2326"); part(.06,.14,.06,X(u),.82,Z(v),"#333"); } else { part(.34,.015,.24,X(u),.76,Z(v),"#2b2f33"); part(.34,.22,.015,X(u),.87,Z(v-.12),"#2b2f33"); } };
+      const disk=(u,v,Dm)=>{ const [px,pz]=local(X(u),Z(v)); const m=new THREE.Mesh(new THREE.CylinderGeometry(Dm/2,Dm/2,.04,32),new THREE.MeshStandardMaterial({color:f.c})); m.position.set(px,base+.74,pz); m.castShadow=true; root.add(m); part(.08,.72,.08,X(u),.36,Z(v),"#555"); part(Dm*.45,.02,Dm*.45,X(u),.01,Z(v),"#555"); };
+      const mgr=(u,v,dx,dz)=>chairAt(X(u),Z(v),dx,dz,"#2f3133",.52), gst=(u,v,dx,dz)=>chairAt(X(u),Z(v),dx,dz,"#6b7075",.45);
+      if(f.d==="consSq"){ const t=W-1.2; tbl(t,t,.75,0,0,f.c); lap(W/2,.75); mgr(W/2,.3,0,1); gst(W/2,D-.3,0,-1); gst(.3,D/2,1,0); gst(W-.3,D/2,-1,0); }
+      else if(f.d==="consRd"){ const Dm=W-1.2, n=Dm>=1.15?5:4; disk(W/2,D/2,Dm); lap(W/2,D/2-Dm/2+.2); for(let i=0;i<n;i++){ const a=-Math.PI/2+i*2*Math.PI/n, u=W/2+Math.cos(a)*(Dm/2+.3), v=D/2+Math.sin(a)*(Dm/2+.3); chairAt(X(u),Z(v),-Math.cos(a),-Math.sin(a),i?"#6b7075":"#2f3133",i?.45:.52); } }
+      else if(f.d==="consRect"){ const td=D-1.2; tbl(W,td,.75,0,0,f.c); lap(W*.25,.75); mgr(W*.25,.3,0,1); gst(W*.75,.3,0,1); gst(W*.25,D-.3,0,-1); gst(W*.75,D-.3,0,-1); }
+      else if(f.d==="consScr"){ const tw=W-1.2, tl=D-.65, n=Math.max(2,Math.round(tl/.7)); part(Math.min(W,1.6),.9,.05,0,1.35,Z(.03),"#1f2326"); tbl(tw,tl,.75,0,Z(.35+tl/2),f.c); lap(.73,.67,false);
+        for(let i=0;i<n;i++){ const v=.35+tl*(i+.5)/n; chairAt(X(.3),Z(v),1,0,i?"#6b7075":"#2f3133",i?.45:.52); gst(W-.3,v,-1,0); } }
+      else if(f.d==="consL"){ const n=W>=1.75?3:2; pdesk(W,.8,.75,0,Z(1.3),f.c); tbl(.6,.8,.75,X(W-.3),Z(.5),f.c); lap(W-.3,.3,true); chairAt(X(W*.4),Z(.45),0,1,"#2f3133",.55); for(let i=0;i<n;i++) gst(W*(i+.5)/n,D-.3,0,-1); }
+      else if(f.d==="consLs"){ const A=W-.75, n=D>=2.4?3:2; pdesk(A,.7,.75,X(A/2),Z(.35),f.c); tbl(.7,D-.8,.75,X(A-.35),Z(.7+(D-.8)/2),f.c); lap(A*.3+.25,.1,true); chairAt(X(A*.4),Z(1.05),0,-1,"#2f3133",.55); for(let i=0;i<n;i++) gst(A+.35,.9+(D-1)*(i+.5)/n,-1,0); }
+      else if(f.d==="consT"){ const tw=D>3.5?1.8:1.6, L=D-1.55, n=Math.max(1,Math.round(L/.65)); pdesk(tw,.8,.75,0,Z(1.05),f.c); tbl(.7,L,.74,0,Z(1.45+L/2),shade(f.c,.95)); lap(W/2,.75,true); chairAt(0,Z(.3),0,1,"#2f3133",.55); for(let i=0;i<n;i++){ const v=1.45+L*(i+.5)/n; gst(W/2-.7,v,1,0); gst(W/2+.7,v,-1,0); } }
+      else if(f.d==="consD"){ const tw=W-.6, Dm=W-1.2, n=Dm>=1.35?4:3; pdesk(tw,.8,.75,0,Z(1.05),f.c); { const [px,pz]=local(0,Z(1.45)); const m=new THREE.Mesh(new THREE.CylinderGeometry(Dm/2,Dm/2,.04,32,1,false,0,Math.PI),new THREE.MeshStandardMaterial({color:f.c})); m.position.set(px,base+.74,pz); m.rotation.y=ry-Math.PI/2; root.add(m); } lap(W/2,.75,true);   // половина диска (+x) → к гостям (+z) chairAt(0,Z(.3),0,1,"#2f3133",.55);
+        for(let i=0;i<n;i++){ const a=Math.PI*(.15+.7*(i+.5)/n), u=W/2+Math.cos(a)*(Dm/2+.3), v=1.45+Math.sin(a)*(Dm/2+.3); chairAt(X(u),Z(v),-Math.cos(a),-Math.sin(a),"#6b7075",.45); } }
+      break; }
     // ---- угловой / навесной / открытая гардеробная
     case "wardC": { const hh=Math.min(z,H-.02), d=Math.min(.6,W*.5,D*.5); part(W,hh,d,0,hh/2,-D/2+d/2,f.c); part(d,hh,D-d,-W/2+d/2,hh/2,d/2,f.c);
       for(let i=0;i<2;i++){ part((W-d)/2-.01,hh-.04,.02,-W/2+d+(W-d)*(i+.5)/2,hh/2,-D/2+d+.01,"#d8d2c6"); part(.02,hh-.04,(D-d)/2-.01,-W/2+d+.01,hh/2,-D/2+d+(D-d)*(i+.5)/2,"#d8d2c6"); } break; }

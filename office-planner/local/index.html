@@ -123,7 +123,7 @@ kbd{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);bor
 .chk{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 10px;font-size:12px;font-variant-numeric:tabular-nums}
 .chk.red{border-color:var(--warn);color:var(--warn)} .chk.ok{color:var(--ok)}
 .lvl{display:inline-block;min-width:54px;font-size:11px;font-weight:600;padding:1px 6px;border-radius:5px;margin-right:6px;text-align:center}
-.lvl.red{background:#f6dcd8;color:#a3342a} .lvl.yellow{background:#f6e8cc;color:#8a5a12} .lvl.info{background:var(--accent-soft);color:var(--accent)} .lvl.ok{background:#dcefe2;color:#2e7d4f}
+.lvl.red{background:#f6dcd8;color:#a3342a} .lvl.yellow{background:#f6e8cc;color:#8a5a12} .lvl.info{background:var(--accent-soft);color:var(--accent)} .lvl.ok{background:#dcefe2;color:#2e7d4f} .lvl.advice{background:#ece6f7;color:#5b3d9e}
 .checks li{margin:6px 0;font-size:12.5px;line-height:1.4;cursor:pointer} .checks small{color:var(--muted);display:block;margin-left:62px}
 .dlg.wiz{max-width:680px} .fitbar{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0;background:var(--paper);font-size:12.5px}
 .fitbar b{font-family:var(--font-mono)} .fitbar.bad{border-color:var(--warn)} .fitbar.good{border-color:var(--ok)}
@@ -1486,9 +1486,12 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       if (f.placed < f.n) add(f.status === "обязательно" ? "red" : "info", `Программа: «${f.name}» ${f.placed} из ${f.n}.`, "программа помещений");
       else if (f.state === "yellow") add("info", `Программа: «${f.name}» ${f.factArea} м² при цели ${f.targetArea} м².`, "программа помещений");
     }
-    const order = { red: 0, yellow: 1, info: 2 };
+    const order = { red: 0, yellow: 1, info: 2, advice: 3 };
     return out.sort((a, c) => order[a.level] - order[c.level]);
   };
+  /* Планировочные проверки: правила зонирования из реальных проектов (см. скилл sales-office-zoning). Уровень advice — совет, не норма. */
+  KB.DESIGN_RULES = [];
+  KB.designChecks = function (S) { const out = []; for (const r of KB.DESIGN_RULES) { try { r.check(S, (text, id) => out.push({ level: "advice", text, ref: r.ref || r.title, id, key: r.key })); } catch (e) {} } return out; };
 
   /* ------------------------------------------------------------ текстовая сводка (для Claude и CLI) */
   KB.summary = function (S) {
@@ -3342,7 +3345,7 @@ function explicationHTML(){
   const rows=explRows(); const tot=rows.map(r=>r.rooms.filter(x=>!x.sub).reduce((s,x)=>s+x.area,0));
   o+=`<div class="kpis"><div class="kpi"><span>Площадь застройки</span><b>${m2(bA)} м²</b></div><div class="kpi"><span>Всего полезная</span><b>${m2(tot[0]+tot[1])} м²</b></div>
   <div class="kpi"><span>1 этаж</span><b>${m2(tot[0])} м²</b></div><div class="kpi"><span>${S.b.upper==="floor"?"2 этаж":"Антресоль · доля"}</span><b>${m2(tot[1])}${S.b.upper==="floor"?" м²":" · "+Math.round(tot[1]/bA*100)+"%"}</b></div></div>`;
-  o+=checksHTML()+programHTML();
+  o+=checksHTML()+designHTML()+programHTML();
   for(const g of rows){ if(!g.rooms.length) continue;
     o+=`<h5>${g.lv?upperName()+", отм. +"+fmt(S.b.mz,3):"1 этаж, отм. 0,000"}</h5><table class="ex"><tr><th>№</th><th>Помещение</th><th style="text-align:right">м²</th></tr>`+
     g.rooms.map(r=>`<tr class="${r.sub?"sub":""}" data-sel="${r.id}"><td>${r.num}</td><td><span class="dot" style="background:${r.color}"></span>${esc(r.name)}${r.sub?" <small>(в составе)</small>":""}</td><td class="n">${m2(r.area)}</td></tr>`).join("")+
@@ -3956,13 +3959,16 @@ $("#bExport").onclick=()=>{ const m=document.createElement("div"); m.className="
   document.body.appendChild(m); m.addEventListener("click",e=>{ if(e.target===m||e.target.id==="xClose") m.remove(); const x=e.target.closest("[data-exp]"); if(x){ doExport(x.dataset.exp); } }); };
 
 /* ============================================================ мастер офиса продаж, программа и проверки */
-const LV={red:"важно",yellow:"внимание",info:"подсказка"};
+const LV={red:"важно",yellow:"внимание",info:"подсказка",advice:"совет"};
 function checksChip(){ const c=OfficeKB.checks(S), r=c.filter(x=>x.level==="red").length, y=c.filter(x=>x.level==="yellow").length;
   return `<button class="chk ${r?"red":(y?"":"ok")}" id="hudChecks" title="Открыть проверки">${r||y?`Проверки: ${r} красн. · ${y} жёлт.`:"Проверки: замечаний нет"}</button>`; }
 $("#hud").addEventListener("click",e=>{ if(e.target.id==="hudChecks"){ tab="ex"; setTabs(); renderPane(); } });
 function checksHTML(){ const c=OfficeKB.checks(S);
   if(!c.length) return `<h5>Проверки</h5><p class="note"><span class="lvl ok">ок</span>Замечаний нет. Нормы — подсказка; окончательно проверяет проектировщик.</p>`;
   return `<h5>Проверки · ${c.length}</h5><ul class="checks" style="list-style:none;padding:0">`+c.map(x=>`<li ${x.id?`data-sel="${x.id}"`:""}><span class="lvl ${x.level}">${LV[x.level]}</span>${esc(x.text)}<small>${esc(x.ref)}</small></li>`).join("")+`</ul><p class="note">Правила — подсказки со ссылками на СП; окончательно проверяет проектировщик.</p>`; }
+function designHTML(){ if(!OfficeKB.designChecks) return ""; const c=OfficeKB.designChecks(S); if(!S.items.some(i=>i.t==="room")) return "";
+  if(!c.length) return `<h5>Планировка</h5><p class="note"><span class="lvl ok">ок</span>По правилам зонирования из реальных офисов продаж замечаний нет.</p>`;
+  return `<h5>Планировка · ${c.length}</h5><ul class="checks" style="list-style:none;padding:0">`+c.map(x=>`<li ${x.id?`data-sel="${x.id}"`:""}><span class="lvl advice">совет</span>${esc(x.text)}<small>${esc(x.ref||"")}</small></li>`).join("")+`</ul><p class="note">Советы по опыту реальных проектов (houz architects): не нормы, а как делают в хороших офисах продаж.</p>`; }
 function programHTML(){ if(!S.program||!S.program.length) return `<h5>Программа помещений</h5><p class="note">Программы нет. Нажмите «Новый проект → Настроить программу» — он соберёт список помещений с целевыми площадями и разложит их по зонам.</p>`;
   const f=OfficeKB.programFact(S), st={ok:"ok",yellow:"yellow",red:"red",info:"info"}, nm={ok:"есть",yellow:"частично",red:"нет",info:"больше"};
   return `<h5>Программа: цель / факт</h5><table class="ex"><tr><th>Помещение</th><th style="text-align:right">шт.</th><th style="text-align:right">м² факт / цель</th></tr>`+

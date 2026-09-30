@@ -1094,9 +1094,12 @@
       if (f.placed < f.n) add(f.status === "обязательно" ? "red" : "info", `Программа: «${f.name}» ${f.placed} из ${f.n}.`, "программа помещений");
       else if (f.state === "yellow") add("info", `Программа: «${f.name}» ${f.factArea} м² при цели ${f.targetArea} м².`, "программа помещений");
     }
-    const order = { red: 0, yellow: 1, info: 2 };
+    const order = { red: 0, yellow: 1, info: 2, advice: 3 };
     return out.sort((a, c) => order[a.level] - order[c.level]);
   };
+  /* Планировочные проверки: правила зонирования из реальных проектов (см. скилл sales-office-zoning). Уровень advice — совет, не норма. */
+  KB.DESIGN_RULES = [];
+  KB.designChecks = function (S) { const out = []; for (const r of KB.DESIGN_RULES) { try { r.check(S, (text, id) => out.push({ level: "advice", text, ref: r.ref || r.title, id, key: r.key })); } catch (e) {} } return out; };
 
   /* ------------------------------------------------------------ текстовая сводка (для Claude и CLI) */
   KB.summary = function (S) {

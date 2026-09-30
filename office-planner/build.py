@@ -12,7 +12,7 @@ kb = open(os.path.join(HERE, 'src', 'office-kb.js'), encoding='utf-8').read()
 p = os.path.join(HERE, 'index.html')
 s = open(p, encoding='utf-8').read()
 s = re.sub(r'/\* KB:BEGIN \*/\n.*?\n/\* KB:END \*/', lambda m: '/* KB:BEGIN */\n' + kb + '\n/* KB:END */', s, flags=re.S)
-for key, fn in (('chine', 'chine-house.json'), ('olam', 'olam-nazarbek.json'), ('olam2', 'olam-nazarbek-v2.json')):
+for key, fn in (('chine', 'chine-house.json'), ('olam', 'olam-nazarbek.json'), ('olam2', 'olam-nazarbek-v2.json'), ('houzint', 'houz-interior.json')):
     ex = os.path.join(HERE, 'examples', fn)
     if os.path.exists(ex):
         js = json.dumps(json.load(open(ex, encoding='utf-8')), ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')

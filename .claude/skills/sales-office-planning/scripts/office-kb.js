@@ -500,6 +500,8 @@
       if ((i = set.variants.findIndex(v => fit(v) && re.test(v.name))) >= 0) return i; }
     if (set.auto && (i = pick(v => fit(v, pad) && set.auto.test(v.name))) >= 0) return i;
     return Math.max(0, pick(v => fit(v))); };
+  /* Санузлы: размеры и приборы (скилл sales-office-zoning → references/restrooms.md). */
+  KB.WC = { cabW: 0.9, cabIn: 1.5, cabOut: 1.2, urW: 0.75, sinkW: 0.7, sinkD: 0.55, passMin: 1.1, doorW: 0.8, mgn: [2.2, 2.25] };
   KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {
@@ -1178,6 +1180,25 @@
     const rs = dz.rooms(S), k = rs.find(r => dz.is(r, "kids")); if (!k) return; const cabs = rs.filter(r => dz.is(r, "cab"));
     const near = cabs.map(c => dz.gapR(k, c)).sort((a, b) => a - b)[0];
     if (near != null && near < 5) add(`Детская в ${near.toFixed(1)} м от кабинета менеджера — шум мешает переговорам. В проектах между ними ожидание, макет или ресепшен, 7–12 м.`, k.id); });
+  R_("wc_sightline", "Из двери санузла не видно писсуаров и унитазов", "restrooms: напротив двери — стена, раковина или дверь кабины; писсуары сбоку, за экранами", (S, add) => {
+    const its = S.items.filter(i => i.t === "item"), ab = KB.aabb;
+    const segX = (a, b, c, d) => { const o = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x); return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0; };
+    const crossBox = (A, B, x) => { const m = 0.03, X0 = x.x + m, X1 = x.x + x.w - m, Y0 = x.y + m, Y1 = x.y + x.h - m; let t0 = 0, t1 = 1; const dx = B.x - A.x, dy = B.y - A.y;
+      for (const [p, q] of [[-dx, A.x - X0], [dx, X1 - A.x], [-dy, A.y - Y0], [dy, Y1 - A.y]]) { if (!p) { if (q < 0) return false; continue; } const t = q / p; if (p < 0) { if (t > t1) return false; t0 = Math.max(t0, t); } else { if (t < t0) return false; t1 = Math.min(t1, t); } }
+      return t1 > t0; };
+    for (const r of S.items.filter(i => i.t === "room" && dz.is(i, "wc"))) {
+      const lv = r.lv || 0, inR = i => (i.lv || 0) === lv && dz.contains(r, i), fx = its.filter(i => inR(i) && /^(urinal|wc)$/.test(i.k));
+      if (fx.length < 2 && !fx.some(f => f.k === "urinal")) continue;   // одноместная кабина с дверью — сама себе укрытие
+      const walls = S.items.filter(w => w.t === "wall" && (w.lv || 0) === lv), boxes = its.filter(i => inR(i) && i.k === "cubicle").map(ab)
+        .concat(S.items.filter(q => q.t === "room" && q !== r && (q.lv || 0) === lv && q.border !== "none" && q.x >= r.x - 0.05 && q.y >= r.y - 0.05 && q.x + q.w <= r.x + r.w + 0.05 && q.y + q.h <= r.y + r.h + 0.05));
+      for (const d of its.filter(i => (i.lv || 0) === lv && /^(door|slide)/.test(i.k))) { const a = ab(d), px = a.x + a.w / 2, py = a.y + a.h / 2;
+        const E = [["n", Math.abs(py - r.y)], ["s", Math.abs(py - r.y - r.h)], ["w", Math.abs(px - r.x)], ["e", Math.abs(px - r.x - r.w)]].filter(e => e[1] <= 0.8 && (e[0] === "n" || e[0] === "s" ? px > r.x && px < r.x + r.w : py > r.y && py < r.y + r.h)).sort((p, q) => p[1] - q[1])[0];
+        if (!E) continue; const vert = E[0] === "n" || E[0] === "s", half = (vert ? a.w : a.h) / 2 - 0.05;
+        const A = vert ? { x: px, y: E[0] === "n" ? r.y - 0.3 : r.y + r.h + 0.3 } : { x: E[0] === "w" ? r.x - 0.3 : r.x + r.w + 0.3, y: py };   // глаз — в проёме, за порогом
+        const hit = fx.find(f => { const b = ab(f), lo = vert ? b.x : b.y, hi = vert ? b.x + b.w : b.y + b.h, o0 = vert ? px : py; if (!(hi > o0 - half && lo < o0 + half)) return false;
+          const B = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+          return !walls.some(w => segX(A, B, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })) && !boxes.some(x => crossBox(A, B, x)); });
+        if (hit) { add(`«${r.name}»: из двери прямо видно ${hit.k === "urinal" ? "писсуар" : "унитаз"}. Сдвиньте дверь к углу, поставьте напротив неё раковину или дверь кабины, писсуары — на боковую стену за экраном (или шлюз перед входом).`, r.id); break; } } } });
   R_("bar_backroom", "У бара подсобка", "4-public: подсобка бара 5–6,5 м² за спиной бармена", (S, add) => {
     const rs = S.items.filter(i => i.t === "room"), b = rs.find(r => dz.is(r, "bar") && !/кофе-корнер|кофе-поинт/.test(dz.N(r.name)) && r.w * r.h >= 15);   // мини-бар 10–12 м² (R24 060) — без подсобки
     if (b && !rs.some(r => dz.is(r, "barback"))) add("У бара нет подсобки. В проектах за спиной бармена — подсобка 5–6,5 м², лучше рядом со служебной дверью (загрузка минуя зал).", b.id); });
@@ -1850,6 +1871,7 @@
     { key: "backoffice", re: /бэк|back|бухгалтер|open-space|колл|call|задолжен|маркетинг/, cat: "back", border: "glass", size: [6, 5] },
     { key: "kitchen", re: /кухн|приём пищи|прием пищи|комната отдыха/, cat: "staff", border: "wall", size: [4, 3.5] },
     { key: "wcv", re: /мгн|посетит|универсал/, cat: "wc", border: "wall", size: [2.4, 2.4], color: "#CFE8E6", wc: true },
+    { key: "wcmf", re: /(с\/у|санузел|туалет|уборн|wc).*(мужск|женск)|(мужск|женск).*(с\/у|санузел|туалет|уборн|wc)/, cat: "wc", border: "wall", size: [2.2, 3.2], color: "#CFE8E6", wc: true },
     { key: "wcs", re: /с\/у|санузел|туалет|wc/, cat: "wc", border: "wall", size: [1.8, 2.5], color: "#CFE8E6", wc: true },
     { key: "kui", re: /куи|уборочн/, cat: "service", border: "wall", size: [1.8, 2] },
     { key: "elec", re: /электрощит|щитов|слаботоч/, cat: "service", border: "wall", size: [2, 2.5] },
@@ -1948,7 +1970,7 @@
     if (!zone && o.door !== false && T.key !== "stair") {
       const along = face === "n" || face === "s" ? r.w : r.h, dw = T.key === "wcv" ? 1.0 : (T.wc || /куи|щит|сервер/.test(T.key) ? 0.8 : 0.9);
       const off0 = Math.min(0.3, Math.max(0.05, along - dw - 0.05)), off = face === "n" || face === "e" ? Math.max(0.05, along - dw - off0) : off0; // дверь всегда слева в локальной системе
-      const inward = !(T.wc || T.key === "kui" || T.key === "elec" || T.key === "server" || T.key === "archive");
+      const inward = T.key === "wcmf" || !(T.wc || T.key === "kui" || T.key === "elec" || T.key === "server" || T.key === "archive");
       out.push(r.border === "glass" && T.key !== "vip" && T.key !== "meet" && T.key !== "showroom" ? slideDoor(r, face, off) : door(r, face, off, dw, inward));
     }
     const doorZone = 1.1; // у лицевой стены возле двери оставляем свободно
@@ -1991,6 +2013,20 @@
       case "wcv": P("wc", 0.9, 0.05); P("sink", W - 0.6, Math.min(1.2, D - 1.5), 90);
         if (W >= 3.6) { P("cubicle", W - 1.3, 0.05); P("wc", W - 0.9, 0.1); } break;
       case "wcs": P("wc", Math.min(0.6, W - 0.5), 0.05); P("sink", W - 0.5, Math.min(1.0, D - 1.3), 90); break;
+      case "wcmf": {   // мужской / женский: дверь слева на лицевой стене; у двери — раковины и зеркала, в глубине — кабины, напротив двери — дверь кабины
+        const C = KB.WC, men = /мужск/.test(norm(r.name)), L = W - 0.1;
+        const cd = D - C.sinkD - C.passMin >= C.cabIn ? C.cabIn : C.cabOut;                  // кабина: дверь внутрь 0,9×1,5 или наружу 0,9×1,2
+        let nWc = men ? 1 : Math.max(1, Math.floor(L / C.cabW)), nUr = men ? Math.max(0, Math.floor((L - C.cabW) / C.urW)) : 0;
+        if (men && nUr >= 3 && L >= 2 * C.cabW + 2 * C.urW) { nWc = 2; nUr = Math.floor((L - 2 * C.cabW) / C.urW); }
+        nUr = Math.min(nUr, 3); nWc = Math.min(nWc, 6);
+        let u = 0.05;
+        for (let i = 0; i < nWc; i++) { P("cubicle", u, 0.02, 0, { w: C.cabW, h: cd }); P("wc", u + (C.cabW - 0.4) / 2, 0.05); u += C.cabW; }
+        for (let i = 0; i < nUr; i++) { u += 0.1; P("urinal", u + (C.urW - 0.4) / 2 - 0.05, 0.02); P("urSep", u + C.urW - 0.12, 0.02); u += C.urW - 0.1; }
+        const s0 = 0.3 + C.doorW + 0.25, nS = Math.max(1, Math.min(Math.ceil((nWc + nUr) / 2) + (men ? 0 : 1), Math.floor((W - s0 - 0.05) / C.sinkW)));
+        if (W - s0 >= 0.6) for (let i = 0; i < nS; i++) { const su = s0 + i * C.sinkW + (C.sinkW - 0.55) / 2; P("sink", su, D - 0.47); P("mirror", su - 0.025, D - 0.06, 0, { w: 0.6 }); }
+        else if (D - cd - 0.5 >= 0.9) P("sink", W - 0.5, cd + 0.2, 90);                    // узкая комната: раковина на боковой стене
+        if (W - s0 - nS * C.sinkW >= 0.35) P("dryer", W - 0.35, D - 0.18);
+        out._note = `кабин ${nWc}${nUr ? `, писсуаров ${nUr}` : ""}, раковин ${W - s0 >= 0.6 ? nS : 1}; проход перед кабинами ${(D - cd - C.sinkD).toFixed(2)} м`; break; }
       case "kui": case "server": case "archive": P("shelf", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 3)) });
         if (T.key === "archive" && D >= 2.6 && W >= 2) P("shelf", 0.05, 0.6, 90, { w: Math.min(D - 1.6, 3) }); break;
       case "elec": P("cab", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 1.8)), label: "щиты" }); break;
@@ -2264,7 +2300,7 @@
     const upKeys = mezz ? ["director", "backoffice", "kitchen", "archive", "server", "storage", "wcs", "prayer"].concat(STAFFX, floor2 ? ["meet", "vip"] : []) : [];   // 2 этаж: и переговорные / сделочные   // персонал — наверх: санузлы персонала и намазхана тоже, внизу остаётся место клиентам
     const coreBack = [];
     const wcv = get("wcv");
-    if (wcv) { if (wcv.area >= 10) coreBack.push({ r: wcv, name: "С/у МГН", w: 2.3 }, { r: wcv, name: "С/у мужской", w: 1.5 }, { r: wcv, name: "С/у женский", w: 1.5 }); else coreBack.push({ r: wcv, w: Math.max(2.4, wcv.area / rb) }); }
+    if (wcv) { if (wcv.area >= 10) coreBack.push({ r: wcv, name: "С/у МГН", w: 2.3 }, { r: wcv, name: "С/у мужской", w: 2.0 }, { r: wcv, name: "С/у женский", w: 2.0 }); /* М: кабина + писсуар + раковина; Ж: 2 кабины + раковина (KB.WC) */ else coreBack.push({ r: wcv, w: Math.max(2.4, wcv.area / rb) }); }
     if (!upKeys.includes("wcs")) for (const r of copies("wcs")) coreBack.push({ r, w: Math.max(1.5, areaOf(r) / rb) });
     for (const k of ["kui", "elec"]) { const r = get(k); if (r) coreBack.push({ r, w: wOf(r, rb, k === "kui" ? 1.2 : 1.4) }); }
     for (const k of ["server", "archive", "storage", "security", "prayer"]) { const r = get(k); if (r && !upKeys.includes(k)) coreBack.push({ r, w: wOf(r, rb, 1.4) }); }   // мелкие — в задний ряд

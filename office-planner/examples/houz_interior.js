@@ -76,7 +76,7 @@ const S = { v: 1, name: "Офис продаж по альбому интерь�
   "Полы: керамогранит 283 м² (зал, вход, кафе), ламинат 106 м² (боксы, кабинет, зона переговоров), керамогранит с/у 11,6 + 7,8 м². " +
   "В каждом боксе — ТВ на стене и стол 1750×600: менеджер спиной к стене, два гостя со стороны зала. Ресепшен Г-образный 4900×2850 напротив тамбура. Снаружи вдоль витража — летняя терраса под криволинейным козырьком.",
   b: { w: 27.8, d: 21.7, h: 8.0, mz: 4.1, front: "vitrage" }, items };
-fs.writeFileSync(path.join(__dirname, "houz-interior.json"), JSON.stringify(S));
+require("./add_cabins.js").addCabins(S); fs.writeFileSync(path.join(__dirname, "houz-interior.json"), JSON.stringify(S));
 const KB = require("../src/office-kb.js");
 console.log(KB.summary ? KB.summary(S) : "ok", "\nrooms", items.filter(i => i.t === "room").length, "items", items.filter(i => i.t === "item").length);
 console.log(KB.checks(S).map(c => `[${c.level}] ${c.text}`).join("\n"));

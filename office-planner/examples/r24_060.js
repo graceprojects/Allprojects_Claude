@@ -292,7 +292,7 @@ function doorSides(S, d) {   // точка на оси стены и пробы 
   return [roomAt(rooms, px - 0.6 * nx, py - 0.6 * ny), roomAt(rooms, px + 0.6 * nx, py + 0.6 * ny)].map(nm);
 }
 for (const [file, S, total, count] of VARIANTS) {
-  fs.writeFileSync(path.join(__dirname, file), JSON.stringify(S));
+  require("./add_cabins.js").addCabins(S); fs.writeFileSync(path.join(__dirname, file), JSON.stringify(S));
   const rooms = S.items.filter(i => i.t === "room"), ex = rooms.filter(r => r.no), byNo = new Map();
   for (const r of ex) { const e = byNo.get(r.no) || { name: r.name, ex: r.ex, a: 0, parts: 0 }; e.a += r.w * r.h; e.parts++; byNo.set(r.no, e); }
   const sum = [...byNo.values()].reduce((s, e) => s + e.a, 0);

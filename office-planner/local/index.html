@@ -1586,6 +1586,15 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     const rs = S.items.filter(i => i.t === "room"), rop = rs.find(r => dz.is(r, "rop")); if (!rop) return;
     const same = rs.filter(r => (r.lv || 0) === (rop.lv || 0) && r !== rop);
     if (!same.some(r => dz.touch(rop, r) && (dz.is(r, "pub") || /проход вдоль|галере/.test(dz.N(r.name))))) add("Кабинет РОП спрятан в бэк-офисе. В проектах РОП — клиентская комната с дверью из зала, рядом с рядом кабинетов или сделочным блоком.", rop.id); });
+  R_("cjm_deal_cluster", "Сделка одним узлом", "cjm: касса, банк, нотариус — смежные комнаты, клиент проходит сделку без возврата через зал", (S, add) => {
+    const rs = dz.rooms(S).filter(r => /банк|ипотек|касс|нотари/.test(dz.N(r.name))); if (rs.length < 3) return;
+    const grp = []; for (const r of rs) { const g = grp.find(g => g.some(q => dz.gapR(q, r) <= 4)); g ? g.push(r) : grp.push([r]); }
+    for (let i = 0; i < grp.length; i++) for (let j = grp.length - 1; j > i; j--) if (grp[j].some(a => grp[i].some(b => dz.gapR(a, b) <= 4))) { grp[i].push(...grp[j]); grp.splice(j, 1); }
+    if (grp.length > 1) add(`Касса, банк и нотариус разнесены на ${grp.length} группы. В вариантах R24 060 они стоят одним узлом в торце: после решения клиент проходит оплату, ипотеку и регистрацию подряд, не возвращаясь через зал.`, grp[1][0].id); });
+  R_("cjm_kids_by_waiting", "Детская видна из ожидания", "cjm: детская примыкает к зоне ожидания (≤ 3 м)", (S, add) => {
+    const rs = dz.rooms(S), k = rs.find(r => dz.is(r, "kids")), w = rs.filter(r => dz.is(r, "wait")); if (!k || !w.length) return;
+    const near = Math.min(...w.map(r => dz.gapR(k, r)));
+    if (near > 3) add(`Детская в ${near.toFixed(1)} м от зоны ожидания. Во всех вариантах R24 и ChineHaus детская вплотную к ожиданию: родители видят ребёнка, пока ждут менеджера или сделку.`, k.id); });
   R_("waiting_on_glass", "Ожидание у витража", "1-path: к витражу обращены ожидание, детская, кафе; диваны спинкой к стеклу", (S, add) => { const d = +S.b.d;
     const w = dz.rooms(S).filter(r => dz.is(r, "wait")); if (w.length && !w.some(r => r.y + r.h >= d - 0.8)) add("Ни одна зона ожидания не стоит у витража. В проектах мягкие группы — вдоль остекления спинкой к стеклу, лицом к макету и кабинетам.", w[0].id); });
 

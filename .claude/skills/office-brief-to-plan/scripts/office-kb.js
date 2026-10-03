@@ -501,7 +501,17 @@
     if (set.auto && (i = pick(v => fit(v, pad) && set.auto.test(v.name))) >= 0) return i;
     return Math.max(0, pick(v => fit(v))); };
   /* Санузлы: размеры и приборы (скилл sales-office-zoning → references/restrooms.md). */
-  KB.WC = { cabW: 0.9, cabIn: 1.5, cabOut: 1.2, urW: 0.75, sinkW: 0.7, sinkD: 0.55, passMin: 1.1, doorW: 0.8, mgn: [2.2, 2.25] };
+  // кабина 0,9×1,5 (дверь внутрь) / 0,9×1,25 (наружу), СП 44 минимум 0,8×1,2; шаг писсуаров 0,8; проход перед кабинами 1,2 (СП 44 табл. 1); МГН 2,2×2,25 (СП 59 п. 6.3.3)
+  KB.WC = { cabW: 0.9, cabIn: 1.5, cabOut: 1.25, cabMin: [0.8, 1.2], urW: 0.8, sinkW: 0.75, sinkD: 0.5, passMin: 1.2, doorW: 0.8, mgn: [2.2, 2.25], puiMin: 4 };
+  /* Число приборов (скилл sales-office-zoning → references/restrooms.md): сотрудники — 1 унитаз на 45 мужчин / 30 женщин (СП 44);
+   * посетители — 1 унитаз на 50–60, писсуар на 50–80, умывальник на 4 унитаза, не меньше 1 на уборную (СП 118). Общий санузел — при персонале ≤ 10 и ≤ 10 посетителях одновременно. */
+  KB.wcNeed = function (o = {}) { const staff = +o.staff || 0, vis = +o.visitors || 0, men = Math.round(staff * (o.menShare ?? 0.5)), wom = staff - men, vm = Math.ceil(vis / 2), vw = vis - vm;
+    // общие уборные персонала и посетителей — ≥ 1,5 × большего из раздельных расчётов (СП 118); Ж от 20 человек — 2 унитаза (практика: без очереди)
+    const shared = staff <= 10 && vis <= 10, m = Math.max(1, Math.ceil(1.5 * Math.max(men / 45, vm / 60) - 1e-9)), w = Math.max(staff + vis > 20 ? 2 : 1, Math.ceil(1.5 * Math.max(wom / 30, vw / 50) - 1e-9)), ur = vm + men > 15 ? Math.max(1, Math.ceil(vm / 80)) : 0;
+    const sinks = { m: Math.max(1, Math.ceil((m + ur) / 4)), w: Math.max(1, Math.ceil(w / 4)) };
+    return shared ? { shared: true, mgn: 1, text: `Персонал ${staff}, посетителей одновременно ${vis}: достаточно одной универсальной кабины МГН 2,20×2,25 с умывальником (СП 118).` }
+      : { shared: false, m: { wc: m, ur, sink: sinks.m }, w: { wc: w, sink: sinks.w }, mgn: 1, pui: true,
+        text: `Персонал ${staff}, посетителей одновременно ${vis}: М — ${Math.max(1, m - (ur ? 1 : 0))} унитаз${ur ? ` + ${ur} писсуар` : ""}, Ж — ${w} унитаз${w > 1 ? "а" : ""}, по ${sinks.m}/${sinks.w} умывальнику, плюс универсальная кабина МГН и ПУИ (СП 44, СП 118). Вход в М и Ж — через шлюз или санхолл с умывальником (СП 44 п. 5.18).` }; };
   KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {
@@ -1053,6 +1063,17 @@
     if (!wcv.length && rooms.length) add("red", "Нет санузла для посетителей с универсальной кабиной МГН.", "СП 59.13330.2020 п. 6.3.2");
     const mgnWc = wcv.filter(r => has(r, "мгн") || has(r, "универсал")), chkWc = mgnWc.length ? mgnWc : wcv.length ? [wcv.slice().sort((x, y) => y.w * y.h - x.w * x.h)[0]] : [];   // размер МГН проверяем у кабины МГН (или у самого большого с/у)
     for (const r of chkWc) if (Math.min(r.w, r.h) < 2.2 || Math.max(r.w, r.h) < 2.25) add("red", `«${r.name}»: меньше 2,20×2,25 м — универсальная кабина МГН не помещается.`, "СП 59.13330.2020 табл. 6.1", r.id);
+    // Санузлы М/Ж: кабины, проход, умывальник; ПУИ
+    { const its = (S.items || []).filter(i => i.t === "item"), ab = aabbOf, inR = (r, i) => { const a = ab(i), cx = a.x + a.w / 2, cy = a.y + a.h / 2; return (i.lv || 0) === (r.lv || 0) && cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h; };
+      for (const r of rooms.filter(r => /с\/у|санузел|туалет|уборн/i.test(r.name))) {
+        const cubs = its.filter(i => i.k === "cubicle" && inR(r, i)), fx = its.filter(i => /^(wc|urinal)$/.test(i.k) && inR(r, i)), sinks = its.filter(i => /^(sink|sinkD)$/.test(i.k) && inR(r, i));
+        for (const c of cubs) { const a = ab(c); if (Math.min(a.w, a.h) < KB.WC.cabMin[0] - 0.01 || Math.max(a.w, a.h) < KB.WC.cabMin[1] - 0.01) { add("yellow", `«${r.name}»: кабина ${a.w.toFixed(2)}×${a.h.toFixed(2)} м меньше 0,8×1,2 м.`, "СП 44.13330.2011 табл. 1", r.id); break; } }
+        if (fx.length >= 2 && !sinks.length) add("yellow", `«${r.name}»: ${fx.length} прибора и нет умывальника — умывальник в уборной или в шлюзе перед ней.`, "СП 44.13330.2011 п. 5.18; СП 118", r.id);
+        if (cubs.length) { const q = (cubs[0].rot || 0) % 180 ? "w" : "h", deep = Math.max(...cubs.map(c => q === "h" ? ab(c).h : ab(c).w)),   // кабины вдоль стены: глубина — поперёк ряда
+            front = sinks.some(sk => { const a = ab(sk), c = ab(cubs[0]); return q === "h" ? Math.abs((a.y + a.h / 2) - (c.y + c.h / 2)) > deep / 2 + 0.3 : Math.abs((a.x + a.w / 2) - (c.x + c.w / 2)) > deep / 2 + 0.3; }) ? 0.5 : 0,
+            pass = (q === "h" ? r.h : r.w) - deep - front;
+          if (pass < 0.9) add("yellow", `«${r.name}»: проход перед кабинами ≈ ${pass.toFixed(2)} м — тесно (между рядами 1,2 м, у ряда вдоль стены — не меньше 0,9–1,1 м).`, "СП 44.13330.2011 табл. 1", r.id); } } }
+    for (const r of rooms.filter(r => /(^|[^а-я])(пуи|куи)([^а-я]|$)|уборочн/i.test(r.name))) if (r.w * r.h < KB.WC.puiMin - 0.05) { add("info", `«${r.name}» ${(r.w * r.h).toFixed(1)} м² — по СП 44 ПУИ не меньше 4 м² (0,8 м² на 100 м²), с водой, рядом с уборными.`, "СП 44.13330.2011 (сверить редакцию)", r.id); break; }
     // Тамбур
     for (const r of rooms.filter(r => has(r, "тамбур"))) if (r.h < 2.45) add("yellow", `Тамбур: глубина по ходу движения ${r.h.toFixed(2)} м < 2,45 м.`, "СП 59.13330.2020 п. 6.1.8 (сверить редакцию)", r.id);
     // Антресоль
@@ -1827,6 +1848,8 @@
     const advice = [], inner0 = (w - 0.6) * (d - 0.6), staffA = rows.filter(x => x.zone === "service").reduce((s0, x) => s0 + (x.n === "M" ? M : +x.n || 1) * (+x.area || (+x.w || 0) * (+x.h || 0) || 0), 0);
     if (!floor2 && mezz !== "yes" && staffA > 0.25 * inner0) advice.push(`Служебное и бэк-офис ≈ ${Math.round(staffA)} м² — больше четверти площади. Как в проектах R24: вынесите бэк-офис (бухгалтерия, колл-центр, кухня, руководство) на 2 этаж или в подвал — внизу останется место клиентам.`);
     if (lost.length && !floor2) advice.push("Не всё поместилось — полистайте сценарии (‹ › над планом): другие пропорции, крыло бэк-офиса у торца, другой формат продаж.");
+    { const need = KB.wcNeed({ staff: M + Bo + staffX + 2, visitors: seats }), mf = /mf|м\s*\+?\s*ж/i.test(wcg);   // приборы по СП 44 / СП 118: ожидание = одновременные посетители
+      advice.push("Санузлы: " + need.text + (need.shared && mf ? " Раздельные М/Ж можно не делать." : !need.shared && !mf ? " Сейчас в ТЗ одна кабина — добавьте М/Ж (wc_guest: \"mf\")." : "")); }
     if (fmt === "glass" && M >= 3) advice.push("В реальных офисах продаж кабинеты менеджеров чаще с общим столом 1800×1200 на 2 + 2 (менеджер сидит вместе с гостями) — формат «кабинеты с общим столом».");
     S.meta.brief = { lost, assume, log: r.log, rescued, warnings: warns, advice };
     if (advice.length) L.push("", "Советы:", ...advice.map(x => "- " + x));
@@ -2023,7 +2046,7 @@
         for (let i = 0; i < nWc; i++) { P("cubicle", u, 0.02, 0, { w: C.cabW, h: cd }); P("wc", u + (C.cabW - 0.4) / 2, 0.05); u += C.cabW; }
         for (let i = 0; i < nUr; i++) { u += 0.1; P("urinal", u + (C.urW - 0.4) / 2 - 0.05, 0.02); P("urSep", u + C.urW - 0.12, 0.02); u += C.urW - 0.1; }
         const s0 = 0.3 + C.doorW + 0.25, nS = Math.max(1, Math.min(Math.ceil((nWc + nUr) / 2) + (men ? 0 : 1), Math.floor((W - s0 - 0.05) / C.sinkW)));
-        if (W - s0 >= 0.6) for (let i = 0; i < nS; i++) { const su = s0 + i * C.sinkW + (C.sinkW - 0.55) / 2; P("sink", su, D - 0.47); P("mirror", su - 0.025, D - 0.06, 0, { w: 0.6 }); }
+        if (W - s0 >= 0.6) for (let i = 0; i < nS; i++) { const su = s0 + i * C.sinkW + (C.sinkW - 0.55) / 2; P("sink", su, D - 0.47, 0, { label: "зеркало над раковиной" }); }
         else if (D - cd - 0.5 >= 0.9) P("sink", W - 0.5, cd + 0.2, 90);                    // узкая комната: раковина на боковой стене
         if (W - s0 - nS * C.sinkW >= 0.35) P("dryer", W - 0.35, D - 0.18);
         out._note = `кабин ${nWc}${nUr ? `, писсуаров ${nUr}` : ""}, раковин ${W - s0 >= 0.6 ? nS : 1}; проход перед кабинами ${(D - cd - C.sinkD).toFixed(2)} м`; break; }

@@ -11,11 +11,12 @@ function addCabins(S) {
     const inR = i => i.t === "item" && (i.lv || 0) === (r.lv || 0) && (a => a.x + a.w / 2 > r.x && a.x + a.w / 2 < r.x + r.w && a.y + a.h / 2 > r.y && a.y + a.h / 2 < r.y + r.h)(ab(i));
     const wcs = its.filter(i => inR(i) && i.k === "wc"); if (wcs.length < 2 || its.some(i => inR(i) && i.k === "cubicle")) continue;
     for (const w of wcs) { const a = ab(w), rot = (w.rot || 0) % 360, cx = a.x + a.w / 2, cy = a.y + a.h / 2;
-      const along = rot === 0 || rot === 180, dep = Math.min(1.5, (along ? r.h : r.w) - 1.1);
+      // стена, к которой придвинут унитаз, — ближайшая по оси прибора (поворот 90 и 270 в данных встречается для обеих сторон)
+      const along = rot === 0 || rot === 180, dep = Math.max(1.2, Math.min(1.5, (along ? r.h : r.w) - 1.0 - 0.5)), nearLo = along ? cy - r.y < r.y + r.h - cy : cx - r.x < r.x + r.w - cx;
       let x, y, cw, ch;
-      if (rot === 0) { x = cx - 0.45; y = r.y + 0.02; cw = 0.9; ch = dep; }
-      else if (rot === 180) { x = cx - 0.45; y = r.y + r.h - 0.02 - dep; cw = 0.9; ch = dep; }
-      else if (rot === 90) { x = r.x + r.w - 0.02 - dep; y = cy - 0.45; cw = dep; ch = 0.9; }
+      if (along && nearLo) { x = cx - 0.45; y = r.y + 0.02; cw = 0.9; ch = dep; }
+      else if (along) { x = cx - 0.45; y = r.y + r.h - 0.02 - dep; cw = 0.9; ch = dep; }
+      else if (!nearLo) { x = r.x + r.w - 0.02 - dep; y = cy - 0.45; cw = dep; ch = 0.9; }
       else { x = r.x + 0.02; y = cy - 0.45; cw = dep; ch = 0.9; }
       x = Math.max(r.x + 0.02, Math.min(x, r.x + r.w - 0.02 - cw)); y = Math.max(r.y + 0.02, Math.min(y, r.y + r.h - 0.02 - ch));
       // cubicle: w — вдоль стены, h — глубина; поворот повторяет поворот унитаза (дверь кабины — к проходу)

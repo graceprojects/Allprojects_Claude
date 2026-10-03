@@ -330,7 +330,15 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
 .varbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:5px;border-radius:999px;background:var(--glassbg);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:var(--shadow);z-index:5;max-width:calc(100% - 32px)}
 .varbar button{width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);color:var(--ink);font-size:20px;line-height:1;cursor:pointer;flex:none}.varbar button:hover{background:var(--accent);color:#fff}
 .varbar .vt{display:flex;flex-direction:column;align-items:center;padding:0 8px;min-width:0}.varbar .vt b{font-size:12.5px}.varbar .vt span{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}.varbar .vt i{font-style:normal;color:var(--orange)}
-.varbar.busy{opacity:.6;pointer-events:none}
+.varbar.busy{opacity:.6;pointer-events:none}.varbar .vt em{font-style:normal;font-weight:700;color:var(--ok)}.varbar .vt em.mid{color:var(--orange)}.varbar .vt em.low{color:var(--warn)}
+.score{display:flex;align-items:center;gap:12px;margin:4px 0 10px;padding:10px 12px;border-radius:12px;background:var(--fill)}.score b{font-size:28px;line-height:1;min-width:46px;text-align:center}.score span{font-size:12.5px;line-height:1.35}.score small{color:var(--muted)}
+.score.ok b{color:var(--ok)}.score.yellow b{color:var(--orange)}.score.red b{color:var(--warn)}
+table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px}table.cjm .cj.bad{background:var(--warn)}table.cjm .cj.no{background:var(--line);color:var(--muted)}
+.bw .bwent{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}.bw .bwent select,.bw .bwent input{width:100%}
+.bw details.fun{margin:4px 0 10px;padding:8px 10px;border-radius:12px;background:var(--fill)}.bw details.fun summary{cursor:pointer;font-weight:600;font-size:13px}
+.bw .fung{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 10px;margin:8px 0}.bw .fung label{display:flex;flex-direction:column;font-size:11.5px;color:var(--muted);gap:3px}.bw .fung input{border:0;background:var(--panel);border-radius:7px;padding:5px 6px;color:var(--ink);font-size:13px}
+.bw .funres{font-size:12.5px;line-height:1.45}.bw .funres ul{margin:4px 0 6px;padding-left:18px}
+@media (max-width:700px){.bw .bwent,.bw .fung{grid-template-columns:1fr 1fr}}
 .bw .fmt{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}.bw .fmt button{border:0;background:var(--fill);border-radius:12px;padding:10px 8px;text-align:left;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;gap:3px}
 .bw .fmt button.on{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}.bw .fmt svg{width:100%;height:30px;fill:none;stroke:var(--ink);stroke-width:1.1;margin-bottom:4px}.bw .fmt svg .f{fill:var(--panel)}.bw .fmt svg .gl{stroke:var(--accent)}
 .bw .fmt b{font-size:12.5px}.bw .fmt small{font-size:11px;color:var(--muted);line-height:1.3}.bw .bwalways{margin-top:8px}
@@ -1547,10 +1555,11 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     const cabs = dz.rooms(S).filter(r => dz.is(r, "cab") && !r.sub && r.border !== "none");
     const single = cabs.filter(r => { const its = S.items.filter(i => i.t === "item" && dz.contains(r, i)); return its.some(i => /^(work3|desk|deskC)$/.test(i.k)) && !its.some(i => /^cons/.test(i.k)); });
     if (single.length >= 2) add(`В ${single.length} кабинетах стол «руководителя» с гостями напротив. В реальных офисах продаж — общий стол на 4 (менеджер сидит вместе с гостями): формат «кабинеты с общим столом» или набор «Кабинет менеджеров — общий стол».`, single[0].id); });
-  R_("deal_far_from_entrance", "Сделочные в конце пути", "1-path: VIP, банк и касса в 17–30 м от входа, за макетом", (S, add) => { const e = dz.entrance(S); if (!e) return; const W = +S.b.w, D = +S.b.d;
-    const lim = W / D >= 2.5 ? Math.min(12, 0.35 * W) : 6;
-    const bad = dz.rooms(S).filter(r => dz.is(r, "deal") && !dz.is(r, "rop") && Math.abs(dz.cx(r) - e.x) + (e.y - dz.cy(r)) < lim);
-    if (bad.length) add(`«${bad[0].name}» слишком близко ко входу (< ${lim.toFixed(0)} м по пути). В проектах VIP, банк и касса — в дальнем конце маршрута, за макетом, двери выходят в зал.`, bad[0].id); });
+  R_("deal_not_in_waiting", "Сделка не на виду у ожидания", "cjm, этап 7: сделочные открываются в свой холл, ресепшен-хаб или коридор, а не в ожидание и детскую", (S, add) => {
+    const rs = dz.rooms(S), deal = rs.filter(r => /vip|сделочн|банк|ипотек|касс|нотари/.test(dz.N(r.name)) && !dz.is(r, "rop"));
+    for (const r of deal) { const to = dz.doorTo(S, r), nb = to ? to.filter(p => p.name) : rs.filter(p => p !== r && dz.touch(r, p) && p.border === "none");
+      const bad = nb.find(p => /ожидан|лаунж|мягк|детск|(^|[^а-я])бар|кафе/.test(dz.N(p.name)));
+      if (bad) { add(`«${r.name}» открывается прямо в «${bad.name}». В R24 060 сделка — отдельный узел со своим холлом (или дверями в ресепшен-хаб): ожидающие не видят оформление, клиент не проходит через гостей.`, r.id); return; } } });
   R_("reception_on_axis", "Ресепшен виден с порога", "1-path: стойка на оси входа в 2,5–5 м от двери", (S, add) => { const e = dz.entrance(S); const rc = dz.rooms(S).find(r => dz.is(r, "rec")); if (!e || !rc) return;
     const dx = Math.abs(dz.cx(rc) - e.x), dy = e.y - (rc.y + rc.h);
     if (dx > 6 || dy > 9) add(`Ресепшен в ${dx.toFixed(1)} м от оси входа и в ${Math.max(0, dy).toFixed(1)} м от витража. В проектах стойка стоит «в лоб» по оси входа в 2,5–5 м от двери — её первой видит гость.`, rc.id); });
@@ -1604,6 +1613,224 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
   R_("waiting_on_glass", "Ожидание у витража", "1-path: к витражу обращены ожидание, детская, кафе; диваны спинкой к стеклу", (S, add) => { const d = +S.b.d;
     const w = dz.rooms(S).filter(r => dz.is(r, "wait")); if (w.length && !w.some(r => r.y + r.h >= d - 0.8)) add("Ни одна зона ожидания не стоит у витража. В проектах мягкие группы — вдоль остекления спинкой к стеклу, лицом к макету и кабинетам.", w[0].id); });
 
+  /* ============================================================ МАТРИЦА СМЕЖНОСТИ · ГРАФ ПРОХОДОВ · ПУТЬ КЛИЕНТА (CJM) · ОЦЕНКА ПЛАНА
+   * Скилл sales-office-zoning: references/cjm.md (этапы визита), references/adjacency.md (матрица). Числа — из проектов houz (R24 060 В1–В3, ChineHaus, альбом интерьера). */
+  // роль помещения по названию: первое совпадение сверху вниз
+  KB.ROLES = [
+    ["notary", /нотари/, "Нотариус"], ["bank", /банк|ипотек/, "Банк"], ["cash", /касс/, "Касса"], ["vip", /vip|сделочн/, "VIP / сделочная"],
+    ["rop", /(^|[^а-я])роп([^а-я]|$)|руководител[ья] отдела продаж/, "РОП"], ["meet", /переговор|перегорвор/, "Переговорная"],
+    ["cab", /кабинет менеджер|ячейк|место консультац|мпп|менеджеры по продажам|бокс менеджер/, "Кабинет менеджера"],
+    ["barback", /подсобк/, "Подсобка бара"], ["bar", /(^|[^а-я])бар([^а-я]|$)|кафе|кофе/, "Бар / кафе"], ["kids", /детск/, "Детская"],
+    ["maket", /макет/, "Макет"], ["media", /(^|[^а-я])vr([^а-я]|$)|медиа|фото|экран/, "VR / медиа"], ["showroom", /шоурум|образц/, "Шоурум"],
+    ["rec", /ресепшен|ресепшн|хостес/, "Ресепшен"], ["wardrobe", /гардероб/, "Гардероб"], ["entr", /тамбур|портал|входн/, "Вход"],
+    ["wait", /ожидан|лаунж|мягк/, "Ожидание"], ["wc", /(^|\s)с\/у|санузел|туалет|(^|\s)wc/, "Санузел"], ["kitchen", /кухн|при[её]м пищи/, "Кухня"],
+    ["prayer", /молитв|намаз/, "Молитвенная"], ["tech", /(^|[^а-я])тех|электрощит|сервер|(^|[^а-я])куи|(^|[^а-я])пуи|кладов|склад|архив|венткам/, "Техническое"],
+    ["back", /бэк|бухгалт|колл|call|маркет|задолж|руководств|руководит|персонал|прораб|директор/, "Бэк-офис"],
+    ["circ", /проход|коридор|холл|галере|лестниц|^помещение/, "Проход / холл"], ["hall", /зал|зона продаж/, "Зал"]];
+  KB.roleOf = r => { const n = norm(r && r.name); for (const [k, rx] of KB.ROLES) if (rx.test(n) && !(k === "entr" && /служеб/.test(n))) return k; return /служеб/.test(n) ? "circ" : "other"; };
+  const ROLE_NAME = Object.fromEntries(KB.ROLES.map(x => [x[0], x[2]]));
+  const CLOSED = new Set(["cab", "rop", "meet", "vip", "bank", "cash", "notary"]), STAFF = new Set(["kitchen", "back", "tech", "barback", "wc", "prayer"]);
+  const DEAL = new Set(["cash", "bank", "notary", "vip"]);
+  /* Матрица смежности: что с чем рядом (must — обязательно, near — желательно) и что врозь (avoid). d — порог в метрах между
+   * прямоугольниками помещений (для must/near — не больше, для avoid — не меньше). w — вес в оценке. rule — какая проверка уже говорит об этой паре. */
+  KB.ADJ = [
+    { a: "rec", b: "entr", rel: "near", d: 6, w: 3, why: "стойку видно с порога, она в 2,5–5 м от двери", rule: "reception_on_axis" },
+    { a: "wardrobe", b: "rec", rel: "near", d: 8, w: 1, why: "гардероб обслуживает администратор со стойки" },
+    { a: "wait", b: "rec", rel: "near", d: 8, w: 2, why: "ожидание в одном шаге от стойки — администратор видит гостей" },
+    { a: "kids", b: "wait", rel: "must", d: 3, w: 3, why: "родители видят ребёнка из ожидания", rule: "cjm_kids_by_waiting" },
+    { a: "bar", b: "wait", rel: "near", d: 6, w: 2, why: "кофе подают в ожидание" },
+    { a: "barback", b: "bar", rel: "must", d: 1.5, w: 2, why: "подсобка за спиной бармена" },
+    { a: "maket", b: "entr", rel: "near", d: 16, w: 2, why: "макет виден с порога, это первый «вау»", rule: "maket_near" },
+    { a: "maket", b: "wait", rel: "near", d: 9, w: 1, why: "ожидающий уже смотрит на макет" },
+    { a: "cab", b: "maket", rel: "near", d: 10, w: 3, why: "менеджер выводит клиента к макету и обратно" },
+    { a: "rop", b: "cab", rel: "near", d: 5, w: 2, why: "РОП подключается к сделке из соседней комнаты" },
+    { a: "meet", b: "rop", rel: "near", d: 12, w: 1, why: "эскалация: РОП ведёт переговоры" },
+    { a: "cash", b: "bank", rel: "must", d: 4, w: 3, why: "оплата и ипотека подряд, без возврата через зал", rule: "cjm_deal_cluster" },
+    { a: "bank", b: "notary", rel: "must", d: 4, w: 3, why: "ипотека → регистрация сделки в соседней комнате", rule: "cjm_deal_cluster" },
+    { a: "cash", b: "notary", rel: "near", d: 8, w: 1, why: "один сделочный узел", rule: "cjm_deal_cluster" },
+    { a: "vip", b: "bank", rel: "near", d: 8, w: 1, why: "решение → оформление рядом" },
+    { a: "kids", b: "cab", rel: "avoid", d: 5, w: 2, why: "шум мешает консультации", rule: "kids_away_from_sales" },
+    { a: "kids", b: "meet", rel: "avoid", d: 5, w: 1, why: "шум мешает переговорам" },
+    { a: "kids", b: "notary", rel: "avoid", d: 5, w: 1, why: "регистрация сделки — в тишине" },
+    { a: "wc", b: "kitchen", rel: "near", d: 6, w: 1, why: "мокрые точки одним узлом (стояки)", rule: "wet_core" },
+    { a: "prayer", b: "wc", rel: "near", d: 6, w: 1, why: "омовение перед намазом рядом с санузлом" },
+    { a: "kitchen", b: "wait", rel: "avoid", d: 0.4, w: 1, why: "кухня персонала не граничит с зоной гостей" },
+    { a: "cash", b: "wait", rel: "avoid", d: 0.4, w: 1, why: "очередь в кассу не на виду у ожидающих" },
+    { a: "back", b: "entr", rel: "avoid", d: 4, w: 1, why: "бэк-офис не у клиентского входа" }];
+  const rectGap = (a, b) => Math.hypot(Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w)), Math.max(0, Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h)));
+  // вход — точка на витраже (дверь «Вход», тамбур или ресепшен), как в проверках
+  const entrPt = S => { const d = +S.b.d, it = S.items.find(i => i.t === "item" && !(i.lv || 0) && /вход/i.test(i.label || "") && !/служеб/i.test(i.label || ""));
+    if (it) { const q = (it.rot || 0) % 180, w = q ? it.h : it.w, h = q ? it.w : it.h, cy = it.y + h / 2; return { x: it.x + w / 2, y: cy > d / 2 ? d : 0, face: cy > d / 2 ? "s" : "n", px: it.x + w / 2, py: cy }; }
+    const rs = S.items.filter(i => i.t === "room" && !(i.lv || 0)), t = rs.find(r => /тамбур/.test(norm(r.name)) && !/служеб/.test(norm(r.name)) && r.y + r.h >= d - 0.6);
+    if (t) return { x: t.x + t.w / 2, y: d, face: "s", px: t.x + t.w / 2, py: t.y + t.h - 0.3 }; const rc = rs.find(r => KB.roleOf(r) === "rec"); return rc ? { x: rc.x + rc.w / 2, y: d, face: "s", px: rc.x + rc.w / 2, py: d - 0.6 } : null; };
+  KB.entrance = entrPt;
+  // куда ставить помещение по матрице: взвешенный центр уже стоящих партнёров (must/near) и помещений той же роли
+  KB.partnerPoint = function (S, name, lv = 0) { const role = KB.roleOf({ name }); if (role === "other") return null;
+    const wt = {}; for (const a of KB.ADJ) if (a.rel !== "avoid" && (a.a === role || a.b === role)) { const o = a.a === role ? a.b : a.a; wt[o] = (wt[o] || 0) + a.w * (a.rel === "must" ? 2 : 1); }
+    if (DEAL.has(role) || role === "cab") for (const k of DEAL.has(role) ? DEAL : ["cab"]) wt[k] = (wt[k] || 0) + 2;
+    let X = 0, Y = 0, W = 0; for (const r of S.items) { if (r.t !== "room" || (r.lv || 0) !== lv) continue; const k = KB.roleOf(r), w = wt[k]; if (!w) continue; X += w * (r.x + r.w / 2); Y += w * (r.y + r.h / 2); W += w; }
+    if (!W && wt.entr) { const e = entrPt(S); if (e) return { x: e.px, y: e.py - 2 }; }
+    return W ? { x: X / W, y: Y / W } : null; };
+  KB.adjacency = function (S, lv = 0) {
+    const rs = S.items.filter(i => i.t === "room" && (i.lv || 0) === lv), by = {};
+    for (const r of rs) { const k = KB.roleOf(r); (by[k] = by[k] || []).push(r); }
+    const e = lv ? null : entrPt(S); if (e) (by.entr = by.entr || []).push({ name: "Вход", x: e.px - 0.5, y: e.py, w: 1, h: 0, pseudo: true });
+    const out = []; let W = 0, ok = 0;
+    for (const p of KB.ADJ) { const A = by[p.a], B = by[p.b]; if (!A || !B) continue;
+      let dmin = Infinity, pa = null, pb = null; for (const a of A) for (const b of B) { if (a === b) continue; const g = rectGap(a, b); if (g < dmin) { dmin = g; pa = a; pb = b; } }
+      if (!isFinite(dmin)) continue;
+      const good = p.rel === "avoid" ? dmin >= p.d * 0.9 : dmin <= p.d * 1.1;   // допуск 10 %: ориентиры, а не нормы
+      W += p.w; if (good) ok += p.w;
+      out.push(Object.assign({}, p, { dist: +dmin.toFixed(1), ok: good, ra: pa, rb: pb })); }
+    return { score: W ? ok / W : 1, pairs: out, total: W };
+  };
+  /* Сетка проходимости 0,3 м: зоны без стен и свободное место — проходимы; в помещение со стенами или стеклом попадаешь только через дверь.
+   * Свободное место вне помещений проходимо, если вокруг ≥ 0,9 м (щели в стенах не считаются проходом). */
+  KB.walkGrid = function (S, lv = 0, c = 0.3) {
+    const b = S.b, W = +b.w, D = +b.d, nx = Math.ceil(W / c), ny = Math.ceil(D / c), N = nx * ny;
+    const rs = S.items.filter(i => i.t === "room" && (i.lv || 0) === lv), doors = S.items.filter(i => i.t === "item" && (i.lv || 0) === lv && /^(door|slide|auto)/.test(i.k));
+    const hasDoor = new Set(), dz2 = [];
+    for (const dI of doors) { const q = (dI.rot || 0) % 180, w = q ? dI.h : dI.w, h = q ? dI.w : dI.h; dz2.push({ x0: dI.x - 0.35, y0: dI.y - 0.35, x1: dI.x + w + 0.35, y1: dI.y + h + 0.35, it: dI });
+      for (const r of rs) if (r.border !== "none" && dI.x + w > r.x - 0.5 && dI.x < r.x + r.w + 0.5 && dI.y + h > r.y - 0.5 && dI.y < r.y + r.h + 0.5) hasDoor.add(r); }
+    const closedR = rs.filter(r => r.border !== "none" && hasDoor.has(r) && r.w * r.h < 0.8 * W * D);
+    const lab = new Int32Array(N).fill(-1), mem = new Int32Array(N).fill(-1), inDoor = new Uint8Array(N), area = r => r.w * r.h;
+    const custom = b.front === "custom" || b.cut;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const x = (i + 0.5) * c, y = (j + 0.5) * c, k = j * nx + i;
+      let bl = null, bm = null; for (const r of rs) if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h) { if (!bm || area(r) < area(bm)) bm = r; if (closedR.includes(r) && (!bl || area(r) < area(bl))) bl = r; }
+      for (const z of dz2) if (x > z.x0 && x < z.x1 && y > z.y0 && y < z.y1) { inDoor[k] = 1; break; }
+      if (bm) mem[k] = rs.indexOf(bm); if (bl) lab[k] = rs.indexOf(bl); else if (bm) lab[k] = -3; else lab[k] = x > 0.3 && x < W - 0.3 && y > 0.3 && y < D - 0.3 && (!custom || inDoor[k]) ? -4 : -1; }
+    // -3 — открытая зона (проходима), -4 — свободное место вне помещений: проходимо при запасе ≥ 0,9 м от стен
+    for (let k = 0; k < N; k++) if (lab[k] === -4) { const i = k % nx, j = (k - i) / nx; let ok = true;
+      for (let dj = -1; dj <= 1 && ok; dj++) for (let di = -1; di <= 1; di++) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) { ok = false; break; } const l = lab[jj * nx + ii]; if (l >= 0 || l === -1) { ok = false; break; } }
+      if (!ok && !inDoor[k]) lab[k] = -5; }
+    return { c, nx, ny, lab, mem, inDoor, rooms: rs, closed: closedR, noDoor: rs.filter(r => r.border !== "none" && !hasDoor.has(r) && !r.sub) };
+  };
+  // Дейкстра по сетке. blocked — индексы помещений, из которых нельзя выйти дальше (клиент не ходит через кабинеты и служебное)
+  const gridWalk = (G, sx, sy, blocked) => {
+    const { c, nx, ny, lab, inDoor } = G, N = nx * ny, dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
+    const si = Math.min(nx - 1, Math.max(0, Math.floor(sx / c))), sj = Math.min(ny - 1, Math.max(0, Math.floor(sy / c))), s0 = sj * nx + si;
+    const pass = k => lab[k] >= 0 || lab[k] === -3 || lab[k] === -4 || (inDoor[k] && lab[k] !== -1);
+    if (!pass(s0)) return { dist, prev, s0 };
+    const H = [[0, s0]]; dist[s0] = 0;
+    const push = (d, k) => { H.push([d, k]); let i = H.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (H[p][0] <= H[i][0]) break; [H[p], H[i]] = [H[i], H[p]]; i = p; } };
+    const pop = () => { const top = H[0], last = H.pop(); if (H.length) { H[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < H.length && H[l][0] < H[m][0]) m = l; if (r < H.length && H[r][0] < H[m][0]) m = r; if (m === i) break; [H[m], H[i]] = [H[i], H[m]]; i = m; } } return top; };
+    const NB = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
+    while (H.length) { const [d, k] = pop(); if (d > dist[k]) continue; const i = k % nx, j = (k - i) / nx, lk = lab[k];
+      if (blocked && lk >= 0 && blocked.has(lk) && k !== s0) { /* внутри закрытой комнаты — ходим только по ней */ }
+      for (const [di, dj, w] of NB) { const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue; const q = jj * nx + ii; if (!pass(q)) continue;
+        const lq = lab[q], same = lk === lq || (lk < 0 && lq < 0);
+        if (!same && !(inDoor[k] && inDoor[q])) continue;          // сменить помещение — только в проёме двери
+        if (w > 1 && !same) continue;                              // через дверь — не по диагонали
+        if (w > 1 && (!pass(j * nx + ii) || !pass(jj * nx + i) || lab[j * nx + ii] !== lk || lab[jj * nx + i] !== lk)) continue;   // не срезать углы
+        if (blocked && lk >= 0 && blocked.has(lk) && lq !== lk && k !== s0) continue;   // из закрытой комнаты дальше не идём
+        const nd = d + w * c; if (nd < dist[q]) { dist[q] = nd; prev[q] = k; push(nd, q); } } }
+    return { dist, prev, s0 };
+  };
+  const gridRoomD = (G, Wk, ri) => { const r = G.rooms[ri], { c, nx, ny } = G; let best = Infinity, bk = -1;
+    const i0 = Math.max(0, Math.floor(r.x / c)), i1 = Math.min(nx - 1, Math.floor((r.x + r.w) / c)), j0 = Math.max(0, Math.floor(r.y / c)), j1 = Math.min(ny - 1, Math.floor((r.y + r.h) / c));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const k = j * nx + i, x = (i + 0.5) * c, y = (j + 0.5) * c; if (x <= r.x || x >= r.x + r.w || y <= r.y || y >= r.y + r.h) continue; if (Wk.dist[k] < best) { best = Wk.dist[k]; bk = k; } }
+    return { d: best, k: bk }; };
+  const gridPath = (G, Wk, k) => { const out = []; while (k >= 0) { out.unshift(k); if (k === Wk.s0) break; k = Wk.prev[k]; } return out; };
+  const pathPts = (G, cells) => { const { c, nx } = G, P = cells.map(k => { const i = k % nx; return { x: (i + 0.5) * c, y: ((k - i) / nx + 0.5) * c }; });
+    const dp = (a, z) => { let m = -1, dm = 0.25; for (let i = a + 1; i < z; i++) { const A = P[a], B = P[z], Q = P[i], L = Math.hypot(B.x - A.x, B.y - A.y) || 1e-9, dd = Math.abs((B.x - A.x) * (A.y - Q.y) - (A.x - Q.x) * (B.y - A.y)) / L; if (dd > dm) { dm = dd; m = i; } }
+      return m < 0 ? [P[a]] : dp(a, m).concat(dp(m, z)); };
+    return P.length > 2 ? dp(0, P.length - 1).concat([P[P.length - 1]]) : P; };
+  const gridVia = (G, cells, target) => { const out = []; for (const k of cells) { const m = G.mem[k]; if (m < 0) continue; const r = G.rooms[m]; if (r !== target && out[out.length - 1] !== r) out.push(r); } return out.filter((r, i, a) => a.indexOf(r) === i); };
+  KB.roomGraph = function (S, lv = 0) { const G = KB.walkGrid(S, lv); return { rooms: G.rooms, noDoor: G.noDoor }; };
+  const segCrosses = (x1, y1, x2, y2, r) => { const m = 0.05, X0 = r.x + m, X1 = r.x + r.w - m, Y0 = r.y + m, Y1 = r.y + r.h - m; let t0 = 0, t1 = 1; const dx = x2 - x1, dy = y2 - y1;
+    for (const [p, q] of [[-dx, x1 - X0], [dx, X1 - x1], [-dy, y1 - Y0], [dy, Y1 - y1]]) { if (p === 0) { if (q < 0) return false; continue; } const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } }
+    return t1 - t0 > 0.02; };
+  // видно ли точку B из точки A: отрезок не проходит сквозь помещения за глухими стенами
+  KB.visible = function (S, A, B, skip = []) { return !S.items.some(i => i.t === "room" && !(i.lv || 0) && i.border === "wall" && !skip.includes(i) && i.w * i.h < 0.8 * S.b.w * S.b.d && segCrosses(A.x, A.y, B.x, B.y, i)); };
+  KB.JOURNEY = [
+    { k: "entr", n: 1, label: "Вход", roles: ["entr"] }, { k: "rec", n: 2, label: "Приветствие", roles: ["rec"] }, { k: "wait", n: 3, label: "Ожидание", roles: ["wait", "bar", "kids"] },
+    { k: "maket", n: 4, label: "Презентация", roles: ["maket", "media"] }, { k: "cab", n: 5, label: "Консультация", roles: ["cab"] },
+    { k: "decide", n: 6, label: "Решение", roles: ["rop", "meet", "vip"] }, { k: "deal", n: 7, label: "Сделка", roles: ["cash", "bank", "notary"] }];
+  /* Путь клиента (CJM): для каждого этапа — ближайшее по пути помещение, расстояние, путь (точки для рисования) и что он пересекает. */
+  KB.journey = function (S) {
+    const e = entrPt(S); if (!e) return null;
+    const G = KB.walkGrid(S, 0); if (!G.rooms.length) return null;
+    const role = G.rooms.map(r => KB.roleOf(r)), { c, nx, ny } = G;
+    // клетка за входной дверью: пробуем точку внутрь здания, затем по сторонам
+    const dn = e.face === "s" ? -1 : 1; let sx = e.px, sy = e.py;
+    for (const [ox, oy] of [[0, 0.6 * dn], [0, 0.9 * dn], [0, 0.3 * dn], [-0.6, 0], [0.6, 0], [0, 1.2 * dn]]) { const i = Math.floor((e.px + ox) / c), j = Math.floor((e.py + oy) / c); if (i < 0 || j < 0 || i >= nx || j >= ny) continue;
+      const l = G.lab[j * nx + i]; if (l >= 0 || l === -3 || l === -4) { sx = e.px + ox; sy = e.py + oy; break; } }
+    const blocked = new Set(role.map((k, i) => (CLOSED.has(k) || STAFF.has(k)) && G.closed.includes(G.rooms[i]) ? i : -1).filter(i => i >= 0));
+    const Wk = gridWalk(G, sx, sy, blocked), Wf = gridWalk(G, sx, sy, null);
+    if (!isFinite(Wk.dist[Wk.s0])) return null;
+    const RD = G.rooms.map((r, i) => gridRoomD(G, Wk, i)), RF = G.rooms.map((r, i) => gridRoomD(G, Wf, i));
+    const stages = [];
+    for (const st of KB.JOURNEY) {
+      const r0 = st.k === "decide" || st.k === "deal" ? st.roles : [st.roles.find(k => role.includes(k))];   // ожидание — сперва зона ожидания, потом бар и детская; макет — раньше медиа
+      const idx = role.map((k, i) => r0.includes(k) ? i : -1).filter(i => i >= 0); if (!idx.length) { stages.push(Object.assign({}, st, { missing: true })); continue; }
+      const reach = idx.filter(i => isFinite(RD[i].d)).sort((a, b) => RD[a].d - RD[b].d);
+      const i0 = reach.length ? reach[0] : idx.slice().sort((a, b) => RF[a].d - RF[b].d)[0], W0 = reach.length ? Wk : Wf, R0 = reach.length ? RD : RF, r = G.rooms[i0];
+      const cells = isFinite(R0[i0].d) ? gridPath(G, W0, R0[i0].k) : [];
+      const pts = cells.length ? [{ x: e.px, y: e.py }].concat(pathPts(G, cells), [{ x: r.x + r.w / 2, y: r.y + r.h / 2 }]) : [];
+      stages.push(Object.assign({}, st, { room: r, rooms: idx.map(i => G.rooms[i]), dist: isFinite(R0[i0].d) ? +R0[i0].d.toFixed(1) : null, pts, via: gridVia(G, cells, r),
+        transit: !reach.length && isFinite(RF[i0].d), unreachable: !isFinite(R0[i0].d), far: reach.length ? +Math.max(...reach.map(i => RD[i].d)).toFixed(1) : null })); }
+    // транзит: до каких клиентских комнат можно дойти, только проходя через закрытые / служебные
+    const transit = [], unreach = [];
+    G.rooms.forEach((r, i) => { const k = role[i]; if (!CLOSED.has(k) && !["rec", "wait", "kids", "bar", "maket", "media", "wardrobe", "showroom"].includes(k)) return;
+      if (isFinite(RD[i].d)) return;
+      if (isFinite(RF[i].d)) transit.push({ room: r, via: gridVia(G, gridPath(G, Wf, RF[i].k), r).filter(x => G.closed.includes(x) && (CLOSED.has(KB.roleOf(x)) || STAFF.has(KB.roleOf(x)))) });
+      else unreach.push(r); });
+    // служебный путь: от служебного входа до кухни / бэк-офиса — не через ожидание, детскую, макет, бар
+    let staff = null; const sd = S.items.find(i => i.t === "item" && !(i.lv || 0) && /служеб/i.test(i.label || ""));
+    if (sd) { const q = (sd.rot || 0) % 180, w = q ? sd.h : sd.w, h = q ? sd.w : sd.h, px = sd.x + w / 2, py = sd.y + h / 2; let p0 = null;
+      for (const [ox, oy] of [[0, 0.6], [0, -0.6], [0.6, 0], [-0.6, 0], [0, 0.9], [0, -0.9]]) { const i = Math.floor((px + ox) / c), j = Math.floor((py + oy) / c); if (i < 0 || j < 0 || i >= nx || j >= ny) continue; const l = G.lab[j * nx + i]; if (l >= 0 || l === -3 || l === -4) { p0 = [px + ox, py + oy]; break; } }
+      if (p0) { const Ws = gridWalk(G, p0[0], p0[1], null), SD = G.rooms.map((r, i) => (role[i] === "kitchen" || role[i] === "back") ? gridRoomD(G, Ws, i) : { d: Infinity });
+        const tgt = SD.map((x, i) => [x.d, i]).filter(x => isFinite(x[0])).sort((a, b) => a[0] - b[0])[0];
+        if (tgt) { const v = gridVia(G, gridPath(G, Ws, SD[tgt[1]].k), G.rooms[tgt[1]]); staff = { room: G.rooms[tgt[1]], dist: +tgt[0].toFixed(1), via: v, crosses: v.filter(x => ["wait", "kids", "maket", "media", "bar"].includes(KB.roleOf(x))) }; } } }
+    const vis = k => { const s = stages.find(x => x.k === k); if (!s || !s.room) return null; const r = s.room;   // видна хотя бы часть: центр или точки на четвертях
+      return [[.5, .5], [.25, .25], [.75, .25], [.25, .75], [.75, .75]].some(([u, v]) => KB.visible(S, { x: sx, y: sy }, { x: r.x + r.w * u, y: r.y + r.h * v }, [r])); };
+    return { entrance: e, stages, transit, unreachable: unreach, noDoor: G.noDoor, staff, see: { rec: vis("rec"), maket: vis("maket") } };
+  };
+  /* Программа от воронки продаж: сделок в месяц → визиты → одновременные консультации в пик → менеджеры, места ожидания, переговорные, сделочный узел.
+   * Ориентиры: конверсия визит → сделка 8–15 %, консультация 45–90 мин, пик (выходные, вечер) ≈ 3 × средний час, загрузка менеджера 80 %. */
+  KB.funnel = function (F = {}) {
+    const n = (v, d) => { const x = +String(v ?? "").replace(",", "."); return isFinite(x) && x > 0 ? x : d; };
+    const deals = n(F.deals, 30), conv = n(F.conv, 10) / 100, mort = Math.min(1, n(F.mortgage, 50) / 100), consult = n(F.consult, 60), days = n(F.days, 26), hours = n(F.hours, 10), peak = n(F.peak, 3), banks = Math.round(n(F.banks, mort > 0 ? 2 : 0));
+    const visits = deals / conv, perDay = visits / days, perHour = perDay / hours, peakH = perHour * peak, conc = peakH * consult / 60;
+    const managers = Math.max(2, Math.ceil(conc / 0.8)), waiting = Math.max(6, Math.ceil(conc * 2 + 2)), meet = Math.max(1, Math.ceil(managers / 5)), vip = deals >= 20 ? Math.max(1, Math.ceil(deals / 60)) : 0;
+    const notary = deals >= 30, cashier = deals > 0, bank = mort > 0 ? Math.max(1, banks) : 0;
+    const f1 = v => (Math.round(v * 10) / 10).toLocaleString("ru-RU");
+    const notes = [`${deals} сделок в месяц при конверсии ${f1(conv * 100)} % → ≈ ${Math.round(visits)} визитов в месяц, ${f1(perDay)} в день.`,
+      `В пиковый час (× ${f1(peak)}) — ${f1(peakH)} визита; консультация ${consult} мин → одновременно ${f1(conc)} консультаций.`,
+      `Менеджеров на смене: ${managers} (загрузка 80 %); мест ожидания: ${waiting}; переговорных: ${meet}${vip ? `; VIP: ${vip}` : ""}.`,
+      `Сделочный узел: касса${bank ? `, ${bank} ${bank === 1 ? "кабинет банка" : bank < 5 ? "кабинета банков-партнёров" : "кабинетов банков-партнёров"} (по числу банков, ипотека ${Math.round(mort * 100)} % сделок)` : ""}${notary ? ", нотариус (от 30 сделок в месяц регистрация — на месте)" : ""}.`];
+    return { managers, waiting, meet, vip, bank, cashier, notary, visits: Math.round(visits), perDay: +perDay.toFixed(1), peakHour: +peakH.toFixed(1), concurrent: +conc.toFixed(1), notes };
+  };
+  /* Оценка плана 0–100: нормы, программа, планировочные советы (правила + матрица + путь клиента), выполнение матрицы смежности. */
+  KB.planScore = function (S) {
+    const ch = KB.checks(S), adv = KB.designChecks(S), adj = KB.adjacency(S);
+    const red = ch.filter(c => c.level === "red" && c.ref !== "программа помещений").length, yel = ch.filter(c => c.level === "yellow").length;
+    const lost = (S.meta && S.meta.brief && S.meta.brief.lost ? S.meta.brief.lost.length : ch.filter(c => c.ref === "программа помещений" && c.level === "red").length);
+    const parts = { norms: Math.min(40, red * 10 + yel * 2), lost: lost * 12, zoning: Math.min(36, adv.length * 3), adjacency: Math.round((1 - adj.score) * 12) };
+    const score = Math.max(0, 100 - parts.norms - parts.lost - parts.zoning - parts.adjacency);
+    return { score, parts, red, yellow: yel, lost, advice: adv.length, adj: Math.round(adj.score * 100) };
+  };
+  // проверки пути клиента и матрицы — в общий список планировочных советов
+  const J_ = S => { const n = S.items.reduce((a, i) => a + (i.t === "wall" ? 0 : (+i.x || 0) * 1.31 + (+i.y || 0) * 1.73 + (+i.w || 0) + (+i.h || 0) * 0.7), S.items.length); if (S.__j && S.__j.n === n) return S.__j.v; const v = KB.journey(S); try { Object.defineProperty(S, "__j", { value: { n, v }, configurable: true, enumerable: false, writable: true }); } catch (e) {} return v; };
+  R_("cjm_transit", "Без транзита через закрытые комнаты", "cjm: путь клиента идёт по залу и холлам, не через кабинеты, сделочные и служебное", (S, add) => {
+    const J = J_(S); if (!J) return;
+    for (const t of J.transit.slice(0, 2)) add(`До «${t.room.name}» можно дойти только через ${t.via.length ? "«" + t.via.map(r => r.name).join("», «") + "»" : "закрытые помещения"}. В проектах у каждой клиентской комнаты своя дверь из зала, холла или кармана сделки.`, t.room.id); });
+  R_("cjm_unreachable", "У каждой комнаты есть вход", "cjm: в помещение ведёт дверь из зала, холла или коридора", (S, add) => {
+    const J = J_(S); if (!J) return; const bad = J.unreachable.filter(r => !["tech", "other", "circ", "hall"].includes(KB.roleOf(r)));
+    if (bad.length) add(`Нет прохода от входа: ${bad.slice(0, 3).map(r => "«" + r.name + "»").join(", ")}${bad.length > 3 ? ` и ещё ${bad.length - 3}` : ""}. Поставьте дверь в зал, холл или коридор.`, bad[0].id); });
+  R_("cjm_maket_visible", "Макет виден с порога", "cjm, этап 1: с порога видны стойка и макет", (S, add) => {
+    const J = J_(S); if (!J || J.see.maket !== false) return; const m = J.stages.find(s => s.k === "maket");
+    add("От входа макет закрыт глухими стенами. В проектах его видно с порога (а лучше — с улицы через витраж): это первый «вау» визита.", m && m.room && m.room.id); });
+  R_("cjm_order", "Сначала макет, потом кабинет", "cjm, этапы 4 → 5: клиент доходит до макета раньше, чем до кабинета", (S, add) => {
+    const J = J_(S); if (!J) return; const m = J.stages.find(s => s.k === "maket"), c = J.stages.find(s => s.k === "cab");
+    if (m && c && m.room && c.room && !m.unreachable && !c.unreachable && m.dist > c.dist + 6) add(`До ближайшего кабинета ${c.dist.toFixed(0)} м, а до макета — ${m.dist.toFixed(0)} м. По карте пути клиент сначала видит макет, и уже от макета менеджер ведёт его в кабинет.`, m.room.id); });
+  R_("cjm_staff_path", "Персонал не ходит через гостевые зоны", "cjm: служебный вход → кухня / бэк-офис по тыльной стороне", (S, add) => {
+    const J = J_(S); if (!J || !J.staff || !J.staff.crosses.length) return;
+    add(`Путь персонала от служебного входа до «${J.staff.room.name}» идёт через «${J.staff.crosses[0].name}». В проектах служебный вход ведёт в коридор или проход вдоль тыльной стены.`, J.staff.crosses[0].id); });
+  R_("adj_matrix", "Матрица смежности", "adjacency: что с чем рядом и что врозь (references/adjacency.md)", (S, add) => {
+    const A = KB.adjacency(S); for (const p of A.pairs.filter(p => !p.ok && !p.rule).sort((a, b) => b.w - a.w).slice(0, 3)) {
+      const na = p.ra.pseudo ? "входа" : `«${p.ra.name}»`, nb = p.rb.pseudo ? "входа" : `«${p.rb.name}»`;
+      add(p.rel === "avoid" ? `${na} в ${p.dist.toFixed(1)} м от ${nb} (лучше ≥ ${p.d} м): ${p.why}.` : `${na} в ${p.dist.toFixed(1)} м от ${nb} (ориентир ≤ ${p.d} м): ${p.why}.`, (p.ra.pseudo ? p.rb : p.ra).id); } });
   KB.designChecks = function (S) { const out = []; for (const r of KB.DESIGN_RULES) { try { r.check(S, (text, id) => out.push({ level: "advice", text, ref: r.ref || r.title, id, key: r.key })); } catch (e) {} } return out; };
 
   /* ------------------------------------------------------------ текстовая сводка (для Claude и CLI) */
@@ -1624,7 +1851,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
    */
   KB.LEVEL_KEYS = ["S", "M", "L"];
   // где помещение стоит в схеме: полоса вдоль глухой стены / публичная зона у витража / служебное ядро
-  const GROUP = { barback: "band", cafe: "band", wardrobe: "band", showroom: "band", cabinet: "band", meet: "band", bank: "band", vip: "band", cashier: "band",
+  const GROUP = { notary: "band", barback: "band", cafe: "band", wardrobe: "band", showroom: "band", cabinet: "band", meet: "band", bank: "band", vip: "band", cashier: "band",
     kids: "pub", lounge: "pub", seats: "pub", maket: "pub", media: "pub", reception: "pub", tambour: "pub" };
   const MAKET_STEPS = ["6x5", "6x4", "5x3", "3x2", "2x1.5"];
   KB.autoPlan = function (p0) {
@@ -1640,7 +1867,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     let st = { counts: Object.assign({}, p0.counts || {}), opts: Object.assign({}, p0.opts || {}), seats: null, maket: null };
     const run = s => {
       const P = def(); if (s.seats != null) P.vars.seats = String(s.seats); if (s.maket) P.vars.maket = "'" + s.maket + "'";
-      const g = KB.generate2({ pkg, pkgDef: P, area: A, w, d, h, mz: p0.mz, coreMode: p0.coreMode, mezz: p0.mezz || "auto", name: p0.name || "Офис продаж", opts: s.opts, counts: s.counts, overflowOrder: base.shrink });
+      const g = KB.generate2({ pkg, pkgDef: P, area: A, w, d, h, mz: p0.mz, coreMode: p0.coreMode, entT: p0.entT, grid: p0.grid, mezz: p0.mezz || "auto", name: p0.name || "Офис продаж", opts: s.opts, counts: s.counts, overflowOrder: base.shrink });
       const fact = KB.programFact(g.project);
       let miss = 0, missOpt = [], missReq = [];
       for (const f of fact) if (f.placed < f.n) { const k = f.status === "обязательно" ? 10 : 3; miss += k * (f.n - f.placed); (k === 10 ? missReq : missOpt).push(f); }
@@ -1738,10 +1965,12 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     return S; };
   /* Сценарии для одного помещения и одного ТЗ: пересборка «другой вариант». Базовый первым. */
   KB.briefScenarios = function (B) {
-    const auto = !(B.building && B.building.w && B.building.d), fmt = String((B.sales || {}).format || "glass");
+    const bl0 = B.building || {}, auto = !(bl0.w && bl0.d), fmt = String((B.sales || {}).format || "glass");
     const L = [{ name: "Базовый", o: {} }, { name: "Зеркально: служебное с другой стороны", o: { mirror: true } },
       { name: "Бэк-офис крылом у торца (коридор, кабинеты с двух сторон)", o: { coreMode: "wing" } },
       { name: "Служебное — колонкой вдоль торца", o: { coreMode: "column" } }, { name: "Служебное — блоком с коридором", o: { coreMode: "block" } }];
+    if (bl0.entrance == null || bl0.entrance === "auto") L.push({ name: "Вход по центру фасада (как R24 В3)", o: { entT: 0.5 } },
+      { name: "Вход ближе к торцу, гостеприимство в коротком плече (как R24 В1)", o: { entT: 0.3 } }, { name: "Вход у сделочного узла (как R24 В2)", o: { entT: 0.72 } });
     if (auto) L.push({ name: "Другие пропорции здания", o: { depthRank: 1 } }, { name: "Ещё пропорции", o: { depthRank: 2 } });
     const F = { glass: "кабинеты со стеклом", shared: "кабинеты с общим столом на 4", open: "открытые места вдоль стены", cells: "ячейки в общем зале (open space)" };
     for (const f of ["cells", "open", "glass", "shared"]) if (f !== fmt) L.push({ name: "Продажи — " + F[f], o: {}, sales: f });
@@ -1758,8 +1987,12 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       let r; try { r = KB.fromBrief(B2, sc.o); } catch (e) { continue; }
       if (!dims) dims = { w: r.w, d: r.d };
       const g = sig(r.project); if (seen.has(g)) continue; seen.add(g);
-      r.scenario = sc.name; r.project.meta.params.brief = B; out.push(r); }
-    out.forEach((r, i) => { r.project.meta.variant = { i, n: out.length, name: r.scenario, base: dims }; });
+      r.scenario = sc.name; r.sales = sc.sales || null; r.project.meta.params.brief = B; out.push(r); }
+    // ранжирование: оценка плана (нормы, программа, зонирование, матрица смежности, путь клиента); лучший — первым
+    for (const r of out) r.score = KB.planScore(r.project);
+    // сначала сценарии, которые сохраняют ТЗ (формат продаж заказчика), затем — с другим форматом продаж; внутри групп — по оценке
+    if (o.sort !== false) out.sort((a, b) => (!!a.sales - !!b.sales) || b.score.score - a.score.score);
+    out.forEach((r, i) => { r.project.meta.variant = { i, n: out.length, name: r.scenario, base: dims, score: r.score.score, best: i === 0 && o.sort !== false }; });
     return out; };
   KB.variants = function (p0) { return KB.LEVEL_KEYS.map(k => Object.assign({ pkg: k }, KB.autoPlan(Object.assign({}, p0, { pkg: k })))); };
 
@@ -1771,7 +2004,13 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
    * Возвращает { project, report (текст), lost, assume, notes, log, rescued } — как скрипт скилла office-brief-to-plan и мастер «Новый проект». */
   KB.fromBrief = function (B, o = {}) {
     B = B || {};
-    const bl = B.building || {}, notes = [], assume = [];
+    const notes = [], assume = [];
+    if (B.funnel && typeof B.funnel === "object") { const F = KB.funnel(B.funnel), B2 = Object.assign({}, B), sales = Object.assign({}, B.sales || {});
+      if (sales.managers == null && B.managers == null) { sales.managers = F.managers; assume.push(`менеджеров ${F.managers} — по воронке продаж`); }
+      B2.sales = sales; if (B.waiting == null) B2.waiting = F.waiting; if (B.meet == null) B2.meet = { n: F.meet, seats: 8 }; if (B.vip == null) B2.vip = F.vip;
+      if (B.bank == null) B2.bank = F.bank; if (B.cashier == null) B2.cashier = F.cashier; if (B.notary == null) B2.notary = F.notary;
+      notes.push("Воронка продаж: " + F.notes.join(" ")); B = B2; }
+    const bl = B.building || {};
     const num = v => v == null || v === "" ? null : +String(v).replace(",", ".");
     let A = num(bl.area), w = num(bl.w), d = num(bl.d), h = num(bl.h);
     const up = String(bl.upper || "auto"), floor2 = /^(floor|2|two|этаж)/i.test(up);
@@ -1822,6 +2061,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     if (+B.vip > 0) R("vip", "Сделочная / VIP", "private", "meet", { n: String(+B.vip), area: A < 420 ? "16" : "20", border: "glass", color: "#A8784E" });
     if (+B.bank > 0) R("bank", +B.bank > 1 ? "Банк / ипотека" : "Банк / ипотека (1 сотрудник)", "semi", "office", { n: String(+B.bank), w: 3, h: 3.2, border: "glass" });
     if (on(B.cashier)) R("cashier", "Касса", "private", "service", { w: 3, h: 3 });
+    if (on(B.notary)) R("notary", "Нотариус", "private", "office", { area: A < 350 ? "15" : "20", border: "wall", color: "#C9B79C" });   // R24 060: 21,6 м², в сделочном узле с банком и кассой
     const wcg = String(B.wc_guest || (A >= 380 ? "mf" : "one"));
     R("wcv", /mf|м\s*\+?\s*ж/i.test(wcg) ? "С/у посетителей (М/Ж + МГН)" : "С/у универсальный (МГН)", "public", "wc", { area: /mf|м\s*\+?\s*ж/i.test(wcg) ? "12" : "5.5", color: "#CFE8E6" });
     if (+B.wc_staff > 0) R("wcs", "С/у персонала", "service", "wc", { n: String(+B.wc_staff), w: 1.6, h: 2.3, color: "#CFE8E6" });
@@ -1890,7 +2130,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
           } else {
             const w = +row.w || +Math.sqrt((+row.area || 9) * 1.3).toFixed(1), h = +row.h || +((+row.area || 9) / w).toFixed(1);
             const lvs = row.zone === "service" && S.items.some(i => i.t === "room" && i.lv === 1) ? [1, 0] : [0];
-            for (const lv of lvs) if (tryPlace(row, w, h, lv, row.zone === "public" ? "facade" : "back")) { ok = true; rescued.push(`${row.name} — ${lv ? (floor2 ? "на 2 этаже" : "на антресоли") : "в свободном месте"}`); break; }
+            for (const lv of lvs) if (tryPlace(row, w, h, lv, (!lv && KB.partnerPoint(S, row.name)) || (row.zone === "public" ? "facade" : "back"))) { ok = true; rescued.push(`${row.name} — ${lv ? (floor2 ? "на 2 этаже" : "на антресоли") : "в свободном месте"}`); break; }
           }
           if (!ok) break;
         }
@@ -1909,7 +2149,11 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     const score = (x, S) => missingOf(S).reduce((a, q) => a + (q.n - q.placed) * (q.status === "обязательно" ? 10 : 3), 0)
       + Math.max(0, (S.meta.seatsWanted || 0) - (S.meta.seatsPlaced || 0)) + KB.checks(S).filter(c => c.level === "red").length * 5
       + x.log.filter(l => /макет|→/.test(l)).length * 2;
-    const plan = (ww, dd) => KB.autoPlan({ pkg: "T", w: ww, d: dd, h, mz: floor2 ? fh : undefined, mezz, name, coreMode: o.coreMode });
+    // вход: доля длины фасада от левого торца (R24 060: В1 ≈ 0,7 от служебного торца, В2 — у сделочного узла, В3 — по центру); сетка колонн — шаг, м
+    const ENT = { center: 0.5, centre: 0.5, "по центру": 0.5, end: 0.3, hospitality: 0.3, "у торца": 0.3, deal: 0.7, "у сделки": 0.7 };
+    const entT = o.entT != null ? +o.entT : bl.entrance != null && bl.entrance !== "auto" ? (isFinite(+bl.entrance) && +bl.entrance > 0 && +bl.entrance < 1 ? +bl.entrance : ENT[String(bl.entrance).toLowerCase()]) : undefined;
+    const grid = num(bl.grid) || undefined;
+    const plan = (ww, dd) => KB.autoPlan({ pkg: "T", w: ww, d: dd, h, mz: floor2 ? fh : undefined, mezz, name, coreMode: o.coreMode, entT, grid });
     let r, rescued;
     try {
       if (w && d) { r = plan(w, d); rescued = finish(r.project); }
@@ -1924,7 +2168,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       }
     } finally { delete KB.PACKAGES.T; }
     const S = r.project;
-    if (o.mirror) KB.mirrorPlan(S);
+    if (!o.mirror !== !(String(bl.core || "").toLowerCase() === "left")) KB.mirrorPlan(S);   // служебное слева (по ТЗ) или сценарий «зеркально»
     let setsMsg = ""; if (B.sets) { const [sr] = KB.applyAll(S, [{ op: "sets_all", style: B.style }]); setsMsg = sr.msg || sr.error || ""; }
     S.notes = [`По ТЗ заказчика${B.name ? " «" + B.name + "»" : ""}. Здание ${w} × ${d} м, ${floor2 ? `2 этажа по ${fh} м` : `потолок ${h} м`}.`, assume.length ? "Допущения: " + assume.join("; ") + "." : "",
       notes.length ? notes.join("; ") + "." : "", B.notes || ""].filter(Boolean).join(" ");
@@ -1952,6 +2196,11 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     const red = checks.filter(c => c.level === "red"), yel = checks.filter(c => c.level === "yellow" || c.level === "warn");
     L.push("", `Проверки норм: красных ${red.length}, жёлтых ${yel.length}`, ...red.concat(yel).map(c => `- [${c.level}] ${c.text || c.msg || c.title}${c.ref ? " (" + c.ref + ")" : ""}`));
     if (setsMsg) L.push("", "Мебель наборами: " + setsMsg);
+    try { const J = KB.journey(S), P = KB.planScore(S);
+      if (J) { L.push("", "Путь клиента (CJM), расстояние по проходам от входной двери:");
+        for (const st of J.stages) L.push(`- ${st.n}. ${st.label}: ${st.missing ? "нет" : `${st.room.name} — ${st.dist == null ? "нет прохода" : String(st.dist).replace(".", ",") + " м"}${st.transit ? " (только через закрытые комнаты)" : ""}`}`);
+        if (J.see.maket === false) L.push("- макет не виден с порога"); }
+      L.push("", `Оценка плана: ${P.score} из 100 (нормы −${P.parts.norms}, программа −${P.parts.lost}, зонирование −${P.parts.zoning}, матрица смежности ${P.adj} %).`); } catch (e) {}
     // советы по планировке (по опыту реальных проектов: ChineHaus, R24): тяжёлый бэк-офис — на второй уровень, продажи — у макета
     const advice = [], inner0 = (w - 0.6) * (d - 0.6), staffA = rows.filter(x => x.zone === "service").reduce((s0, x) => s0 + (x.n === "M" ? M : +x.n || 1) * (+x.area || (+x.w || 0) * (+x.h || 0) || 0), 0);
     if (!floor2 && mezz !== "yes" && staffA > 0.25 * inner0) advice.push(`Служебное и бэк-офис ≈ ${Math.round(staffA)} м² — больше четверти площади. Как в проектах R24: вынесите бэк-офис (бухгалтерия, колл-центр, кухня, руководство) на 2 этаж или в подвал — внизу останется место клиентам.`);
@@ -2047,7 +2296,8 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     if (!here.length) return lv ? -5 : 2;                                                  // открытое пространство (на антресоли — пустота)
     const solid = here.filter(i => !i.sub && !isHall(i) && !isCirc(i));
     if (solid.length) return -3;
-    if (here.some(isCirc)) return 4;
+    if (here.some(isCirc)) { const k = KB.roleOf(r), corr = here.some(i => /коридор/i.test(i.name || ""));   // служебные — в коридор, клиентские — в холл
+      return corr ? (CLOSED.has(k) ? 3.2 : STAFF.has(k) ? 5 : 4) : (STAFF.has(k) ? 3.5 : 4); }
     if (here.some(isHall)) return 3;
     return 1;                                                                              // зона без стен
   }
@@ -2188,7 +2438,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       const a = { x, y, w, h }; if (blocks.some(c => overlap(a, c, within ? 0 : m) && !(c.w >= b.w - 1 && c.h >= b.d - 1))) continue;
       if (lv === 1 && !S.items.some(i => i.t === "room" && i.lv === 1 && !i.sub && inside(a, i))) continue; // на антресоли — только над перекрытием
       const cy = y + h / 2, cx = x + w / 2;
-      const pref = o.near === "facade" ? b.d - cy : o.near === "back" ? cy : o.near === "left" ? cx : o.near === "right" ? b.w - cx : o.near === "center" ? Math.hypot(cx - b.w / 2, cy - b.d / 2) : cy * 0 + cx * 0.001;
+      const pref = o.near && typeof o.near === "object" ? Math.hypot(cx - o.near.x, cy - o.near.y) : o.near === "facade" ? b.d - cy : o.near === "back" ? cy : o.near === "left" ? cx : o.near === "right" ? b.w - cx : o.near === "center" ? Math.hypot(cx - b.w / 2, cy - b.d / 2) : cy * 0 + cx * 0.001;
       res.push({ x: r3(x), y: r3(y), w, h, score: pref });
     }
     res.sort((a, c) => a.score - c.score);
@@ -2467,7 +2717,11 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     const frontArea = coreFront.reduce((s, c) => s + areaOf(c.r), 0);
     // глубина ряда за коридором: сколько нужно по площади при ширине ядра ≈ ширине заднего ряда; остаток у витража — под сделочные/банк
     let dA = 0;
-    if (coreFront.length) { dA = Math.min(Df, Math.max(3.4, frontArea / Math.max(wBack, 3.6) + 0.2)); if (Df - dA < 2.95) dA = Df; }   // остаток ≥ 3 м у витража — под клиентские комнаты, а не раздувать кухню
+    if (coreFront.length) { dA = Math.min(Df, Math.max(3.4, frontArea / Math.max(wBack, 3.6) + 0.2));
+      // CJM: ≥ 2 сделочных — под служебным блоком оставляем карман сделки (ряд комнат у витража + холл), как в R24 060 В3
+      const dealN = ["vip", "cashier", "bank", "notary"].reduce((s0, k) => s0 + (upKeys.includes(k) ? 0 : copies(k).length), 0);
+      if (dealN >= 2 && Df - 4.5 >= 3.2) dA = Math.min(dA, Math.max(3.2, Df - 4.5));   // карман: комнаты 3 м + холл 1,5 м
+      if (Df - dA < 2.95) dA = Df; }   // остаток ≥ 3 м у витража — под клиентские комнаты, а не раздувать кухню
     const cfW = c => Math.max(c.r.key === "director" ? 3.2 : 2.4, areaOf(c.r) / Math.max(dA, 1));
     const wFront = coreFront.reduce((s, c) => s + cfW(c), 0);
     Wc = Math.max(wBack, wFront, 3.6);
@@ -2483,30 +2737,38 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
 
     /* ---------- 2. полоса вдоль глухой стены */
     const band = [];
-    const push = (k, w0) => { for (const r of copies(k)) band.push({ r, w: r.key === "cabinet" ? (r.w || 3) : wOf(r, rb, w0) }); };
+    const g = +p.grid || 0, gU = g ? (g / 2 >= 2.8 && g / 2 <= 3.9 ? g / 2 : g >= 2.8 && g <= 3.9 ? g : 0) : 0;   // шаг колонн → модуль кабинета (2 кабинета в пролёте 6–6,5 м)
+    const push = (k, w0) => { for (const r of copies(k)) band.push({ r, w: r.key === "cabinet" ? (gU && !openDesks ? gU : (r.w || 3)) : wOf(r, rb, w0) }); };
     push("cafe", 2.4); push("barback", 1.8); push("wardrobe", 1.5); push("showroom", 4); const mkT = get("maket") && (KB.MAKET[pp.maket] || KB.MAKET["3x2"]), frontNeed = Math.max(3.0, mkT ? mkT[1] + 2 * (colCore ? 0.8 : compact ? 1.0 : 1.2) + 0.3 : 0);   // у витража: вход, ожидание и зона макета
     const cellsOK = !!(cab && cab.cells && Y1 - (Y0 + rb + a) - frontNeed >= (cab.h || 2.6));   // зал мелкий — ячейки встают вдоль стены
     if (cab && cab.cells && !cellsOK) warn.push("Зал неглубокий для ячеек в центре — места продаж поставлены вдоль глухой стены.");
     if (!cellsOK) push("cabinet"); if (dirInBand) push("director", 3.4);   // РОП — клиентская комната у кабинетов, дверь из зала
-    if (!upKeys.includes("meet")) push("meet", 4.2); push("bank", 3); if (!upKeys.includes("vip")) push("vip", 3.2); push("cashier", 2.6);
+    if (!upKeys.includes("meet")) push("meet", 4.2); push("bank", 3); push("notary", 3.6); if (!upKeys.includes("vip")) push("vip", 3.2); push("cashier", 2.6);
     const stairW = mezz ? 2.8 : 0;
     const eDepth = Y1 - coreBottom, frontBlock = [];
     // блок под служебным коридором: у витража ряд клиентских помещений; если глубины хватает — второй ряд у коридора и холл между ними
     const FB_A = 1.5, fbTwo = eDepth >= 3.2 + FB_A + 3.0, fbD1 = fbTwo ? Math.min(5, Math.max(3.2, eDepth - FB_A - 3.0)) : Math.min(eDepth, 5), fbD2 = fbTwo ? Math.min(5, eDepth - fbD1 - FB_A) : 0;
+    // мелкий карман без холла: в нём одна комната у торца, остальное — холл к залу (иначе дальние комнаты доступны только транзитом)
+    const noLob = !fbTwo && fbD1 >= eDepth - 0.3;
     if (eDepth >= 2.95) { const left = [Wc, fbTwo ? Wc : 0];
-      for (const k of ["vip", "cashier", "bank", "meet"]) for (let i = band.length - 1; i >= 0; i--) { const b = band[i]; if (b.r.key !== k) continue;
-        for (const row of [0, 1]) { const w = Math.max(2.8, areaOf(b.r) / (row ? fbD2 : fbD1)); if (left[row] > 0 && w <= left[row] + 0.01) { frontBlock.push({ r: b.r, w, row }); band.splice(i, 1); left[row] -= w; break; } } } }
+      for (const k of ["vip", "cashier", "notary", "bank", "meet"]) for (let i = band.length - 1; i >= 0; i--) { const b = band[i]; if (b.r.key !== k) continue;
+        for (const row of [0, 1]) { const w = Math.max(2.8, areaOf(b.r) / (row ? fbD2 : fbD1)); if (left[row] > 0 && w <= left[row] + 0.01) { frontBlock.push({ r: b.r, w, row }); band.splice(i, 1); left[row] = noLob && !row ? 0 : left[row] - w; break; } } } }
     for (const r of toBand) band.push({ r, w: wOf(r, rb, r.key === "director" ? 3.2 : 2.4) });   // служебное, не влезшее в колонку, — в конце ряда, у колонки
     const Lb = xc - X0 - stairW - passW; let used = band.reduce((s, b) => s + b.w, 0);
     const overflow = [];
     while (used > Lb + 0.01 && band.length) {
       let idx = -1;
-      const ord = (p.overflowOrder || ["showroom", "wardrobe", "cashier", "cafe", "bank", "meet", "cabinet", "vip"]).filter(k => band.some(b => b.r.key === k));
+      const ord = (p.overflowOrder || ["showroom", "wardrobe", "cashier", "cafe", "bank", "notary", "meet", "cabinet", "vip"]).filter(k => band.some(b => b.r.key === k));
       if (wing && toBand.length) ord.unshift(...[...new Set(toBand.map(r => r.key))].filter(k => band.some(b => b.r.key === k)));   // служебное, не влезшее в ядро, уступает ряд местам продаж
-      for (const k of ord.concat(["showroom", "wardrobe", "cashier", "cafe", "bank", "meet", "cabinet", "vip"])) { idx = band.map(b => b.r.key).lastIndexOf(k); if (idx >= 0) break; }
+      for (const k of ord.concat(["showroom", "wardrobe", "cashier", "cafe", "bank", "notary", "meet", "cabinet", "vip"])) { idx = band.map(b => b.r.key).lastIndexOf(k); if (idx >= 0) break; }
       if (idx < 0) idx = band.length - 1; const [b] = band.splice(idx, 1); overflow.push(b); used -= b.w; }
-    { let x = X0; const slack = Lb - used, add = slack > 0 && band.length ? Math.min(slack / band.length, 0.6) : 0;
-      for (const b of band) { const w = b.w + add; mk(b.r, x, Y0, w, rb); x += w; placedKeys.push(b.r.key); }
+    { let x = X0, last = null; const slack = Lb - used; let add = slack > 0 && band.length ? Math.min(slack / band.length, 0.6) : 0, left = slack;
+      if (gU) { add = 0; const u = g / 2;   // по сетке: перегородки кабинетов — на осях и в середине пролёта; добор — предыдущему помещению
+        let xx = X0; for (let i = 0; i < band.length; i++) { const b = band[i];
+          if (b.r.key === "cabinet" && (i === 0 || band[i - 1].r.key !== "cabinet")) { const sn = X0 + Math.ceil((xx - X0 - 0.05) / u) * u, dl = sn - xx; if (dl > 0.05 && dl <= left + 0.01) { b.pre = dl; left -= dl; xx = sn; } }
+          xx += b.w; } }
+      for (const b of band) { if (b.pre) { if (last) { last.w = r3(last.w + b.pre); } else mk({ key: "pass", name: "Проход", cat: "circ", border: "none" }, x, Y0, b.pre, rb); x += b.pre; }
+        const w = b.r.key === "cabinet" && gU ? b.w : b.w + add; last = mk(b.r, x, Y0, w, rb); x += w; placedKeys.push(b.r.key); }
       if (xc - stairW - passW - x > 0.3) mk({ key: "pass", name: "Проход", cat: "circ", border: "none" }, x, Y0, xc - stairW - passW - x, rb); }
     if (passW) mk({ key: "pass", name: "Проход к служебным", cat: "circ", border: "none" }, xc - passW, Y0, passW, rb + a);
     if (mezz) mk({ key: "stair", name: floor2 ? "Лестница на 2 этаж" : "Лестница на антресоль", cat: "circ", border: "none" }, xc - stairW - passW, Y0, stairW, rb + a);
@@ -2528,7 +2790,7 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       for (; placed < cab.n; placed++) overflow.unshift({ r: cab, w: cw });
     }
     // в ряд напротив сначала — кабинеты и переговорные (клиент идёт к ним из зала), потом остальное
-    const semiFirst = ["cabinet", "meet", "bank", "vip", "showroom", "cashier", "cafe", "wardrobe"];
+    const semiFirst = ["cabinet", "meet", "bank", "notary", "vip", "showroom", "cashier", "cafe", "wardrobe"];
     overflow.sort((p, q) => semiFirst.indexOf(p.r.key) - semiFirst.indexOf(q.r.key));
     const islandRow = (y, faceNorth) => { const maxL = (xc - X0) - 2.6, row = []; let wSum = 0;
       while (overflow.length && wSum + overflow[0].w <= maxL) { const b = overflow.shift(); row.push(b); wSum += b.w; }
@@ -2552,7 +2814,9 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
       const put = (list, y, dd) => { let x = xc; const kk = Wc / list.reduce((s, f) => s + f.w, 0); for (const f of list) { mk(f.r, x, y, f.w * kk, dd); x += f.w * kk; placedKeys.push(f.r.key); } };
       if (r2.length) { const y2 = coreBottom; put(r2, y2, fbD2); lobby = mk({ key: "lobby", name: "Холл", cat: "circ", border: "none" }, xc, y2 + fbD2, Wc, y0 - (y2 + fbD2)); }
       else if (y0 - coreBottom > 0.3) lobby = mk({ key: "lobby", name: "Холл", cat: "circ", border: "none" }, xc, coreBottom, Wc, y0 - coreBottom);
-      if (r1.length) put(r1, y0, fbD1); }
+      if (r1.length && noLob && Wc - Math.min(Wc, r1[0].w) >= 1.5) { const w = r1[0].w;
+        lobby = mk({ key: "lobby", name: "Холл", cat: "circ", border: "none" }, xc, y0, Wc - w, fbD1); mk(r1[0].r, X1 - w, y0, w, fbD1); placedKeys.push(r1[0].r.key); }
+      else if (r1.length) put(r1, y0, fbD1); }
     else if (eDepth > 0.3) lobby = mk({ key: "lobby", name: "Холл", cat: "circ", border: "none" }, xc, coreBottom, Wc, eDepth);
 
     /* ---------- 4. публичная зона у витража */
@@ -2593,19 +2857,44 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
     const capI = cI();
     const nI = Math.min(groups - nF, capI);
     if (lounge && (nF + nI) * G.seats < seats) warn.push(`Мест ожидания: ${(nF + nI) * G.seats} из ${seats}.`);
-    // ряд у витража: [детская][ожидание…][ВХОД][макет][медиа]
-    const fItems = (useKids && !inKids ? 1 : 0) + nF + 1 + (useMaket && !inMaket ? 1 : 0) + (useMedia && !inMedia ? 1 : 0);
+    // ряд у витража: [детская][ожидание…][ВХОД][макет][медиа]; при заданном положении входа (p.entT — доля длины) часть групп ожидания уходит за вход
+    const kF = useKids && !inKids, mF = useMaket && !inMaket, dF = useMedia && !inMedia, L0 = px0 + 0.3, R0 = px0 + 0.3 + W_;
+    const recB = (recR ? recW + 1.0 : 0) + Math.max(tamW, 2) / 2, entB = Math.max(tamW / 2, 1.0) + 0.3;
+    let entX, pick = null, x, spD = 0, gm = gap;
+    if (p.entT != null && isFinite(+p.entT)) { const tgt = X0 + Math.min(0.85, Math.max(0.12, +p.entT)) * Lin; gm = Math.min(gap, 0.4);   // при заданном входе зазоры между группами можно сжать до 0,4 м
+      // перебор: сколько групп ожидания слева, детская слева/справа, макет справа (по умолчанию) или слева от входа — ближе всего к целевой оси
+      for (const mL of mF ? [false, true] : [false]) for (let n = nF; n >= 0; n--) for (const k of kF ? [true, false] : [false]) { if (k && !n && nF) continue;   // детская — рядом с ожиданием
+        const lw = (k ? kw + gm : 0) + n * (G.w + gm) + (mL ? mw + gm : 0) + recB, rw = entB + (mF && !mL ? mw + gm : 0) + (dF ? MW + gm : 0) + (nF - n) * (G.w + gm) + (kF && !k ? kw + gm : 0), e = Math.min(Math.max(tgt, L0 + lw), R0 - rw);
+        if (L0 + lw <= e + 0.01 && e + rw <= R0 + 0.01) { const err = Math.abs(e - tgt) + (mL ? 1.5 : 0); if (!pick || err < pick.err - 0.3) pick = { n, k, mL, e, err, lw, rw }; } } }
+    if (pick) {
+      entX = pick.e; const nLi = (pick.k ? 1 : 0) + pick.n + (pick.mL ? 1 : 0), spL = gm + Math.max(0, entX - L0 - pick.lw) / (nLi + 1); x = L0 + (spL - gm);
+      if (pick.mL) { mk(mkR, x, Y1 - mh - 0.2, mw, mh, { name: "Зона макета", extra: { sub: true } }); placedKeys.push("maket"); x += mw + spL; }   // макет слева — дальше от входа, ожидание у стойки
+      if (pick.k) { mk(kidsR, x, Y1 - kh - 0.2, kw, kh, { extra: { sub: true } }); placedKeys.push("kids"); x += kw + spL; }
+      for (let i = 0; i < pick.n; i++) { mk(lounge, x, Y1 - 0.2 - G.h, G.w, G.h, { extra: { sub: true } }); x += G.w + spL; }
+    } else {
+    const fItems = (kF ? 1 : 0) + nF + 1 + (mF ? 1 : 0) + (dF ? 1 : 0);
     const spF = gap + Math.max(0, W_ - fFixed() - nF * (G.w + gap)) / Math.max(1, fItems + 1);
-    let x = px0 + 0.3 + (spF - gap);
-    if (useKids && !inKids) { mk(kidsR, x, Y1 - kh - 0.2, kw, kh, { extra: { sub: true } }); placedKeys.push("kids"); x += kw + spF; }
+    x = px0 + 0.3 + (spF - gap);
+    if (kF) { mk(kidsR, x, Y1 - kh - 0.2, kw, kh, { extra: { sub: true } }); placedKeys.push("kids"); x += kw + spF; }
     for (let i = 0; i < nF; i++) { mk(lounge, x, Y1 - 0.2 - G.h, G.w, G.h, { extra: { sub: true } }); x += G.w + spF; }
-    let entX = x + (recR ? recW + 1.0 : 0) + Math.max(tamW, 2) / 2;
-    { const snap = Math.round((entX - 2.5) / 5) * 5 + 2.5; if (Math.abs(snap - entX) < 0.9) entX = snap; }   // ось входа — между колоннами (шаг 5 м)
+    entX = x + (recR ? recW + 1.0 : 0) + Math.max(tamW, 2) / 2;
+    if (g >= 3) { const room = Math.max(0, (spF - gap) * ((mF ? 1 : 0) + (dF ? 1 : 0) + 1)), k0 = Math.ceil((entX - X0 - 0.3) / g - 0.5), sn = X0 + (k0 + 0.5) * g;   // ось входа — посередине пролёта
+      if (sn - entX >= -0.3 && sn - entX <= Math.min(g / 2, room)) entX = sn; }
+    else { const snap = Math.round((entX - 2.5) / 5) * 5 + 2.5; if (Math.abs(snap - entX) < 0.9) entX = snap; }   // ось входа — между колоннами (шаг 5 м)
+    spD = spF; }
     if (tamR) { mk(tamR, entX - tamW / 2, Y1 - tamH, tamW, tamH, { extra: { sub: true } }); placedKeys.push("tambour"); }
     if (recR) { mk(recR, Math.max(px0 + 0.2, entX - 1.0 - recW), recFront ? Y1 - recH - 0.5 : Math.max(py0 + 0.3, Y1 - tamH - 0.8 - recH), recW, recH, { extra: { sub: true } }); placedKeys.push("reception"); }
-    x = entX + Math.max(tamW / 2, 1.0) + 0.3 + spF;
-    if (useMaket && !inMaket) { mk(mkR, x, Y1 - mh - 0.2, mw, mh, { name: "Зона макета", extra: { sub: true } }); placedKeys.push("maket"); x += mw + spF; }
-    if (useMedia && !inMedia) { mk(medR, x, Y1 - MH - 0.2, MW, MH, { extra: { sub: true } }); placedKeys.push("media"); x += MW + spF; }
+    if (!pick) { x = entX + entB + spD;
+      if (mF) { mk(mkR, x, Y1 - mh - 0.2, mw, mh, { name: "Зона макета", extra: { sub: true } }); placedKeys.push("maket"); x += mw + spD; }
+      if (dF) { mk(medR, x, Y1 - MH - 0.2, MW, MH, { extra: { sub: true } }); placedKeys.push("media"); x += MW + spD; } }
+    else {   // справа от входа: макет и медиа (видны с порога), затем остальные группы ожидания и детская рядом с ними
+      const nRi = (mF && !pick.mL ? 1 : 0) + (dF ? 1 : 0) + (nF - pick.n) + (kF && !pick.k ? 1 : 0), spR = gm + Math.max(0, R0 - entX - pick.rw) / (nRi + 1);
+      x = entX + entB + (spR - gm);
+      if (mF && !pick.mL) { mk(mkR, x, Y1 - mh - 0.2, mw, mh, { name: "Зона макета", extra: { sub: true } }); placedKeys.push("maket"); x += mw + spR; }
+      if (dF) { mk(medR, x, Y1 - MH - 0.2, MW, MH, { extra: { sub: true } }); placedKeys.push("media"); x += MW + spR; }
+      for (let i = pick.n; i < nF; i++) { mk(lounge, x, Y1 - 0.2 - G.h, G.w, G.h, { extra: { sub: true } }); x += G.w + spR; }
+      if (kF && !pick.k) { mk(kidsR, x, Y1 - kh - 0.2, kw, kh, { extra: { sub: true } }); placedKeys.push("kids"); x += kw + spR; }
+    }
     if (lounge && nF + nI) placedKeys.push("lounge");
     // внутренний ряд: макет на оси входа (виден с порога), слева — детская и ожидание, справа — медиа
     if (innerOK && (inMaket && useMaket || inKids && useKids || inMedia && useMedia || nI)) {
@@ -3174,6 +3463,7 @@ function renderPlan(){
   o += `<rect x='-60' y='-60' width='${b.w+120}' height='${b.d+120}' fill='url(#g5)' data-bg='1'/>`;
   o += `<rect x='-3' y='${b.d+1.6}' width='${b.w+6}' height='3.2' fill='var(--grid-major)' opacity='.6' pointer-events='none'/><text x='${b.w/2}' y='${b.d+3.2}' font-size='.5' text-anchor='middle' dominant-baseline='central' fill='var(--muted)' pointer-events='none' letter-spacing='.2'>ДОРОГА · ФАСАД</text>`;
   o += planMarkup(level);
+  if(SHOWPATH&&level===0) o += journeyMarkup();
   // размеры здания
   o += dimLine(0,0,b.w,0,mm(b.w),-1.1) + dimLine(0,b.d,0,0,mm(b.d),-1.1);
   // оси колонн при витраже
@@ -3464,7 +3754,7 @@ function explicationHTML(){
   const rows=explRows(); const tot=rows.map(r=>r.rooms.filter(x=>!x.sub).reduce((s,x)=>s+x.area,0));
   o+=`<div class="kpis"><div class="kpi"><span>Площадь застройки</span><b>${m2(bA)} м²</b></div><div class="kpi"><span>Всего полезная</span><b>${m2(tot[0]+tot[1])} м²</b></div>
   <div class="kpi"><span>1 этаж</span><b>${m2(tot[0])} м²</b></div><div class="kpi"><span>${S.b.upper==="floor"?"2 этаж":"Антресоль · доля"}</span><b>${m2(tot[1])}${S.b.upper==="floor"?" м²":" · "+Math.round(tot[1]/bA*100)+"%"}</b></div></div>`;
-  o+=checksHTML()+designHTML()+programHTML();
+  o+=scoreHTML()+cjmHTML()+checksHTML()+designHTML()+programHTML();
   for(const g of rows){ if(!g.rooms.length) continue;
     o+=`<h5>${g.lv?upperName()+", отм. +"+fmt(S.b.mz,3):"1 этаж, отм. 0,000"}</h5><table class="ex"><tr><th>№</th><th>Помещение</th><th style="text-align:right">м²</th></tr>`+
     g.rooms.map(r=>`<tr class="${r.sub?"sub":""}" data-sel="${r.id}"><td>${r.num}</td><td><span class="dot" style="background:${r.color}"></span>${esc(r.name)}${r.sub?" <small>(в составе)</small>":""}</td><td class="n">${m2(r.area)}</td></tr>`).join("")+
@@ -4089,6 +4379,22 @@ function checksHTML(){ const c=OfficeKB.checks(S);
 function designHTML(){ if(!OfficeKB.designChecks) return ""; const c=OfficeKB.designChecks(S); if(!S.items.some(i=>i.t==="room")) return "";
   if(!c.length) return `<h5>Планировка</h5><p class="note"><span class="lvl ok">ок</span>По правилам зонирования из реальных офисов продаж замечаний нет.</p>`;
   return `<h5>Планировка · ${c.length}</h5><ul class="checks" style="list-style:none;padding:0">`+c.map(x=>`<li ${x.id?`data-sel="${x.id}"`:""}><span class="lvl advice">совет</span>${esc(x.text)}<small>${esc(x.ref||"")}</small></li>`).join("")+`</ul><p class="note">Советы по опыту реальных проектов (houz architects): не нормы, а как делают в хороших офисах продаж.</p>`; }
+function scoreHTML(){ if(!OfficeKB.planScore||!S.items.some(i=>i.t==="room")) return ""; let P; try{ P=OfficeKB.planScore(S); }catch(e){ return ""; }
+  return `<div class="score ${P.score>=85?"ok":P.score>=70?"yellow":"red"}"><b>${P.score}</b><span>оценка плана из 100<br><small>нормы −${P.parts.norms} · программа −${P.parts.lost} · зонирование −${P.parts.zoning} · смежность ${P.adj} %</small></span></div>`; }
+var SHOWPATH=(()=>{ try{ return localStorage.getItem("op_path")==="1"; }catch(e){ return false; } })();
+function cjmHTML(){ if(!OfficeKB.journey||!S.items.some(i=>i.t==="room")) return ""; let J=null; try{ J=OfficeKB.journey(S); }catch(e){}
+  if(!J) return `<h5>Путь клиента</h5><p class="note">Не найден вход: поставьте на витраже дверь с подписью «Вход».</p>`;
+  const rows=J.stages.map(s=>`<tr ${s.room?`data-sel="${s.room.id}"`:""}><td><b class="cj ${s.missing?"no":s.unreachable||s.transit?"bad":""}">${s.n}</b></td><td>${esc(s.label)}</td><td>${s.missing?`<span style="color:var(--muted)">нет</span>`:esc(s.room.name)}</td><td class="n">${s.missing||s.dist==null?"—":fmt(s.dist,1)+" м"}</td></tr>`).join("");
+  const notes=[J.see.maket===false?"макет не виден с порога":"", J.see.rec===false?"стойку не видно с порога":"", J.transit.length?`транзит через закрытые комнаты: ${J.transit.length}`:"", J.unreachable.length?`без прохода: ${J.unreachable.length}`:""].filter(Boolean);
+  return `<h5>Путь клиента (CJM)</h5><label class="c" style="font-size:12.5px"><input type="checkbox" id="cjmShow" ${SHOWPATH?"checked":""}> Показать путь на плане</label><table class="ex cjm">${rows}</table><p class="note">Расстояние — по проходам от входной двери: через двери, а не сквозь стены${notes.length?". Внимание: "+notes.join("; "):""}.</p>`; }
+function journeyMarkup(){ if(!OfficeKB.journey) return ""; let J=null; try{ J=OfficeKB.journey(S); }catch(e){} if(!J) return "";
+  const col=["#2a78b8","#2a78b8","#3c9a5f","#d08a1a","#7a56c2","#c2565e","#a8784e"]; let o="";
+  for(const s of J.stages){ if(!s.pts||s.pts.length<2) continue; const c=s.transit||s.unreachable?"#c0392b":col[(s.n-1)%col.length];
+    o+=`<polyline points="${s.pts.map(p=>p.x.toFixed(2)+","+p.y.toFixed(2)).join(" ")}" fill="none" stroke="${c}" stroke-width="2.4" stroke-dasharray="7 5" stroke-linecap="round" stroke-linejoin="round" class="nss" opacity=".8" pointer-events="none"/>`; }
+  for(const s of J.stages){ if(!s.room) continue; const r=s.room, x=s.n===1?J.entrance.px:r.x+r.w/2, y=s.n===1?J.entrance.py-0.6:r.y+r.h/2, c=s.transit||s.unreachable?"#c0392b":col[(s.n-1)%col.length];
+    o+=`<g pointer-events="none"><circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".38" fill="${c}" stroke="#fff" stroke-width=".07"/><text x="${x.toFixed(2)}" y="${(y+0.01).toFixed(2)}" font-size=".42" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">${s.n}</text></g>`; }
+  return o; }
+$("#pane").addEventListener("change",e=>{ if(e.target.id==="cjmShow"){ SHOWPATH=e.target.checked; try{ localStorage.setItem("op_path",SHOWPATH?"1":"0"); }catch(_){} render(); } });
 function programHTML(){ if(!S.program||!S.program.length) return `<h5>Программа помещений</h5><p class="note">Программы нет. Нажмите «Новый проект → Настроить программу» — он соберёт список помещений с целевыми площадями и разложит их по зонам.</p>`;
   const f=OfficeKB.programFact(S), st={ok:"ok",yellow:"yellow",red:"red",info:"info"}, nm={ok:"есть",yellow:"частично",red:"нет",info:"больше"};
   return `<h5>Программа: цель / факт</h5><table class="ex"><tr><th>Помещение</th><th style="text-align:right">шт.</th><th style="text-align:right">м² факт / цель</th></tr>`+
@@ -4240,7 +4546,8 @@ const BW_ITEMS=[
     {k:"meet",t:"Переговорная",on:A=>A>=150,num:{def:A=>A>=550?2:1,min:1,max:5,u:"шт."},sel:{opts:[["4","на 4"],["6","на 6"],["8","на 8"],["10","на 10"],["12","на 12"]],def:A=>A>=400?"8":"6"}},
     {k:"vip",t:"Сделочная / VIP",on:A=>A>=300,num:{def:A=>A>=600?2:1,min:1,max:4,u:"шт."}},
     {k:"bank",t:"Банк / ипотека",on:A=>A>=250,num:{def:()=>1,min:1,max:4,u:"мест"}},
-    {k:"cashier",t:"Касса",on:()=>false}]],
+    {k:"cashier",t:"Касса",on:()=>false},
+    {k:"notary",t:"Нотариус",on:()=>false}]],
   ["5. Клиентская зона",[
     {k:"reception",t:"Ресепшен",on:()=>true,sel:{opts:[["1","на 1 чел."],["2","на 2 чел."],["3","на 3 чел."]],def:A=>A>=450?"2":"1"}},
     {k:"waiting",t:"Зона ожидания",on:()=>true,num:{def:(A,st)=>Math.max(6,Math.round(1.5*(st.f.managers.n||4))),min:2,max:40,u:"мест"}},
@@ -4276,6 +4583,7 @@ const BW_FMT=[["glass","Кабинеты со стеклом","у глухой �
 const bwDepth=A=>A<=90?7.5:A<=150?8.5:A<=250?10:A<=400?12:13;
 function briefWizard(prev){
   const st=prev?JSON.parse(JSON.stringify(prev)):{A:250,autoB:true,w:0,d:0,lvl:"one",h:4.5,fh:3.6,name:"Офис продаж",sets:true,style:"base",touched:[],f:{}};
+  st.ent=st.ent||"auto"; st.core=st.core||"right"; st.grid=+st.grid||0; st.fun=st.fun||{deals:30,conv:10,mortgage:50,banks:2,consult:60};
   const touched=new Set(st.touched||[]);
   // умолчания — по правилам пакетов S/M/L (то, что движок гарантированно раскладывает); «желательное» пакета — выключено, отметите сами
   const defaults=()=>{ const A=st.A, Ae=Math.round(A*(st.lvl==="mezz"?1.2:st.lvl==="floor"?1.4:1)), pkg=Ae<200?"S":Ae<400?"M":"L";
@@ -4298,7 +4606,13 @@ function briefWizard(prev){
     if(it.sel) s+=`<select data-v="${it.k}" aria-label="${esc(it.t)}: вариант">${it.sel.opts.map(([v,l])=>`<option value="${v}" ${String(f.v)===v?"selected":""}>${l}</option>`).join("")}</select>`;
     return s; };
   const fmtCards=()=>`<div class="fmt" role="radiogroup" aria-label="Формат отдела продаж">${BW_FMT.map(([k,t,d,ic])=>`<button role="radio" aria-checked="${st.fmt===k}" class="${st.fmt===k?"on":""}" data-fmt="${k}"><svg viewBox="0 0 44 20" aria-hidden="true">${ic}</svg><b>${t}</b><small>${d}</small></button>`).join("")}</div>`;
-  const items=()=>BW_ITEMS.map(([g,list],gi)=>`<h5>${g}</h5>${gi?"":fmtCards()}<div class="grp">${list.map(it=>{ const f=st.f[it.k];
+  const funBlock=()=>`<details class="fun" ${st.funOpen?"open":""}><summary>Рассчитать от плана продаж</summary><div class="fung">
+    <label>Сделок в месяц<input type="number" data-fun="deals" min="1" value="${st.fun.deals}"></label><label>Конверсия визит → сделка, %<input type="number" data-fun="conv" min="1" max="60" value="${st.fun.conv}"></label>
+    <label>Консультация, мин<input type="number" data-fun="consult" min="15" max="180" value="${st.fun.consult}"></label><label>Ипотека, % сделок<input type="number" data-fun="mortgage" min="0" max="100" value="${st.fun.mortgage}"></label>
+    <label>Банков-партнёров<input type="number" data-fun="banks" min="0" max="6" value="${st.fun.banks}"></label></div><div class="funres" id="bw_funres"></div>
+    <button class="btn" id="bw_funapply">Подставить в программу</button></details>`;
+  const funRes=()=>{ const r=OfficeKB.funnel(st.fun), el=$m("bw_funres"); if(el) el.innerHTML=`<ul>${r.notes.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`; return r; };
+  const items=()=>BW_ITEMS.map(([g,list],gi)=>`<h5>${g}</h5>${gi?"":fmtCards()+funBlock()}<div class="grp">${list.map(it=>{ const f=st.f[it.k];
       return `<div class="it ${f.on?"":"off"} ${it.num&&it.sel&&it.always?"wide":""}"><label>${it.always?`<span class="dot"></span>`:`<input type="checkbox" data-on="${it.k}" ${f.on?"checked":""}>`}<span>${esc(it.t)}</span></label><span class="ctl">${ctl(it)}</span></div>`; }).join("")}</div>`).join("");
   const lv=[["one","1 этаж","без второго уровня"],["mezz","Антресоль (ярус)","≈ 20% площади наверху"],["floor","2 этажа","служебное — на 2 этаже"]];
   m.innerHTML=`<div class="dlg bw" role="dialog" aria-label="Новый проект"><h3>Новый проект</h3>
@@ -4310,6 +4624,9 @@ function briefWizard(prev){
   <h5>2. Габариты здания</h5>
   <div class="row four bwdims"><label class="f">Длина вдоль улицы (витраж), м<input id="bw_w" type="number" step=".5" min="6"></label><label class="f">Глубина, м<input id="bw_d" type="number" step=".5" min="5"></label>
     <label class="f" id="bw_hl">Высота потолка, м<input id="bw_h" type="number" step=".1" min="2.7"></label></div>
+  <div class="bwent"><label class="f">Вход<select id="bw_ent"><option value="auto">подберёт движок</option><option value="center">по центру фасада (как R24 В3)</option><option value="end">ближе к торцу, гостеприимство в коротком плече (В1)</option><option value="deal">у сделочного узла (В2)</option></select></label>
+    <label class="f">Служебное и мокрый узел<select id="bw_core"><option value="right">в правом торце</option><option value="left">в левом торце</option></select></label>
+    <label class="f">Шаг колонн, м<input id="bw_grid" type="number" step=".1" min="0" max="12" placeholder="нет колонн"></label></div>
   <label class="c"><input type="checkbox" id="bw_auto"> Подобрать пропорции автоматически (движок сравнит несколько глубин и возьмёт ту, где всё помещается)</label>
   <h5>3. Уровни</h5>
   <div class="seg" id="bw_lv">${lv.map(([k,t,s])=>`<button data-lv="${k}">${t}<small>${s}</small></button>`).join("")}</div>
@@ -4322,7 +4639,7 @@ function briefWizard(prev){
   <div class="bwsum" id="bw_sum"></div>
   <div class="actions"><button class="btn primary" id="bw_go">Собрать план</button><button class="btn" id="bw_blank" title="Только стены по габаритам — расставите всё сами">Пустое помещение</button><span class="spacer"></span><button class="btn" id="bw_cancel">Отмена</button></div></div>`;
   document.body.appendChild(m);
-  const sync=()=>{ $m("bw_rng").value=st.A; $m("bw_A").value=st.A; $m("bw_w").value=st.w; $m("bw_d").value=st.d; $m("bw_name").value=st.name; $m("bw_auto").checked=st.autoB;
+  const sync=()=>{ $m("bw_ent").value=st.ent; $m("bw_core").value=st.core; $m("bw_grid").value=st.grid||""; funRes(); $m("bw_rng").value=st.A; $m("bw_A").value=st.A; $m("bw_w").value=st.w; $m("bw_d").value=st.d; $m("bw_name").value=st.name; $m("bw_auto").checked=st.autoB;
     $m("bw_w").disabled=$m("bw_d").disabled=false; $m("bw_sets").checked=st.sets; $m("bw_style").value=st.style;
     m.querySelectorAll("[data-a]").forEach(b=>b.classList.toggle("on",+b.dataset.a===st.A)); m.querySelectorAll("[data-lv]").forEach(b=>b.classList.toggle("on",b.dataset.lv===st.lvl));
     const fl=st.lvl==="floor"; $m("bw_hl").firstChild.textContent=fl?"Высота этажа, м":"Высота потолка, м"; $m("bw_h").value=fl?st.fh:st.h;
@@ -4340,30 +4657,40 @@ function briefWizard(prev){
     if(t.id==="bw_w"||t.id==="bw_d"){ if(n>=5){ st[t.id.slice(3)]=n; st.autoB=false; $m("bw_auto").checked=false; st.A=Math.max(50,Math.min(800,Math.round(st.w*st.d))); $m("bw_A").value=st.A; $m("bw_rng").value=st.A; defaults(); $m("bw_items").innerHTML=items(); summary(); } return; }
     if(t.id==="bw_h"){ if(n>=2.5){ if(st.lvl==="floor") st.fh=n; else st.h=n; $m("bw_lvn").innerHTML=""; summary(); } return; }
     if(t.id==="bw_name"){ st.name=t.value; return; }
+    if(t.id==="bw_grid"){ st.grid=n>=2.5?n:0; return; }
+    if(t.dataset.fun){ st.fun[t.dataset.fun]=n; funRes(); return; }
     if(t.dataset.n){ st.f[t.dataset.n].n=Math.round(n)||1; touched.add(t.dataset.n); if(t.dataset.n==="managers"&&!touched.has("waiting")){ st.f.waiting.n=Math.max(6,Math.round(1.5*st.f.managers.n)); const w=m.querySelector('[data-n="waiting"]'); if(w) w.value=st.f.waiting.n; } summary(); } });
   m.addEventListener("change",e=>{ const t=e.target;
     if(t.dataset.on){ st.f[t.dataset.on].on=t.checked; touched.add(t.dataset.on); t.closest(".it").classList.toggle("off",!t.checked); summary(); }
     if(t.dataset.v){ st.f[t.dataset.v].v=t.value; touched.add(t.dataset.v); }
     if(t.id==="bw_auto"){ st.autoB=t.checked; if(st.autoB) defaults(); sync(); }
-    if(t.id==="bw_sets") st.sets=t.checked; if(t.id==="bw_style") st.style=t.value; });
+    if(t.id==="bw_sets") st.sets=t.checked; if(t.id==="bw_style") st.style=t.value;
+    if(t.id==="bw_ent") st.ent=t.value; if(t.id==="bw_core") st.core=t.value; });
+  m.addEventListener("toggle",e=>{ if(e.target.classList&&e.target.classList.contains("fun")) st.funOpen=e.target.open; },true);
   m.addEventListener("click",async e=>{ const t=e.target.closest("button")||e.target;
     if(t.dataset&&t.dataset.a){ st.autoB=true; setA(+t.dataset.a); return; }
     if(t.dataset&&t.dataset.fmt){ st.fmt=t.dataset.fmt; touched.add("fmt"); m.querySelectorAll("[data-fmt]").forEach(b=>{ b.classList.toggle("on",b.dataset.fmt===st.fmt); b.setAttribute("aria-checked",b.dataset.fmt===st.fmt); }); return; }
     if(t.dataset&&t.dataset.lv){ const was=st.lvl; st.lvl=t.dataset.lv; if(st.lvl==="mezz"&&st.h<6.2) st.h=6.5; if(was==="mezz"&&st.lvl==="one"&&st.h>=6.2) st.h=4.5; defaults(); redraw(); return; }
     if(t===m||t.id==="bw_cancel") return m.remove();
+    if(t.id==="bw_funapply"){ const r=funRes(), set=(k,on,n)=>{ st.f[k].on=on; if(n!=null&&st.f[k].n!=null) st.f[k].n=n; touched.add(k); };
+      st.f.managers.n=r.managers; touched.add("managers"); set("waiting",true,r.waiting); set("meet",true,r.meet); set("vip",r.vip>0,Math.max(1,r.vip)); set("bank",r.bank>0,Math.max(1,r.bank)); set("cashier",r.cashier); set("notary",r.notary);
+      st.funOpen=true; redraw(); toast(`Программа по воронке: ${r.managers} менеджеров, ${r.waiting} мест ожидания${r.bank?`, банков ${r.bank}`:""}${r.notary?", нотариус":""}`); return; }
     if(t.id==="bw_blank"){ await flush(); const w=st.w, d=st.d; S=blankProject(w,d,st.lvl==="floor"?+(2*st.fh).toFixed(2):st.h); if(st.lvl==="floor") Object.assign(S.b,{upper:"floor",mz:st.fh});
       S.name=st.name||S.name; emptyOff=true; projectId=uid(); sel_reset(); m.remove(); setView("2d"); fit(); commit(); toast("Пустое помещение "+fmt(w,1)+" × "+fmt(d,1)+" м — берите помещения и мебель из библиотеки слева"); return; }
     if(t.id==="bw_go"){ t.disabled=true; t.textContent="Собираю план…"; await new Promise(r=>setTimeout(r,30));
       st.touched=[...touched]; const B=bwBrief(st); let r;
       try{ r=OfficeKB.fromBrief(B); }catch(err){ t.disabled=false; t.textContent="Собрать план"; toast("Не получилось: "+err.message); return; }
-      await flush(); S=r.project; S.meta.wiz=st; S.meta.variant={i:0,n:null,name:"Базовый",base:{w:r.w,d:r.d}}; projectId=uid(); sel_reset(); emptyOff=false; m.remove(); setView("2d"); fit(); commit(); tab="ex"; setTabs(); renderPane();
+      // все сценарии этого помещения — сразу; открываем лучший по оценке (нормы, программа, зонирование, путь клиента)
+      let vv=null; try{ t.textContent="Сравниваю сценарии…"; await new Promise(q=>setTimeout(q,20)); vv=OfficeKB.briefVariants(B,{dims:{w:r.w,d:r.d}}); }catch(err){ vv=null; }
+      const base={w:r.w,d:r.d}; if(vv&&vv.length){ r=Object.assign({},vv[0],{checks:OfficeKB.checks(vv[0].project)}); VARS={key:JSON.stringify([B,base]),list:vv}; }
+      await flush(); S=r.project; S.meta.wiz=st; if(!vv||!vv.length) S.meta.variant={i:0,n:null,name:"Базовый",base}; projectId=uid(); sel_reset(); emptyOff=false; m.remove(); setView("2d"); fit(); commit(); tab="ex"; setTabs(); renderPane();
       bwResult(r,st); } });
 }
 function bwBrief(st){ const f=st.f, on=k=>f[k]&&f[k].on;
   const M=f.managers.n, Bo=on("backoffice")?f.backoffice.n:0;
   return { name:st.name, sets:!!st.sets, style:st.style,
-    building: Object.assign({ upper: st.lvl==="floor"?"floor":st.lvl==="mezz"?"mezz":"none", fh: st.fh }, st.autoB?{ area: st.A }:{ w: st.w, d: st.d }, st.lvl==="floor"?{}:{ h: st.h }),
-    sales:{ managers:M, format:st.fmt||"glass" }, meet: on("meet")?{ n:f.meet.n, seats:+f.meet.v }:0, vip: on("vip")?f.vip.n:0, bank: on("bank")?f.bank.n:0, cashier: on("cashier"),
+    building: Object.assign({ upper: st.lvl==="floor"?"floor":st.lvl==="mezz"?"mezz":"none", fh: st.fh, entrance: st.ent||"auto", core: st.core||"right" }, st.grid?{ grid: st.grid }:{}, st.autoB?{ area: st.A }:{ w: st.w, d: st.d }, st.lvl==="floor"?{}:{ h: st.h }),
+    sales:{ managers:M, format:st.fmt||"glass" }, meet: on("meet")?{ n:f.meet.n, seats:+f.meet.v }:0, vip: on("vip")?f.vip.n:0, bank: on("bank")?f.bank.n:0, cashier: on("cashier"), notary: on("notary"),
     reception: on("reception")?+f.reception.v:0, waiting: on("waiting")?f.waiting.n:0, cafe: on("cafe")?f.cafe.v:false, kids: on("kids")?f.kids.v:false,
     maket: on("maket")?f.maket.v:false, media: on("media"), showroom: on("showroom")?f.showroom.v:false, wardrobe: on("wardrobe"), wc_guest: f.wc_guest.v,
     director: on("director")?"room":false, backoffice: Bo, kitchen: on("kitchen")?{ type:f.kitchen.v, seats:Math.max(4,Math.ceil((M+Bo+2)/2)) }:false,
@@ -4372,12 +4699,13 @@ function bwBrief(st){ const f=st.f, on=k=>f[k]&&f[k].on;
 function bwResult(r,st){ const m=document.createElement("div"); m.className="modal"; const S0=r.project, n=S0.items.filter(i=>i.t==="room"&&!i.sub).length, red=r.checks.filter(c=>c.level==="red").length;
   const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join("");
   m.innerHTML=`<div class="dlg" role="dialog" aria-label="План собран"><h3>${r.lost.length?"План собран, но не всё поместилось":"План собран"}</h3>
+  ${S0.meta.variant&&S0.meta.variant.n?`<p class="note">Открыт лучший из ${S0.meta.variant.n} сценариев: «${esc(S0.meta.variant.name)}» — оценка <b>${S0.meta.variant.score}</b> из 100. Остальные — кнопками ‹ › над планом.</p>`:""}
   <p>${fmt(r.w,1)} × ${fmt(r.d,1)} м${S0.b.upper==="floor"?", 2 этажа":S0.items.some(i=>i.lv===1)?", антресоль":""} · помещений ${n} · проверки норм: ${red?`<b style="color:var(--warn)">красных ${red}</b>`:`<b style="color:var(--ok)">без красных</b>`}</p>
   ${r.lost.length?`<h5>Не поместилось</h5><ul>${li(r.lost)}</ul><p class="note">Увеличьте площадь, выберите антресоль или 2 этажа, либо снимите часть галочек.</p>`:""}
   ${r.log.length?`<h5>Что движок изменил</h5><ul>${li(r.log)}</ul>`:""}
   ${r.assume.length?`<h5>Допущения</h5><ul>${li(r.assume)}</ul>`:""}
   ${r.advice&&r.advice.length?`<h5>Советы планировщика</h5><ul>${li(r.advice)}</ul>`:""}
-  <p class="note">Это базовый сценарий. Другие сценарии этого же помещения (зеркально, служебное колонкой, другие пропорции, другой формат продаж) — кнопками ‹ › на панели над планом.</p>
+  <p class="note">Сценарии этого же помещения (положение входа, зеркально, крыло бэк-офиса, служебное колонкой, другие пропорции, другой формат продаж) отсортированы по оценке — листайте кнопками ‹ › над планом. Путь клиента по этапам — во вкладке «Экспликация».</p>
   <div class="actions"><button class="btn primary" id="rs_ok">Готово</button><button class="btn" id="rs_next">Другой вариант ›</button><button class="btn" id="rs_back">Изменить параметры</button></div></div>`;
   document.body.appendChild(m);
   m.addEventListener("click",e=>{ if(e.target===m||e.target.id==="rs_ok") m.remove(); if(e.target.id==="rs_next"){ m.remove(); switchVariant(1); } if(e.target.id==="rs_back"){ m.remove(); briefWizard(st); } }); }
@@ -4385,7 +4713,7 @@ function bwResult(r,st){ const m=document.createElement("div"); m.className="mod
 let VARS={key:null,list:null};
 function renderVarbar(){ const el=$("#varbar"); if(!el) return; const v=S.meta&&S.meta.variant, b=S.meta&&S.meta.params&&S.meta.params.brief;
   if(!v||!b){ el.hidden=true; return; } el.hidden=false; const lost=(S.meta.brief&&S.meta.brief.lost)||[];
-  el.innerHTML=`<button data-vs="-1" aria-label="Предыдущий сценарий" title="Предыдущий сценарий">‹</button><div class="vt"><b>Сценарий ${v.i+1}${v.n?" из "+v.n:""}</b><span>${esc(v.name)} · ${lost.length?`<i>не поместилось: ${lost.length}</i>`:"всё поместилось"}</span></div><button data-vs="1" aria-label="Следующий сценарий" title="Другой сценарий этого же помещения">›</button>`; }
+  el.innerHTML=`<button data-vs="-1" aria-label="Предыдущий сценарий" title="Предыдущий сценарий">‹</button><div class="vt"><b>Сценарий ${v.i+1}${v.n?" из "+v.n:""}</b><span>${v.score!=null?`<em class="${v.score>=85?"":v.score>=70?"mid":"low"}">${v.score}</em> · `:""}${esc(v.name)}${v.best?" · лучший":""} · ${lost.length?`<i>не поместилось: ${lost.length}</i>`:"всё поместилось"}</span></div><button data-vs="1" aria-label="Следующий сценарий" title="Другой сценарий этого же помещения">›</button>`; }
 async function switchVariant(d){ const b=S.meta&&S.meta.params&&S.meta.params.brief, v=S.meta&&S.meta.variant; if(!b||!v) return;
   const key=JSON.stringify([b,v.base]), bar=$("#varbar");
   if(VARS.key!==key){ bar.classList.add("busy"); setStatus("Считаю сценарии…"); await new Promise(r=>setTimeout(r,40));

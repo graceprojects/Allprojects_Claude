@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 /* ТЗ заказчика (brief.json) → план офиса продаж для houz planner.
  *
- *   node brief_to_plan.js brief.json --out plan.json [--sheet plan.png] [--sets]
+ *   node brief_to_plan.js brief.json --out plan.json [--sheet plan.png] [--sets] [--base]
  *
+ * По умолчанию собираются все сценарии этого помещения (положение входа, зеркально, крыло бэк-офиса, колонка, другие пропорции,
+ * другой формат продаж) и сохраняется лучший по оценке KB.planScore: нормы, программа, советы зонирования, матрица смежности, путь клиента.
+ * --base — только базовый сценарий.
  * brief.json — состав помещений по опроснику (формат: references/brief-format.md).
  * Вся логика — в ядре планировщика: KB.fromBrief (то же, что собирает мастер «Новый проект» по галочкам).
  * Ядро превращает ТЗ в «пакет наполнения» для движка зонирования (KB.autoPlan), собирает план, подгоняет мебель
@@ -19,11 +22,13 @@ const B = JSON.parse(fs.readFileSync(file, "utf8"));
 const out = opt("--out") || file.replace(/\.json$/, "") + ".plan.json";
 if (args.includes("--sets")) B.sets = true;   // обставить помещения готовыми наборами — мебели больше и она «представительнее»
 
-let r;
-try { r = KB.fromBrief(B); }
+let r, V = null;
+try { r = KB.fromBrief(B);
+  if (!args.includes("--base")) { V = KB.briefVariants(B, { dims: { w: r.w, d: r.d } }); if (V.length) r = V[0]; } }
 catch (e) { console.error(e.message + " — спросите заказчика."); process.exit(2); }
 fs.writeFileSync(out, JSON.stringify(r.project));
 console.log(r.report + `\n\nФайл проекта: ${out}`);
+if (V) console.log(`\nСценарии (сохранён первый — «${r.scenario}»):\n` + V.map((v, i) => `${i + 1}. ${v.score.score} — ${v.scenario}${v.lost.length ? ` · не поместилось: ${v.lost.length}` : ""}`).join("\n"));
 
 if (opt("--sheet")) {
   const rs = require(path.join(__dirname, "render_sheet.js"));

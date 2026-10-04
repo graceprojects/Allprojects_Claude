@@ -507,11 +507,27 @@
    * посетители — 1 унитаз на 50–60, писсуар на 50–80, умывальник на 4 унитаза, не меньше 1 на уборную (СП 118). Общий санузел — при персонале ≤ 10 и ≤ 10 посетителях одновременно. */
   KB.wcNeed = function (o = {}) { const staff = +o.staff || 0, vis = +o.visitors || 0, men = Math.round(staff * (o.menShare ?? 0.5)), wom = staff - men, vm = Math.ceil(vis / 2), vw = vis - vm;
     // общие уборные персонала и посетителей — ≥ 1,5 × большего из раздельных расчётов (СП 118); Ж от 20 человек — 2 унитаза (практика: без очереди)
-    const shared = staff <= 10 && vis <= 10, m = Math.max(1, Math.ceil(1.5 * Math.max(men / 45, vm / 60) - 1e-9)), w = Math.max(staff + vis > 20 ? 2 : 1, Math.ceil(1.5 * Math.max(wom / 30, vw / 50) - 1e-9)), ur = vm + men > 15 ? Math.max(1, Math.ceil(vm / 80)) : 0;
-    const sinks = { m: Math.max(1, Math.ceil((m + ur) / 4)), w: Math.max(1, Math.ceil(w / 4)) };
+    const all = staff + vis, shared = staff <= 10 && vis <= 10;   // практика (restrooms.md §8): от 20 человек Ж 2 кабины, от 60 — блок 3 + 3 с писсуарами (план 3,6 × 8)
+    const m = Math.max(all > 60 ? 2 : 1, Math.ceil(1.5 * Math.max(men / 45, vm / 60) - 1e-9)), w = Math.max(all > 60 ? 3 : all > 20 ? 2 : 1, Math.ceil(1.5 * Math.max(wom / 30, vw / 50) - 1e-9)), ur = vm + men > 15 ? Math.max(all > 60 ? 2 : 1, Math.ceil(vm / 80)) : 0;
+    const mWc = Math.max(all > 60 ? 2 : 1, m - (ur ? 1 : 0));   // унитазов М: писсуар заменяет один прибор из расчёта
+    const sinks = { m: Math.max(1, Math.ceil((mWc + ur) / 4)), w: Math.max(1, Math.ceil(w / 4)) };
+    const sch = shared ? null : KB.wcScheme({ shared: false, m: { wc: mWc, ur, sink: sinks.m }, w: { wc: w, sink: sinks.w } });
     return shared ? { shared: true, mgn: 1, text: `Персонал ${staff}, посетителей одновременно ${vis}: достаточно одной универсальной кабины МГН 2,20×2,25 с умывальником (СП 118).` }
-      : { shared: false, m: { wc: m, ur, sink: sinks.m }, w: { wc: w, sink: sinks.w }, mgn: 1, pui: true,
-        text: `Персонал ${staff}, посетителей одновременно ${vis}: М — ${Math.max(1, m - (ur ? 1 : 0))} унитаз${ur ? ` + ${ur} писсуар` : ""}, Ж — ${w} унитаз${w > 1 ? "а" : ""}, по ${sinks.m}/${sinks.w} умывальнику, плюс универсальная кабина МГН и ПУИ (СП 44, СП 118). Вход в М и Ж — через шлюз или санхолл с умывальником (СП 44 п. 5.18).` }; };
+      : { shared: false, m: { wc: mWc, ur, sink: sinks.m }, w: { wc: w, sink: sinks.w }, mgn: 1, pui: true,
+        text: `Персонал ${staff}, посетителей одновременно ${vis}: М — ${mWc} унитаз${mWc > 1 ? "а" : ""}${ur ? ` + ${ur} писсуар${ur > 1 ? "а" : ""}` : ""}, Ж — ${w} унитаз${w > 1 ? "а" : ""}, по ${sinks.m}/${sinks.w} умывальнику, плюс универсальная кабина МГН и ПУИ (СП 44, СП 118). Схема: ${sch.name}.`, scheme: sch.key }; };
+  /* Схема санузлов по потребности (restrooms.md §8 — разбор типовых планов). Части идут в задний ряд служебного блока слева направо.
+   *   one   — одна универсальная кабина МГН (павильон, персонал ≤ 10 и посетителей ≤ 10);
+   *   pair  — МГН | М | Ж одноместные 1,4 м с унитазом в глубине и раковиной у двери, зеркально через общую стену (стояк один);
+   *   lock  — МГН | М | санхолл-умывальная | Ж (СП 44 п. 5.18): М 1–2 кабины + писсуар, Ж 2 кабины, руки моют в шлюзе;
+   *   large — М | МГН | Ж по 3–4 м: кабины вдоль дальней стены, раковины внутри у двери, МГН и техника между М и Ж (блок 3,6 × 8). */
+  KB.wcScheme = function (need) {
+    if (!need || need.shared) return { key: "one", name: "одна универсальная кабина МГН", parts: [{ name: null, w: 2.4 }] };
+    const mF = need.m.wc + need.m.ur, wF = need.w.wc;
+    if (mF <= 1 && wF <= 1) return { key: "pair", name: "М и Ж одноместные с раковиной, зеркально, плюс МГН", parts: [{ name: "С/у МГН", w: 2.3 }, { name: "С/у мужской", w: 1.4 }, { name: "С/у женский", w: 1.4 }] };
+    if (wF >= 3 || mF >= 4) { const mW = Math.min(4.2, Math.max(3.0, 0.1 + 0.9 * need.m.wc + 0.8 * need.m.ur)), wW = Math.min(4.2, Math.max(3.0, 0.1 + 0.9 * need.w.wc));
+      return { key: "large", name: "большой блок: М | МГН | Ж, раковины внутри у входа", parts: [{ name: "С/у мужской", w: mW }, { name: "С/у МГН", w: 2.3 }, { name: "С/у женский", w: wW }] }; }
+    const mW = 0.1 + 0.9 * need.m.wc + 0.8 * need.m.ur, wW = 0.1 + 0.9 * need.w.wc;
+    return { key: "lock", name: "М | санхолл-умывальная | Ж плюс МГН", parts: [{ name: "С/у МГН", w: 2.3 }, { name: "С/у мужской", w: Math.max(1.5, Math.min(2.8, mW)) }, { name: "Санхолл — умывальная (шлюз)", w: 1.5 }, { name: "С/у женский", w: Math.max(1.5, Math.min(2.8, wW)) }] }; };
   KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {
@@ -1762,7 +1778,7 @@
     const MSTEPS = ["6x5", "6x4", "5x3", "3x2", "2x1.5"];
     KB.PACKAGES.T = { name: "По ТЗ заказчика", sub: B.name || "", min: 40, max: 5000, A: Afl, k: 1.3, depth: d || 12, h, gap: 1.0,
       maketMin: maket && MSTEPS.includes(maket) ? MSTEPS[Math.min(MSTEPS.indexOf(maket) + 1, MSTEPS.length - 1)] : "2x1.5",
-      minN: { cabinet: M }, vars: { M: String(M), B: String(Bo), seats: String(seats), maket: `'${maket && MSTEPS.includes(maket) ? maket : "3x2"}'` },
+      minN: { cabinet: M }, wcVisitors: seats, vars: { M: String(M), B: String(Bo), seats: String(seats), maket: `'${maket && MSTEPS.includes(maket) ? maket : "3x2"}'` },
       grow: [], shrink, rows };
     const name = B.name && !/^офис продаж$/i.test(String(B.name).trim()) ? `${B.name} — офис продаж ${Math.round(A)} м²` : `Офис продаж ${Math.round(A)} м²`;
 
@@ -1808,7 +1824,7 @@
       }
       { const cr = rows.find(r => r.key === "cafe"), br = rows.find(r => r.key === "barback"), rm = S.items.filter(i => i.t === "room");
         const bar = cr && rm.find(i => i.name === cr.name), bb = br && rm.find(i => i.name === br.name);
-        if (bar && bb && bar.w * bar.h < 15 && rectGap(bar, bb) > 2) {   // бар ушёл в зал мини-баром (< 15 м²) — подсобка ему не нужна (правило bar_backroom), комната остаётся кладовой
+        if (bar && bb && ((bar.w * bar.h < 15 && rectGap(bar, bb) > 2) || rectGap(bar, bb) > 6)) {   // бар ушёл в зал мини-баром (< 15 м²) или подсобка оказалась далеко от бара — она не подсобка, а кладовая
           bb.name = "Кладовая"; rows.splice(rows.indexOf(br), 1); if (S.program) S.program = S.program.filter(x => x.key !== "barback");
           rescued.push("бар поставлен мини-баром в зале — подсобка не нужна, её место отдано под кладовую"); } }
       if (S.meta.seatsWanted > (S.meta.seatsPlaced || 0)) {
@@ -2043,7 +2059,10 @@
         if (q) { const sd = KB.doorSide(S, q), E = sd === "n" ? [q.x + q.w / 2, q.y] : sd === "s" ? [q.x + q.w / 2, q.y + q.h] : sd === "w" ? [q.x, q.y + q.h / 2] : [q.x + q.w, q.y + q.h / 2];
           const hz = face === "n" || face === "s", base = hz ? r.x : r.y, e = hz ? E[0] : E[1], lo = off0, hi = Math.max(0.05, along - dw - off0);
           const near = Math.abs(base + lo + dw / 2 - e) <= Math.abs(base + hi + dw / 2 - e) ? lo : hi, want = /мужск/.test(norm(r.name)) ? near : (near === lo ? hi : lo);
-          wcFlip = want !== off; off = want; } }
+          wcFlip = want !== off; off = want; }
+        else { const nb = S.items.find(q => q.t === "room" && q !== r && lvOf(q) === lv && /мужск|женск/i.test(q.name || "") && rectGap(q, r) < 0.35);   // одноместные М и Ж через общую стену: двери врозь, раковины спина к спине у стояка
+          if (nb) { const hz = face === "n" || face === "s", plus = hz ? nb.x + nb.w / 2 > r.x + r.w / 2 : nb.y + nb.h / 2 > r.y + r.h / 2, rev = face === "n" || face === "e";
+            const lo = off0, hi = Math.max(0.05, along - dw - off0), nbSide = (plus !== rev) ? hi : lo, want = nbSide === lo ? hi : lo; wcFlip = want !== off; off = want; } } }
       const inward = T.key === "wcmf" || !(T.wc || T.key === "kui" || T.key === "elec" || T.key === "server" || T.key === "archive");
       out.push(r.border === "glass" && T.key !== "vip" && T.key !== "meet" && T.key !== "showroom" ? slideDoor(r, face, off) : door(r, face, off, dw, inward));
     }
@@ -2098,12 +2117,15 @@
         if (W > D + 0.4) {   // дверь на длинной стене (из санхолла): приборы — у торцевой стены в конце прохода, из двери видна глухая стена
           const cd = W - 1.3 - C.passMin >= C.cabIn ? C.cabIn : C.cabOut; let v = 0.05, nWc = 0, nUr = 0;
           const room = () => D - 0.05 - v;
-          if (men) { P("cubicle", W - cd, v, 90, { w: C.cabW, h: cd }); P("wc", W - 0.75, v + 0.25, 90); v += C.cabW; nWc++;
+          if (men) { const nC = D - 0.1 >= 2 * C.cabW + C.urW ? 2 : 1;   // глубина позволяет — 2 кабины + писсуары (блок 3 + 3)
+            for (let i = 0; i < nC; i++) { P("cubicle", W - cd, v, 90, { w: C.cabW, h: cd }); P("wc", W - 0.75, v + 0.25, 90); v += C.cabW; nWc++; }
             while (room() >= C.urW && nUr < 3) { v += 0.1; P("urinal", W - 0.4, v + 0.1, 90); P("urSep", W - 0.5, v + C.urW - 0.12, 90); v += C.urW - 0.1; nUr++; } }
           else while (room() >= C.cabW - 0.02 && nWc < 6) { P("cubicle", W - cd, v, 90, { w: C.cabW, h: cd }); P("wc", W - 0.75, v + 0.25, 90); v += C.cabW; nWc++; }
-          if (!lock) P("sink", 1.25, 0.02);   // без шлюза — раковина у входа
+          if (!lock) { P("sink", 1.25, 0.02); if (W - cd - 2.1 >= C.sinkW) P("sink", 1.25 + C.sinkW, 0.02); }   // без шлюза — раковины у входа (2 при ширине ≥ 3,5)
           out._note = `кабин ${nWc}${nUr ? `, писсуаров ${nUr}` : ""}${lock ? "; руки моют в санхолле-шлюзе" : ", раковина у входа"}; проход ${(W - cd).toFixed(2)} м`; break; }
         const L = W - 0.1;   // дверь на торцевой стене: у двери — раковины, в глубине — кабины, напротив двери — дверь кабины
+        if (!lock && L < 1.75) { P("wc", (W - 0.4) / 2, 0.05); P("sink", W - 0.5, Math.min(D - 1.3, Math.max(0.9, D - 1.6)), 90);   // одноместный 1,4 × 2,4–3,2: унитаз в глубине, раковина на боковой стене у двери (план 2,8 × 2,4)
+          out._note = `одноместный: унитаз в глубине, раковина у двери; ширина ${W.toFixed(2)} м`; break; }
         const cd = D - C.sinkD - C.passMin >= C.cabIn ? C.cabIn : C.cabOut;
         let nWc = men ? 1 : Math.max(1, Math.floor(L / C.cabW)), nUr = men ? Math.max(0, Math.floor((L - C.cabW) / C.urW)) : 0;
         if (men && nUr >= 3 && L >= 2 * C.cabW + 2 * C.urW) { nWc = 2; nUr = Math.floor((L - 2 * C.cabW) / C.urW); }
@@ -2391,8 +2413,8 @@
     const coreBack = [];
     const wcv = get("wcv");
     if (wcv) { if (wcv.area >= 10) { const bo = get("backoffice"), staffN = (cab ? cab.n : 4) + (bo ? Math.round(areaOf(bo) / 6) : 0) + STAFFX.reduce((t, k) => t + (get(k) ? Math.round(areaOf(get(k)) / 5) : 0), 0) + 2, lg = get("lounge");
-        const need = KB.wcNeed({ staff: staffN, visitors: lg ? (lg.seats || Math.round(lg.area / 1.8)) : 6 }), mW = need.shared ? 1.5 : 0.1 + 0.9 * need.m.wc + 0.8 * need.m.ur, wW = need.shared ? 1.5 : 0.1 + 0.9 * need.w.wc;
-        coreBack.push({ r: wcv, name: "С/у МГН", w: 2.3 }, { r: wcv, name: "С/у мужской", w: Math.max(1.5, Math.min(2.8, mW)) }, { r: wcv, name: "Санхолл — умывальная (шлюз)", w: 1.5 }, { r: wcv, name: "С/у женский", w: Math.max(1.5, Math.min(2.8, wW)) }); } /* СП 44 п. 5.18: вход в М и Ж через шлюз с умывальниками; одна дверь блока из коридора, М и Ж — из санхолла с боковых стен (KB.WC) */ else coreBack.push({ r: wcv, w: Math.max(2.4, wcv.area / rb) }); }
+        const need = KB.wcNeed({ staff: staffN, visitors: (p.pkgDef && +p.pkgDef.wcVisitors) || (lg ? (lg.seats || Math.round(lg.area / 1.8)) : 6) });   /* по заказанной численности, а не по ужатым местам ожидания */ const sch = KB.wcScheme(need.shared ? { shared: false, m: { wc: 1, ur: 0 }, w: { wc: 1 } } : need);   // заказаны М/Ж — минимум одноместные
+        for (const q of sch.parts) coreBack.push({ r: wcv, name: q.name, w: q.w }); }   /* схемы pair / lock / large — KB.wcScheme, restrooms.md §8 */ else coreBack.push({ r: wcv, w: Math.max(2.4, wcv.area / rb) }); }
     if (!upKeys.includes("wcs")) for (const r of copies("wcs")) coreBack.push({ r, w: Math.max(1.5, areaOf(r) / rb) });
     for (const k of ["kui", "elec"]) { const r = get(k); if (r) coreBack.push({ r, w: wOf(r, rb, k === "kui" ? 1.2 : 1.4) }); }
     for (const k of ["server", "archive", "storage", "security", "prayer"]) { const r = get(k); if (r && !upKeys.includes(k)) coreBack.push({ r, w: wOf(r, rb, 1.4) }); }   // мелкие — в задний ряд
@@ -2564,7 +2586,8 @@
       const ord = (p.overflowOrder || ["showroom", "wardrobe", "cashier", "cafe", "bank", "notary", "meet", "cabinet", "vip"]).filter(k => band.some(b => b.r.key === k));
       if (wing && toBand.length) ord.unshift(...[...new Set(toBand.map(r => r.key))].filter(k => band.some(b => b.r.key === k)));   // служебное, не влезшее в ядро, уступает ряд местам продаж
       for (const k of ord.concat(["showroom", "wardrobe", "cashier", "cafe", "bank", "notary", "meet", "cabinet", "vip"])) { idx = band.map(b => b.r.key).lastIndexOf(k); if (idx >= 0) break; }
-      if (idx < 0) idx = band.length - 1; const [b] = band.splice(idx, 1); overflow.push(b); used -= b.w; }
+      if (idx < 0) idx = band.length - 1; const [b] = band.splice(idx, 1); overflow.push(b); used -= b.w;
+      if (b.r.key === "cafe") { const j = band.findIndex(q => q.r.key === "barback"); if (j >= 0) { const [bb] = band.splice(j, 1); overflow.push(bb); used -= bb.w; } } }   // бар выпал — подсобка идёт за ним (встанет рядом при доразмещении)
     { let x = XL, last = null; const slack = Lb - used; let add = slack > 0 && band.length ? Math.min(slack / band.length, 0.6) : 0, left = slack;
       if (gU) { add = 0; const u = g / 2;   // по сетке: перегородки кабинетов — на осях и в середине пролёта; добор — предыдущему помещению
         let xx = XL; for (let i = 0; i < band.length; i++) { const b = band[i];
@@ -2573,7 +2596,10 @@
       for (const b of band) { if (b.pre) { if (last) { last.w = r3(last.w + b.pre); } else mk({ key: "pass", name: "Проход", cat: "circ", border: "none" }, x, Y0, b.pre, rb); x += b.pre; }
         const w = b.r.key === "cabinet" && gU ? b.w : b.w + add; last = mk(b.r, x, Y0, w, rb); x += w; placedKeys.push(b.r.key); }
       if (xc - stairW - passW - x > 0.3) mk({ key: "pass", name: "Проход", cat: "circ", border: "none" }, x, Y0, xc - stairW - passW - x, rb); }
-    if (passW) mk({ key: "pass", name: "Проход к служебным", cat: "circ", border: "none" }, xc - passW, Y0, passW, rb + a);
+    // колонка: проход к служебным — до низа последнего санузла, чтобы двери М/Ж/МГН не выходили в зал (схемы pair / large выше 5 м)
+    const wcBot = passW ? R.filter(r => r._key === "wcv" || r._key === "wcs").reduce((t, r) => Math.max(t, r.y + r.h), 0) : 0, passH = Math.max(rb + a, Math.min(Y1 - Y0, wcBot - Y0));
+    if (passW) mk({ key: "pass", name: "Проход к служебным", cat: "circ", border: "none" }, xc - passW, Y0, passW, passH);
+    const xh = passW && passH > rb + a + 0.01 ? xc - passW : xc;   // правая граница зала
     if (mezz) mk({ key: "stair", name: floor2 ? "Лестница на 2 этаж" : "Лестница на антресоль", cat: "circ", border: "none" }, xc - stairW - passW, Y0, stairW, rb + a);
     // проход вдоль кабинетов — 1,8 м (1,5 в компактном), но не шире, чем нужно: если зона макета не встаёт у витража, проход сужается до 1,2 м
     let aE = a;
@@ -2625,7 +2651,7 @@
     else if (eDepth > 0.3) lobby = mk({ key: "lobby", name: "Холл", cat: "circ", border: "none" }, xc, coreBottom, Wc, eDepth);
 
     /* ---------- 4. публичная зона у витража */
-    const Pw = xc - px0, Pd = Y1 - py0;
+    const Pw = xh - px0, Pd = Y1 - py0;
     mk({ key: "hall", name: "Зал продаж", cat: "client", border: "none", color: "#EDE8DE" }, px0, py0, Pw, Pd);
     const gap = compact ? 0.5 : 0.8, W_ = Pw - 0.6;
     const lounge = get("lounge"), seats = lounge ? (lounge.seats || Math.round(lounge.area / 1.8)) : 0;
@@ -2707,7 +2733,7 @@
       const yIn = h => py0 + Math.max(0.3, (Id - h) / 2 + 0.1);
       const leftW = (inKids && useKids ? kw + gap : 0) + nI * (G.w + gap), rightW = inMedia && useMedia ? MW + gap : 0;
       let mX = inMaket && useMaket ? entX - mw / 2 : px0 + 0.3 + leftW;
-      mX = Math.max(mX, px0 + 0.3 + leftW); mX = Math.min(mX, xc - 0.3 - rightW - (inMaket && useMaket ? mw : 0));
+      mX = Math.max(mX, px0 + 0.3 + leftW); mX = Math.min(mX, xh - 0.3 - rightW - (inMaket && useMaket ? mw : 0));
       let xl = px0 + 0.3;
       if (inKids && useKids) { mk(kidsR, xl, yIn(kh), kw, kh, { extra: { sub: true } }); placedKeys.push("kids"); xl += kw + gap; }
       for (let i = 0; i < nI; i++) { mk(lounge, xl, yIn(G.h), G.w, G.h, { extra: { sub: true } }); xl += G.w + gap; }

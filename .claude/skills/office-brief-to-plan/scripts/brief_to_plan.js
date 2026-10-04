@@ -28,7 +28,7 @@ try { r = KB.fromBrief(B);
 catch (e) { console.error(e.message + " — спросите заказчика."); process.exit(2); }
 fs.writeFileSync(out, JSON.stringify(r.project));
 console.log(r.report + `\n\nФайл проекта: ${out}`);
-if (V) console.log(`\nСценарии (сохранён первый — «${r.scenario}»):\n` + V.map((v, i) => `${i + 1}. ${v.score.score} — ${v.scenario}${v.lost.length ? ` · не поместилось: ${v.lost.length}` : ""}`).join("\n"));
+if (V) console.log(`\nВарианты (сохранён первый — «${r.scenario}»):\n` + V.map((v, i) => `${i + 1}. ${v.score.score} — ${v.scenario}${v.sales ? " [другой формат продаж]" : ""}${v.lost.length ? ` · не поместилось: ${v.lost.join(", ")}` : " · всё из ТЗ"}${v.reduced && v.reduced.length ? ` · ужато: ${v.reduced.map(x => x.text).join(", ")}` : ""}${v.note ? `\n   ${v.note}` : ""}`).join("\n"));
 
 if (opt("--sheet")) {
   const rs = require(path.join(__dirname, "render_sheet.js"));

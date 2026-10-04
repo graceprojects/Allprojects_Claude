@@ -502,7 +502,12 @@
     return Math.max(0, pick(v => fit(v))); };
   /* Санузлы: размеры и приборы (скилл sales-office-zoning → references/restrooms.md). */
   // кабина 0,9×1,5 (дверь внутрь) / 0,9×1,25 (наружу), СП 44 минимум 0,8×1,2; шаг писсуаров 0,8; проход перед кабинами 1,2 (СП 44 табл. 1); МГН 2,2×2,25 (СП 59 п. 6.3.3)
-  KB.WC = { cabW: 0.9, cabIn: 1.5, cabOut: 1.25, cabMin: [0.8, 1.2], urW: 0.8, sinkW: 0.75, sinkD: 0.5, passMin: 1.2, doorW: 0.8, mgn: [2.2, 2.25], puiMin: 4 };
+  KB.WC = { cabW: 0.9, cabIn: 1.5, cabOut: 1.25, cabMin: [0.85, 1.2], urW: 0.75, sinkW: 0.65, sinkD: 0.5, passMin: 1.2, passRows: 1.5, doorW: 0.8, mgn: [2.2, 2.25], mgnSide: [1.7, 2.2], accMin: [1.65, 2.2],
+    single: [1.2, 1.8], singleOk: [1.5, 1.8], wcFront: 0.6, wcSide: 0.4, sinkFront: 0.55, puiMin: 2 };
+  /* Размеры (restrooms.md §0, §9): кабина 0,85 × 1,2 (дверь наружу) / 0,85 × 1,5 (внутрь) — СП 118 табл. 5.5; оси писсуаров 0,7, умывальников 0,65 — СП 44 табл. 1;
+   * проход между рядами кабин 1,5 (СП 118 табл. 5.5), у ряда вдоль стены — практика 1,2; универсальная кабина 2,2 × 2,25 (унитаз по центру) или 1,7 × 2,2 (унитаз у стены),
+   * доступная в блоке 1,65 × 2,2 — СП 59.13330.2020 табл. 6.1; одноместный с умывальником 1,2 × 1,8 (минимум), 1,5 × 1,8 (комфорт) — Нойферт; перед унитазом ≥ 0,6, от оси до стены 0,4, перед умывальником ≥ 0,55;
+   * ПУИ ≥ 2 м² (СП 118; по СП 44 для административных зданий — ≥ 4 м²). */
   /* Число приборов (скилл sales-office-zoning → references/restrooms.md): сотрудники — 1 унитаз на 45 мужчин / 30 женщин (СП 44);
    * посетители — 1 унитаз на 50–60, писсуар на 50–80, умывальник на 4 унитаза, не меньше 1 на уборную (СП 118). Общий санузел — при персонале ≤ 10 и ≤ 10 посетителях одновременно. */
   KB.wcNeed = function (o = {}) { const staff = +o.staff || 0, vis = +o.visitors || 0, men = Math.round(staff * (o.menShare ?? 0.5)), wom = staff - men, vm = Math.ceil(vis / 2), vw = vis - vm;
@@ -523,7 +528,7 @@
   KB.wcScheme = function (need) {
     if (!need || need.shared) return { key: "one", name: "одна универсальная кабина МГН", parts: [{ name: null, w: 2.4 }] };
     const mF = need.m.wc + need.m.ur, wF = need.w.wc;
-    if (mF <= 1 && wF <= 1) return { key: "pair", name: "М и Ж одноместные с раковиной, зеркально, плюс МГН", parts: [{ name: "С/у МГН", w: 2.3 }, { name: "С/у мужской", w: 1.4 }, { name: "С/у женский", w: 1.4 }] };
+    if (mF <= 1 && wF <= 1) return { key: "pair", name: "М и Ж одноместные с раковиной (1,5 м, зеркально) плюс МГН — до 15 работающих в смену по СП 44 п. 5.17 можно не делить на М/Ж", parts: [{ name: "С/у МГН", w: 2.3 }, { name: "С/у мужской", w: 1.5 }, { name: "С/у женский", w: 1.5 }] };
     if (wF >= 3 || mF >= 4) { const mW = Math.min(4.2, Math.max(3.0, 0.1 + 0.9 * need.m.wc + 0.8 * need.m.ur)), wW = Math.min(4.2, Math.max(3.0, 0.1 + 0.9 * need.w.wc));
       return { key: "large", name: "большой блок: М | МГН | Ж, раковины внутри у входа", parts: [{ name: "С/у мужской", w: mW }, { name: "С/у МГН", w: 2.3 }, { name: "С/у женский", w: wW }] }; }
     const mW = 0.1 + 0.9 * need.m.wc + 0.8 * need.m.ur, wW = 0.1 + 0.9 * need.w.wc;
@@ -1078,18 +1083,32 @@
     const wcv = rooms.filter(r => has(r, "с/у посетит") || has(r, "мгн") || has(r, "гостев") || has(r, "универсал") || (/^(с\/у|санузел|wc)/i.test(r.name) && !has(r, "персонал")));   // общий «С/у» без пометки «персонала» — тоже для гостей
     if (!wcv.length && rooms.length) add("red", "Нет санузла для посетителей с универсальной кабиной МГН.", "СП 59.13330.2020 п. 6.3.2");
     const mgnWc = wcv.filter(r => has(r, "мгн") || has(r, "универсал")), chkWc = mgnWc.length ? mgnWc : wcv.length ? [wcv.slice().sort((x, y) => y.w * y.h - x.w * x.h)[0]] : [];   // размер МГН проверяем у кабины МГН (или у самого большого с/у)
-    for (const r of chkWc) if (Math.min(r.w, r.h) < 2.2 || Math.max(r.w, r.h) < 2.25) add("red", `«${r.name}»: меньше 2,20×2,25 м — универсальная кабина МГН не помещается.`, "СП 59.13330.2020 табл. 6.1", r.id);
+    for (const r of chkWc) { const a = Math.min(r.w, r.h), bb = Math.max(r.w, r.h);
+      if (a < KB.WC.accMin[0] - 0.01 || bb < KB.WC.accMin[1] - 0.01) add("red", `«${r.name}»: ${r.w.toFixed(2)}×${r.h.toFixed(2)} м — универсальная кабина МГН не помещается (минимум 1,70×2,20 с унитазом у стены, 2,20×2,25 с унитазом по центру).`, "СП 59.13330.2020 табл. 6.1", r.id);
+      else if (a < KB.WC.mgn[0] - 0.01 || bb < KB.WC.mgn[1] - 0.01) add("yellow", `«${r.name}»: ${r.w.toFixed(2)}×${r.h.toFixed(2)} м — универсальная кабина только с унитазом у боковой стены (1,70×2,20); с унитазом по центру нужно 2,20×2,25.`, "СП 59.13330.2020 табл. 6.1", r.id);
+      const dr = mgnWc.includes(r) ? (S.items || []).find(i => i.t === "item" && /^(door|slide|auto)/.test(i.k) && (i.lv || 0) === (r.lv || 0) && rectGap(aabbOf(i), r) < 0.2) : null;   // дверь — только у комнаты, названной кабиной МГН
+      if (dr && /^door/.test(dr.k)) { const dw = Math.max(dr.w, dr.h); if (dw < 0.9 - 0.01) add("yellow", `«${r.name}»: дверь ${dw.toFixed(2)} м — для кабины МГН нужен проём ≥ 0,9 м, открывание наружу.`, "СП 59.13330.2020 п. 6.2.4, 6.3.3", r.id);
+        else { const a2 = aabbOf(dr), cx = a2.x + a2.w / 2, cy = a2.y + a2.h / 2; if (cx > r.x + 0.1 && cx < r.x + r.w - 0.1 && cy > r.y + 0.1 && cy < r.y + r.h - 0.1) add("yellow", `«${r.name}»: дверь кабины МГН открывается внутрь — должна открываться наружу (упавшего человека иначе не достать).`, "СП 59.13330.2020 п. 6.3.3", r.id); } } }
     // Санузлы М/Ж: кабины, проход, умывальник; ПУИ
     { const its = (S.items || []).filter(i => i.t === "item"), ab = aabbOf, inR = (r, i) => { const a = ab(i), cx = a.x + a.w / 2, cy = a.y + a.h / 2; return (i.lv || 0) === (r.lv || 0) && cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h; };
       for (const r of rooms.filter(r => /с\/у|санузел|туалет|уборн/i.test(r.name))) {
         const cubs = its.filter(i => i.k === "cubicle" && inR(r, i)), fx = its.filter(i => /^(wc|urinal)$/.test(i.k) && inR(r, i)), sinks = its.filter(i => /^(sink|sinkD)$/.test(i.k) && inR(r, i));
-        for (const c of cubs) { const a = ab(c); if (Math.min(a.w, a.h) < KB.WC.cabMin[0] - 0.01 || Math.max(a.w, a.h) < KB.WC.cabMin[1] - 0.01) { add("yellow", `«${r.name}»: кабина ${a.w.toFixed(2)}×${a.h.toFixed(2)} м меньше 0,8×1,2 м.`, "СП 44.13330.2011 табл. 1", r.id); break; } }
+        for (const c of cubs) { const a = ab(c); if (Math.min(a.w, a.h) < KB.WC.cabMin[0] - 0.01 || Math.max(a.w, a.h) < KB.WC.cabMin[1] - 0.01) { add("yellow", `«${r.name}»: кабина ${a.w.toFixed(2)}×${a.h.toFixed(2)} м меньше 0,85×1,2 м (дверь наружу; с дверью внутрь — 0,85×1,5).`, "СП 118.13330.2022 табл. 5.5", r.id); break; } }
+        // зазоры (Нойферт): перед унитазом ≥ 0,6 м, перед умывальником ≥ 0,55 м; одноместный с умывальником — от 1,2 × 1,8 м
+        const solid = its.filter(i => inR(r, i) && !/^(door|slide|auto|cubicle|urSep)/.test(i.k));
+        const frontOf = (it, need) => { const a = ab(it), dN = a.y - r.y, dS = r.y + r.h - a.y - a.h, dW = a.x - r.x, dE = r.x + r.w - a.x - a.w, m = Math.min(dN, dS, dW, dE);   // перёд прибора — сторона, противоположная ближайшей стене
+          const box = m === dN ? { x: a.x, y: a.y + a.h, w: a.w, h: need } : m === dS ? { x: a.x, y: a.y - need, w: a.w, h: need } : m === dW ? { x: a.x + a.w, y: a.y, w: need, h: a.h } : { x: a.x - need, y: a.y, w: need, h: a.h };
+          const inside = box.x >= r.x - 0.02 && box.y >= r.y - 0.02 && box.x + box.w <= r.x + r.w + 0.02 && box.y + box.h <= r.y + r.h + 0.02; return inside && !solid.some(o => o !== it && overlap(ab(o), box, -0.03)); };
+        const wcs = fx.filter(i => i.k === "wc" && !cubs.some(c => overlap(ab(c), ab(i), 0)));
+        for (const it of wcs) if (!frontOf(it, KB.WC.wcFront)) { add("yellow", `«${r.name}»: перед унитазом меньше 0,6 м свободно (стена или умывальник вплотную).`, "Нойферт: перед унитазом ≥ 0,6 м", r.id); break; }
+        for (const it of sinks) if (!frontOf(it, KB.WC.sinkFront)) { add("yellow", `«${r.name}»: перед умывальником меньше 0,55–0,6 м свободно.`, "Нойферт: перед умывальником ≥ 0,55 м", r.id); break; }
+        if (fx.length === 1 && sinks.length && !cubs.length && (Math.min(r.w, r.h) < KB.WC.single[0] - 0.01 || Math.max(r.w, r.h) < KB.WC.single[1] - 0.01)) add("yellow", `«${r.name}»: одноместный санузел с умывальником ${r.w.toFixed(2)}×${r.h.toFixed(2)} м — минимум 1,2×1,8 м (комфорт 1,5×1,8).`, "Нойферт; практика (restrooms.md §9)", r.id);
         if (fx.length >= 2 && !sinks.length && !rooms.some(q => q !== r && /санхолл|шлюз|умывальн/i.test(q.name) && (q.lv || 0) === (r.lv || 0) && rectGap(q, r) < 0.35 && its.some(i => /^(sink|sinkD)$/.test(i.k) && inR(q, i)))) add("yellow", `«${r.name}»: ${fx.length} прибора и нет умывальника — умывальник в уборной или в шлюзе перед ней.`, "СП 44.13330.2011 п. 5.18; СП 118", r.id);
         if (cubs.length) { const q = (cubs[0].rot || 0) % 180 ? "w" : "h", deep = Math.max(...cubs.map(c => q === "h" ? ab(c).h : ab(c).w)),   // кабины вдоль стены: глубина — поперёк ряда
             front = sinks.some(sk => { const a = ab(sk), c = ab(cubs[0]); return q === "h" ? Math.abs((a.y + a.h / 2) - (c.y + c.h / 2)) > deep / 2 + 0.3 : Math.abs((a.x + a.w / 2) - (c.x + c.w / 2)) > deep / 2 + 0.3; }) ? 0.5 : 0,
             pass = (q === "h" ? r.h : r.w) - deep - front;
-          if (pass < 0.9) add("yellow", `«${r.name}»: проход перед кабинами ≈ ${pass.toFixed(2)} м — тесно (между рядами 1,2 м, у ряда вдоль стены — не меньше 0,9–1,1 м).`, "СП 44.13330.2011 табл. 1", r.id); } } }
-    for (const r of rooms.filter(r => /(^|[^а-я])(пуи|куи)([^а-я]|$)|уборочн/i.test(r.name))) if (r.w * r.h < KB.WC.puiMin - 0.05) { add("info", `«${r.name}» ${(r.w * r.h).toFixed(1)} м² — по СП 44 ПУИ не меньше 4 м² (0,8 м² на 100 м²), с водой, рядом с уборными.`, "СП 44.13330.2011 (сверить редакцию)", r.id); break; }
+          if (pass < 0.9) add("yellow", `«${r.name}»: проход перед кабинами ≈ ${pass.toFixed(2)} м — тесно (между рядами кабин 1,5 м по СП 118 табл. 5.5; у одного ряда вдоль стены практика — не меньше 1,2 м).`, "СП 118.13330.2022 табл. 5.5", r.id); } } }
+    for (const r of rooms.filter(r => /(^|[^а-я])(пуи|куи)([^а-я]|$)|уборочн/i.test(r.name))) if (r.w * r.h < KB.WC.puiMin - 0.05) { add("info", `«${r.name}» ${(r.w * r.h).toFixed(1)} м² — ПУИ не меньше 2 м² по СП 118 (0,8 м² на 100 м² этажа; по СП 44 для административных зданий — 4 м²), с водой, рядом с уборными.`, "СП 118.13330.2022; СП 44.13330.2011", r.id); break; }
     // Тамбур
     for (const r of rooms.filter(r => has(r, "тамбур"))) if (r.h < 2.45) add("yellow", `Тамбур: глубина по ходу движения ${r.h.toFixed(2)} м < 2,45 м.`, "СП 59.13330.2020 п. 6.1.8 (сверить редакцию)", r.id);
     // Антресоль
@@ -2104,9 +2123,10 @@
         else P("desk", cU(Math.min(1.6, W - 0.6)), 0.9, 0, { w: Math.min(1.6, W - 0.6), label: "стол" });
         break; }
       case "wcv": {   // универсальная кабина МГН — одноместная: унитаз в дальнем углу (рядом ≥ 0,8 м для пересадки с коляски), умывальник у стены, круг разворота Ø 1,4 м
-        P("wc", W - 0.85, 0.05);   // унитаз в дальнем правом углу, слева от него ≥ 0,8 м для пересадки с коляски
-        P("sink", 0.05, Math.max(0.3, Math.min(D - 1.9, D - 0.9 - 0.8)), 270);   // раковина — на левой боковой стене у двери (дверь слева, открывается наружу)
-        out._note = "универсальная кабина: одноместная, дверь ≥ 0,9 м наружу, поручни у унитаза"; break; }
+        P("wc", W - 0.65, 0.05);   // унитаз у правой стены: ось 0,45 от стены (поручень), слева от него ≥ 0,8 м свободно для пересадки с коляски (СП 59 п. 6.3.3, Doc M)
+        P("sink", 0.05, Math.max(0.3, Math.min(D - 1.9, D - 0.9 - 0.8)), 270);   // раковина — на стене двери (левая боковая), досягаема с унитаза; дверь наружу ≥ 0,9
+        out._note = `универсальная кабина ${W.toFixed(2)} × ${D.toFixed(2)}: унитаз у стены, сбоку ≥ 0,8 м, умывальник у двери, дверь наружу 0,9${Math.min(W, D) < 2.2 ? " (вариант 1,7 × 2,2 с боковым унитазом, СП 59 табл. 6.1)" : ""}`;
+        break; }
       case "wcs": P("wc", Math.min(0.6, W - 0.5), 0.05); P("sink", W - 0.5, Math.min(1.0, D - 1.3), 90); break;
       case "wclock": {   // санхолл-умывальная (шлюз): дверь из коридора; раковины с зеркалом — на дальней стене, напротив входа; М и Ж — на боковых стенах
         const C = KB.WC, n = Math.max(1, Math.min(3, Math.floor((W - 0.1) / C.sinkW)));

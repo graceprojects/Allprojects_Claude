@@ -332,6 +332,12 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
 .vcard{display:flex;flex-direction:column;gap:4px;text-align:left;border:1px solid var(--line);border-radius:14px;padding:8px;background:var(--panel);color:var(--ink);cursor:pointer;font:inherit}.vcard:hover{border-color:var(--accent)}.vcard.on{outline:2px solid var(--accent)}
 .vcard svg{width:100%;height:auto;max-height:170px;background:#fff;border-radius:8px}.vcard .vh{font-size:13px;line-height:1.3}.vcard .vh em{font-style:normal;font-weight:700;color:var(--ok);margin-right:6px}.vcard .vh em.mid{color:var(--orange)}.vcard .vh em.low{color:var(--warn)}
 .vcard .vs,.vcard .vn{font-size:11.5px;color:var(--muted);line-height:1.35}.vcard .vs i{font-style:normal;color:var(--orange)}
+.ptabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}.ptabs button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}.ptabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:12px}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0;background:var(--panel)}
+.pbox{position:relative;width:100%;max-height:120px;border:3px solid var(--ink);border-bottom:6px solid #4aa3df;border-radius:4px;display:flex;align-items:center;justify-content:center;font:600 15px system-ui;background:var(--fill)}.pbox i{position:absolute;bottom:2px;right:6px;font:10px system-ui;color:#4aa3df;font-style:normal}
+.pt b{display:block;font-size:14px}.pf{font-size:12.5px;line-height:1.4}.pf em{font-style:normal;font-weight:700;color:var(--ok);margin-right:4px}.pf em.mid{color:var(--orange)}.pf em.low{color:var(--warn)}.pf .warn{color:var(--orange)}
+.pcard .actions{margin-top:auto;display:flex;gap:6px;flex-wrap:wrap}.pcard .actions .btn{padding:6px 10px;font-size:12.5px}
 .varbar.busy{opacity:.6;pointer-events:none}.varbar .vt em{font-style:normal;font-weight:700;color:var(--ok)}.varbar .vt em.mid{color:var(--orange)}.varbar .vt em.low{color:var(--warn)}
 .score{display:flex;align-items:center;gap:12px;margin:4px 0 10px;padding:10px 12px;border-radius:12px;background:var(--fill)}.score b{font-size:28px;line-height:1;min-width:46px;text-align:center}.score span{font-size:12.5px;line-height:1.35}.score small{color:var(--muted)}
 .score.ok b{color:var(--ok)}.score.yellow b{color:var(--orange)}.score.red b{color:var(--warn)}
@@ -2101,6 +2107,79 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
     list.forEach((r, i) => { r.project.meta.variant = { i, n: list.length, name: r.scenario, note: r.note, base: dims, score: r.score.score, lost: r.lost.length, group: r.sales ? "format" : "brief", best: i === 0 && o.sort !== false }; });
     return list; };
   KB.variants = function (p0) { return KB.LEVEL_KEYS.map(k => Object.assign({ pkg: k }, KB.autoPlan(Object.assign({}, p0, { pkg: k })))); };
+
+  /* ============================================================ ГОТОВЫЕ ГАБАРИТЫ (каталог боксов для пустого участка)
+   * Фасад — по длинной стороне (витраж к дороге). Для каждого бокса движок подбирает самую большую программу, которая помещается без потерь (KB.presetFit),
+   * результат запечён в поле fit (пересчёт: node tools/presets.js). upper: none — один этаж, mezz — антресоль, floor — два этажа. */
+  KB.PRESETS = [
+    { key: "c3x12", group: "Контейнеры", name: "3 блок-контейнера 12 м", w: 12, d: 7.2, h: 2.7, upper: "none", note: "три 12-метровых модуля бок о бок; витраж по длинной стороне 12 м" },
+    { key: "c4x12", group: "Контейнеры", name: "4 блок-контейнера 12 м", w: 12, d: 9.6, h: 2.7, upper: "none", note: "четыре модуля; зал глубже, есть место под макет" },
+    { key: "c3x12x2", group: "Контейнеры", name: "3 × 12 м в два яруса", w: 12, d: 7.2, h: 5.4, upper: "floor", fh: 2.7, note: "второй ярус — служебное и переговорные; внизу только клиенты" },
+    { key: "c6x12", group: "Контейнеры", name: "6 блок-контейнеров 12 м", w: 24, d: 7.2, h: 2.7, upper: "none", note: "два ряда по три модуля в линию; фасад 24 м" },
+    { key: "p10x8", group: "Павильоны", name: "Павильон 10 × 8", w: 10, d: 8, h: 3.3, upper: "none", note: "минимальный офис: стойка, 2–3 места, макет-стол" },
+    { key: "p12x10", group: "Павильоны", name: "Павильон 12 × 10", w: 12, d: 10, h: 3.5, upper: "none", note: "" },
+    { key: "p15x10", group: "Павильоны", name: "Павильон 15 × 10", w: 15, d: 10, h: 3.5, upper: "none", note: "" },
+    { key: "p18x10", group: "Павильоны", name: "Павильон 18 × 10", w: 18, d: 10, h: 3.6, upper: "none", note: "" },
+    { key: "l20x10", group: "Линейные", name: "Линейный 20 × 10", w: 20, d: 10, h: 4.0, upper: "none", note: "" },
+    { key: "l24x12", group: "Линейные", name: "Линейный 24 × 12", w: 24, d: 12, h: 4.5, upper: "none", note: "" },
+    { key: "l30x12", group: "Линейные", name: "Линейный 30 × 12", w: 30, d: 12, h: 4.5, upper: "none", note: "" },
+    { key: "l36x12", group: "Линейные", name: "Линейный 36 × 12", w: 36, d: 12, h: 4.5, upper: "none", note: "" },
+    { key: "l40x12", group: "Линейные", name: "Линейный 40 × 12 (как R24 060)", w: 40, d: 12, h: 4.5, upper: "none", note: "пролёты 6–6,5 м; сделка в торце, служебное в другом" },
+    { key: "l48x14", group: "Линейные", name: "Линейный 48 × 14", w: 48, d: 14, h: 4.5, upper: "none", note: "" },
+    { key: "l60x15", group: "Линейные", name: "Линейный 60 × 15", w: 60, d: 15, h: 5.0, upper: "none", note: "900 м² в один этаж; длинный фасад" },
+    { key: "d20x15", group: "Глубокие", name: "Глубокий 20 × 15", w: 20, d: 15, h: 4.5, upper: "none", note: "" },
+    { key: "d24x16", group: "Глубокие", name: "Глубокий 24 × 16", w: 24, d: 16, h: 4.5, upper: "none", note: "" },
+    { key: "d30x18", group: "Глубокие", name: "Глубокий 30 × 18", w: 30, d: 18, h: 5.0, upper: "none", note: "" },
+    { key: "d36x20", group: "Глубокие", name: "Глубокий 36 × 20", w: 36, d: 20, h: 5.0, upper: "none", note: "" },
+    { key: "d40x25", group: "Глубокие", name: "Глубокий 40 × 25", w: 40, d: 25, h: 5.5, upper: "none", note: "1000 м² в один этаж" },
+    { key: "m24x12", group: "С антресолью", name: "24 × 12 + антресоль", w: 24, d: 12, h: 7.0, upper: "mezz", note: "бэк-офис и кухня наверху, зал двойного света" },
+    { key: "m30x14", group: "С антресолью", name: "30 × 14 + антресоль", w: 30, d: 14, h: 7.0, upper: "mezz", note: "" },
+    { key: "m40x15", group: "С антресолью", name: "40 × 15 + антресоль", w: 40, d: 15, h: 7.5, upper: "mezz", note: "" },
+    { key: "m48x16", group: "С антресолью", name: "48 × 16 + антресоль", w: 48, d: 16, h: 7.5, upper: "mezz", note: "" },
+    { key: "f20x12", group: "Два этажа", name: "20 × 12 × 2 этажа", w: 20, d: 12, h: 7.2, upper: "floor", fh: 3.6, note: "внизу клиенты, наверху служебное; для МГН нужен подъёмник" },
+    { key: "f30x12", group: "Два этажа", name: "30 × 12 × 2 этажа", w: 30, d: 12, h: 7.2, upper: "floor", fh: 3.6, note: "" },
+    { key: "f36x14", group: "Два этажа", name: "36 × 14 × 2 этажа", w: 36, d: 14, h: 7.2, upper: "floor", fh: 3.6, note: "" },
+    { key: "f40x14", group: "Два этажа", name: "40 × 14 × 2 этажа", w: 40, d: 14, h: 7.2, upper: "floor", fh: 3.6, note: "1120 м² на двух этажах" },
+  ];
+  // ТЗ для бокса: типовая программа офиса продаж от площади, M — менеджеров (опции по площади с учётом этажей)
+  KB.presetBrief = function (p, M, o = {}) {
+    const A = p.w * p.d, Ae = p.upper === "floor" ? 2 * A : p.upper === "mezz" ? Math.round(A * 1.2) : A, lvl = o.level || 0;   // level: 0 — полная программа, 1 — без VIP и 2-й переговорной, 2 — без бара/детской/банка, 3 — минимум: экран вместо макета
+    const on = (lim, v) => (Ae >= lim ? v : false);
+    const B = { name: p.name, building: Object.assign({ w: p.w, d: p.d, upper: p.upper, entrance: "auto", core: "right" }, p.upper === "floor" ? { fh: p.fh || 3.6 } : { h: p.h }),
+      sales: { managers: M, format: A < 200 ? "open" : "shared" }, waiting: lvl >= 3 ? Math.max(3, M + 1) : Math.max(4, Math.round(1.5 * M)),
+      maket: lvl >= 3 ? "screen" : A < 100 ? "2x1.5" : A < 220 ? "3x2" : A < 450 ? "5x3" : "6x4",
+      cafe: lvl >= 2 ? false : on(120, Ae >= 450 ? "bar" : "corner"), kids: lvl >= 2 ? false : on(150, Ae >= 600 ? "room" : "corner"),
+      meet: lvl >= 1 ? (Ae >= 500 ? { n: 1, seats: 8 } : 0) : (Ae >= 150 ? { n: Ae >= 700 ? 2 : 1, seats: Ae >= 450 ? 8 : 6 } : 0),
+      vip: lvl >= 1 ? 0 : (Ae >= 300 ? (Ae >= 700 ? 2 : 1) : 0), bank: lvl >= 2 ? 0 : (Ae >= 250 ? (Ae >= 700 ? 2 : 1) : 0), cashier: Ae >= 600 && lvl < 1, notary: Ae >= 800 && lvl < 1,
+      director: lvl >= 3 ? false : on(150, "room"), backoffice: Ae >= 200 ? Math.max(2, Math.round(Ae / 150)) : 0, accounting: Ae >= 650 && lvl < 1 ? 2 : 0, callcenter: Ae >= 800 && lvl < 1 ? 4 : 0,
+      wardrobe: Ae >= 300 && lvl < 1, media: Ae >= 600 && lvl < 1, photo: Ae >= 500 && lvl < 1, wc_guest: Ae >= 300 ? "mf" : "one", wc_staff: Ae >= 400 ? 1 : 0,
+      kitchen: A < 200 ? { type: "mini", seats: 4 } : { type: "table", seats: Math.max(4, Math.ceil(M / 2) + 2) }, server: Ae >= 220, archive: Ae >= 500, prayer: false, sets: false };
+    if (p.upper === "floor") B.building.fh = p.fh || 3.6;
+    return B; };
+  // подбор: самая большая программа без потерь (менеджеров от ориентира вниз, опции по уровням 0 → 2); возвращает { M, level, score, lost, brief, variant }
+  KB.presetFit = function (p, o = {}) {
+    const A = p.w * p.d, Ae = p.upper === "floor" ? 2 * A : p.upper === "mezz" ? Math.round(A * 1.2) : A;
+    const M0 = Math.max(2, Math.min(16, Math.round(Ae / (Ae < 200 ? 40 : Ae < 500 ? 55 : 65)))), cands = [];
+    const PEN = [0, 6, 14, 30];   // штраф за урезание программы: без VIP, без бара/детской/банка, без макета и РОП (минимум — только для павильонов)
+    const rank = c => c.M * 10 - PEN[c.level] + c.score / 20;
+    let fallback = null;
+    for (let M = M0; M >= 2; M--) { let okAt = -1;
+      for (const level of (A < 130 ? [0, 1, 2, 3] : [0, 1, 2])) { const B = KB.presetBrief(p, M, { level });
+        let V; try { V = KB.briefVariants(B, { formats: false, max: 6 }); } catch (e) { continue; }
+        const v = V[0]; if (!v) continue;
+        const ok = !v.lost.length && !(v.reduced && v.reduced.some(x => x.k === "maket" && x.steps >= 2)) && v.score.score >= (o.minScore || 70);
+        const c = { ok, M, level, score: v.score.score, lost: v.lost, reduced: v.reduced || [], brief: B, variant: v };
+        if (!fallback || v.lost.length < fallback.lost.length || (v.lost.length === fallback.lost.length && v.score.score > fallback.score)) fallback = c;
+        if (ok) { cands.push(c); okAt = level; break; } }
+      if (okAt === 0) break;   // полная программа при этом M — меньше менеджеров смысла нет
+      if (cands.length && M < cands[0].M - 2) break; }
+    if (!cands.length) return fallback;
+    return cands.sort((a, b) => rank(b) - rank(a))[0]; };
+  /*PRESET_FIT*/ KB.PRESET_FIT = {}; /*END_PRESET_FIT*/
+  KB.presetSummary = function (B) {   // короткая строка «что вмещается»
+    const L = [`${B.sales.managers} менедж.`, `ожидание ${B.waiting}`]; if (B.meet) L.push(`переговорн. ${B.meet.n} на ${B.meet.seats}`); if (B.vip) L.push(`VIP ${B.vip}`); if (B.bank) L.push(`банк ${B.bank}`); if (B.cashier) L.push("касса"); if (B.notary) L.push("нотариус");
+    L.push(`макет ${String(B.maket).replace("x", "×")}`); if (B.cafe) L.push(B.cafe === "bar" ? "бар" : "кофе"); if (B.kids) L.push(B.kids === "room" ? "детская комната" : "детский уголок"); if (B.media) L.push("медиа"); if (B.director) L.push("РОП");
+    if (B.backoffice) L.push(`бэк-офис ${B.backoffice}`); if (B.accounting) L.push("бухгалтерия"); if (B.callcenter) L.push("колл-центр"); L.push(B.wc_guest === "mf" ? "с/у Ж | МГН | М" : "с/у МГН"); return L.join(", "); };
 
   /* ============================================================ ТЗ / ГАЛОЧКИ → ПЛАН
    * brief — что нужно заказчику (формат: .claude/skills/office-brief-to-plan/references/brief-format.md):
@@ -4904,6 +4983,7 @@ function briefWizard(prev){
   <div class="row one"><label class="f">Название проекта<input id="bw_name" placeholder="ЖК, адрес или заказчик"></label></div>
   <div class="area"><input type="range" id="bw_rng" min="50" max="800" step="5" aria-label="Площадь, м²"><label class="big"><input type="number" id="bw_A" min="50" max="800" step="5"> м²</label></div>
   <div class="qa" id="bw_qa">${[60,100,150,250,400,600,800].map(a=>`<button data-a="${a}">${a} м²</button>`).join("")}</div>
+  <div class="row one" style="margin-top:8px"><button class="btn" id="bw_presets" type="button">Готовые габариты: от 3 контейнеров до 1000 м²</button><span class="note">Участок пустой и размеров ещё нет — выберите бокс: фасад-витраж по длинной стороне к дороге, программа уже подобрана движком.</span></div>
   <h5>2. Габариты здания</h5>
   <div class="row four bwdims"><label class="f">Длина вдоль улицы (витраж), м<input id="bw_w" type="number" step=".5" min="6"></label><label class="f">Глубина, м<input id="bw_d" type="number" step=".5" min="5"></label>
     <label class="f" id="bw_hl">Высота потолка, м<input id="bw_h" type="number" step=".1" min="2.7"></label></div>
@@ -4955,6 +5035,7 @@ function briefWizard(prev){
     if(t.dataset&&t.dataset.fmt){ st.fmt=t.dataset.fmt; touched.add("fmt"); m.querySelectorAll("[data-fmt]").forEach(b=>{ b.classList.toggle("on",b.dataset.fmt===st.fmt); b.setAttribute("aria-checked",b.dataset.fmt===st.fmt); }); return; }
     if(t.dataset&&t.dataset.lv){ const was=st.lvl; st.lvl=t.dataset.lv; if(st.lvl==="mezz"&&st.h<6.2) st.h=6.5; if(was==="mezz"&&st.lvl==="one"&&st.h>=6.2) st.h=4.5; defaults(); redraw(); return; }
     if(t===m||t.id==="bw_cancel") return m.remove();
+    if(t.id==="bw_presets"){ presetsDialog(p=>{ bwApplyPreset(st,p,touched); defaults(); redraw(); }, p=>{ bwApplyPreset(st,p,touched); defaults(); redraw(); $m("bw_go").click(); }); return; }
     if(t.id==="bw_funapply"){ const r=funRes(), set=(k,on,n)=>{ st.f[k].on=on; if(n!=null&&st.f[k].n!=null) st.f[k].n=n; touched.add(k); };
       st.f.managers.n=r.managers; touched.add("managers"); set("waiting",true,r.waiting); set("meet",true,r.meet); set("vip",r.vip>0,Math.max(1,r.vip)); set("bank",r.bank>0,Math.max(1,r.bank)); set("cashier",r.cashier); set("notary",r.notary);
       st.funOpen=true; redraw(); toast(`Программа по воронке: ${r.managers} менеджеров, ${r.waiting} мест ожидания${r.bank?`, банков ${r.bank}`:""}${r.notary?", нотариус":""}`); return; }
@@ -4969,6 +5050,33 @@ function briefWizard(prev){
       await flush(); S=r.project; S.meta.wiz=st; if(!vv||!vv.length) S.meta.variant={i:0,n:null,name:"Вариант 1",base}; projectId=uid(); sel_reset(); emptyOff=false; m.remove(); setView("2d"); fit(); commit(); tab="ex"; setTabs(); renderPane();
       bwResult(r,st); } });
 }
+/* ---------- готовые габариты (KB.PRESETS + запечённая программа KB.PRESET_FIT) ---------- */
+function bwApplyPreset(st,p,touched){ const fit=OfficeKB.PRESET_FIT[p.key], B=OfficeKB.presetBrief(p,fit?fit.M:4,{level:fit?fit.level:0});
+  st.autoB=false; st.w=p.w; st.d=p.d; st.lvl=p.upper==="floor"?"floor":p.upper==="mezz"?"mezz":"one"; st.h=p.h; st.fh=p.fh||3.6; st.A=Math.max(50,Math.min(800,Math.round(p.w*p.d))); if(!st.name||st.name==="Офис продаж") st.name=p.name;
+  st.fmt=B.sales.format; touched.add("fmt"); st.preset=p.key;
+  const set=(k,on,n,v)=>{ st.f[k]=st.f[k]||{}; st.f[k].on=!!on; if(n!=null) st.f[k].n=n; if(v!=null) st.f[k].v=String(v); touched.add(k); };
+  set("managers",true,B.sales.managers); set("waiting",B.waiting>0,B.waiting); set("meet",!!B.meet,B.meet?B.meet.n:1,B.meet?B.meet.seats:6); set("vip",B.vip>0,Math.max(1,B.vip||1)); set("bank",B.bank>0,Math.max(1,B.bank||1)); set("cashier",B.cashier); set("notary",B.notary);
+  set("reception",true,null,st.A>=450?"2":"1"); set("cafe",!!B.cafe,null,B.cafe||"corner"); set("kids",!!B.kids,null,B.kids||"corner"); set("maket",B.maket!=="screen",null,B.maket==="screen"?"screen":B.maket); set("media",B.media); set("photo",B.photo); set("showroom",false); set("wardrobe",B.wardrobe); set("wc_guest",true,null,B.wc_guest);
+  set("director",!!B.director); set("backoffice",B.backoffice>0,Math.max(1,B.backoffice||1)); set("accounting",B.accounting>0,Math.max(1,B.accounting||1)); set("callcenter",B.callcenter>0,Math.max(1,B.callcenter||1)); set("management",false); set("debt",false); set("marketing",false);
+  set("kitchen",true,null,B.kitchen.type); set("wc_staff",B.wc_staff>0,Math.max(1,B.wc_staff||1)); set("archive",!!B.archive); set("storage",false); set("server",!!B.server); set("prayer",false); set("security",false); }
+function presetsDialog(onPick,onBuild){ const P=OfficeKB.PRESETS, F=OfficeKB.PRESET_FIT||{}; const groups=[...new Set(P.map(p=>p.group))];
+  const area=p=>{ const a=p.w*p.d; return p.upper==="floor"?`${m2(a)} + ${m2(a)} = ${m2(2*a)} м²`:p.upper==="mezz"?`${m2(a)} + антресоль ≈ ${m2(a*0.2)} м²`:`${m2(a)} м²`; };
+  const card=p=>{ const f=F[p.key]; const sc=f?f.score:null;
+    return `<div class="pcard"><div class="pbox" style="aspect-ratio:${p.w}/${Math.max(p.d,p.w/3.2)}"><span>${fmt(p.w,1)} × ${fmt(p.d,1)}</span><i>витраж · дорога</i></div>
+      <div class="pt"><b>${esc(p.name)}</b><span class="note">${area(p)}${p.upper==="floor"?" · 2 этажа":p.upper==="mezz"?" · антресоль":" · 1 этаж"}${p.h?` · h ${fmt(p.upper==="floor"?(p.fh||3.6):p.h,1)}`:""}</span></div>
+      <div class="pf">${f?`<em class="${sc>=85?"":sc>=70?"mid":"low"}">${sc}</em> ${esc(f.summary)}${f.lost&&f.lost.length?`<span class="warn"> · не помещается: ${esc(f.lost.join(", "))}</span>`:""}`:"программа подбирается при выборе"}</div>
+      ${p.note?`<div class="note">${esc(p.note)}</div>`:""}
+      <div class="actions"><button class="btn primary" data-build="${p.key}">Собрать план</button><button class="btn" data-pick="${p.key}">Подставить в форму</button></div></div>`; };
+  const m=document.createElement("div"); m.className="modal";
+  m.innerHTML=`<div class="dlg wide" role="dialog" aria-label="Готовые габариты"><h3>Готовые габариты офиса продаж</h3>
+    <p class="note">Боксы от трёх блок-контейнеров до 1000 м². Длинная сторона — фасад с витражом и входной группой, к дороге; служебное и мокрый узел — в торце. Для каждого бокса движок заранее подобрал самую большую программу, которая помещается без потерь (оценка 0–100 — качество плана). «Собрать план» сразу покажет лучший вариант и остальные на миниатюрах.</p>
+    <div class="ptabs">${groups.map((g,i)=>`<button class="${i?"":"on"}" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
+    ${groups.map((g,i)=>`<div class="pgrid" data-grp="${esc(g)}" ${i?"hidden":""}>${P.filter(p=>p.group===g).map(card).join("")}</div>`).join("")}
+    <div class="actions"><button class="btn" id="pr_close">Закрыть</button></div></div>`;
+  document.body.appendChild(m);
+  m.addEventListener("click",e=>{ const t=e.target.closest("button"); if(e.target===m||(t&&t.id==="pr_close")) return m.remove(); if(!t) return;
+    if(t.dataset.g){ m.querySelectorAll(".ptabs button").forEach(b=>b.classList.toggle("on",b===t)); m.querySelectorAll(".pgrid").forEach(g=>g.hidden=g.dataset.grp!==t.dataset.g); return; }
+    const key=t.dataset.pick||t.dataset.build; if(!key) return; const p=P.find(x=>x.key===key); m.remove(); (t.dataset.build?onBuild:onPick)(p); }); }
 function bwBrief(st){ const f=st.f, on=k=>f[k]&&f[k].on;
   const M=f.managers.n, Bo=on("backoffice")?f.backoffice.n:0;
   return { name:st.name, sets:!!st.sets, style:st.style,

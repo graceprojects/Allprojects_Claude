@@ -1700,6 +1700,79 @@
     return list; };
   KB.variants = function (p0) { return KB.LEVEL_KEYS.map(k => Object.assign({ pkg: k }, KB.autoPlan(Object.assign({}, p0, { pkg: k })))); };
 
+  /* ============================================================ ГОТОВЫЕ ГАБАРИТЫ (каталог боксов для пустого участка)
+   * Фасад — по длинной стороне (витраж к дороге). Для каждого бокса движок подбирает самую большую программу, которая помещается без потерь (KB.presetFit),
+   * результат запечён в поле fit (пересчёт: node tools/presets.js). upper: none — один этаж, mezz — антресоль, floor — два этажа. */
+  KB.PRESETS = [
+    { key: "c3x12", group: "Контейнеры", name: "3 блок-контейнера 12 м", w: 12, d: 7.2, h: 2.7, upper: "none", note: "три 12-метровых модуля бок о бок; витраж по длинной стороне 12 м" },
+    { key: "c4x12", group: "Контейнеры", name: "4 блок-контейнера 12 м", w: 12, d: 9.6, h: 2.7, upper: "none", note: "четыре модуля; зал глубже, есть место под макет" },
+    { key: "c3x12x2", group: "Контейнеры", name: "3 × 12 м в два яруса", w: 12, d: 7.2, h: 5.4, upper: "floor", fh: 2.7, note: "второй ярус — служебное и переговорные; внизу только клиенты" },
+    { key: "c6x12", group: "Контейнеры", name: "6 блок-контейнеров 12 м", w: 24, d: 7.2, h: 2.7, upper: "none", note: "два ряда по три модуля в линию; фасад 24 м" },
+    { key: "p10x8", group: "Павильоны", name: "Павильон 10 × 8", w: 10, d: 8, h: 3.3, upper: "none", note: "минимальный офис: стойка, 2–3 места, макет-стол" },
+    { key: "p12x10", group: "Павильоны", name: "Павильон 12 × 10", w: 12, d: 10, h: 3.5, upper: "none", note: "" },
+    { key: "p15x10", group: "Павильоны", name: "Павильон 15 × 10", w: 15, d: 10, h: 3.5, upper: "none", note: "" },
+    { key: "p18x10", group: "Павильоны", name: "Павильон 18 × 10", w: 18, d: 10, h: 3.6, upper: "none", note: "" },
+    { key: "l20x10", group: "Линейные", name: "Линейный 20 × 10", w: 20, d: 10, h: 4.0, upper: "none", note: "" },
+    { key: "l24x12", group: "Линейные", name: "Линейный 24 × 12", w: 24, d: 12, h: 4.5, upper: "none", note: "" },
+    { key: "l30x12", group: "Линейные", name: "Линейный 30 × 12", w: 30, d: 12, h: 4.5, upper: "none", note: "" },
+    { key: "l36x12", group: "Линейные", name: "Линейный 36 × 12", w: 36, d: 12, h: 4.5, upper: "none", note: "" },
+    { key: "l40x12", group: "Линейные", name: "Линейный 40 × 12 (как R24 060)", w: 40, d: 12, h: 4.5, upper: "none", note: "пролёты 6–6,5 м; сделка в торце, служебное в другом" },
+    { key: "l48x14", group: "Линейные", name: "Линейный 48 × 14", w: 48, d: 14, h: 4.5, upper: "none", note: "" },
+    { key: "l60x15", group: "Линейные", name: "Линейный 60 × 15", w: 60, d: 15, h: 5.0, upper: "none", note: "900 м² в один этаж; длинный фасад" },
+    { key: "d20x15", group: "Глубокие", name: "Глубокий 20 × 15", w: 20, d: 15, h: 4.5, upper: "none", note: "" },
+    { key: "d24x16", group: "Глубокие", name: "Глубокий 24 × 16", w: 24, d: 16, h: 4.5, upper: "none", note: "" },
+    { key: "d30x18", group: "Глубокие", name: "Глубокий 30 × 18", w: 30, d: 18, h: 5.0, upper: "none", note: "" },
+    { key: "d36x20", group: "Глубокие", name: "Глубокий 36 × 20", w: 36, d: 20, h: 5.0, upper: "none", note: "" },
+    { key: "d40x25", group: "Глубокие", name: "Глубокий 40 × 25", w: 40, d: 25, h: 5.5, upper: "none", note: "1000 м² в один этаж" },
+    { key: "m24x12", group: "С антресолью", name: "24 × 12 + антресоль", w: 24, d: 12, h: 7.0, upper: "mezz", note: "бэк-офис и кухня наверху, зал двойного света" },
+    { key: "m30x14", group: "С антресолью", name: "30 × 14 + антресоль", w: 30, d: 14, h: 7.0, upper: "mezz", note: "" },
+    { key: "m40x15", group: "С антресолью", name: "40 × 15 + антресоль", w: 40, d: 15, h: 7.5, upper: "mezz", note: "" },
+    { key: "m48x16", group: "С антресолью", name: "48 × 16 + антресоль", w: 48, d: 16, h: 7.5, upper: "mezz", note: "" },
+    { key: "f20x12", group: "Два этажа", name: "20 × 12 × 2 этажа", w: 20, d: 12, h: 7.2, upper: "floor", fh: 3.6, note: "внизу клиенты, наверху служебное; для МГН нужен подъёмник" },
+    { key: "f30x12", group: "Два этажа", name: "30 × 12 × 2 этажа", w: 30, d: 12, h: 7.2, upper: "floor", fh: 3.6, note: "" },
+    { key: "f36x14", group: "Два этажа", name: "36 × 14 × 2 этажа", w: 36, d: 14, h: 7.2, upper: "floor", fh: 3.6, note: "" },
+    { key: "f40x14", group: "Два этажа", name: "40 × 14 × 2 этажа", w: 40, d: 14, h: 7.2, upper: "floor", fh: 3.6, note: "1120 м² на двух этажах" },
+  ];
+  // ТЗ для бокса: типовая программа офиса продаж от площади, M — менеджеров (опции по площади с учётом этажей)
+  KB.presetBrief = function (p, M, o = {}) {
+    const A = p.w * p.d, Ae = p.upper === "floor" ? 2 * A : p.upper === "mezz" ? Math.round(A * 1.2) : A, lvl = o.level || 0;   // level: 0 — полная программа, 1 — без VIP и 2-й переговорной, 2 — без бара/детской/банка, 3 — минимум: экран вместо макета
+    const on = (lim, v) => (Ae >= lim ? v : false);
+    const B = { name: p.name, building: Object.assign({ w: p.w, d: p.d, upper: p.upper, entrance: "auto", core: "right" }, p.upper === "floor" ? { fh: p.fh || 3.6 } : { h: p.h }),
+      sales: { managers: M, format: A < 200 ? "open" : "shared" }, waiting: lvl >= 3 ? Math.max(3, M + 1) : Math.max(4, Math.round(1.5 * M)),
+      maket: lvl >= 3 ? "screen" : A < 100 ? "2x1.5" : A < 220 ? "3x2" : A < 450 ? "5x3" : "6x4",
+      cafe: lvl >= 2 ? false : on(120, Ae >= 450 ? "bar" : "corner"), kids: lvl >= 2 ? false : on(150, Ae >= 600 ? "room" : "corner"),
+      meet: lvl >= 1 ? (Ae >= 500 ? { n: 1, seats: 8 } : 0) : (Ae >= 150 ? { n: Ae >= 700 ? 2 : 1, seats: Ae >= 450 ? 8 : 6 } : 0),
+      vip: lvl >= 1 ? 0 : (Ae >= 300 ? (Ae >= 700 ? 2 : 1) : 0), bank: lvl >= 2 ? 0 : (Ae >= 250 ? (Ae >= 700 ? 2 : 1) : 0), cashier: Ae >= 600 && lvl < 1, notary: Ae >= 800 && lvl < 1,
+      director: lvl >= 3 ? false : on(150, "room"), backoffice: Ae >= 200 ? Math.max(2, Math.round(Ae / 150)) : 0, accounting: Ae >= 650 && lvl < 1 ? 2 : 0, callcenter: Ae >= 800 && lvl < 1 ? 4 : 0,
+      wardrobe: Ae >= 300 && lvl < 1, media: Ae >= 600 && lvl < 1, photo: Ae >= 500 && lvl < 1, wc_guest: Ae >= 300 ? "mf" : "one", wc_staff: Ae >= 400 ? 1 : 0,
+      kitchen: A < 200 ? { type: "mini", seats: 4 } : { type: "table", seats: Math.max(4, Math.ceil(M / 2) + 2) }, server: Ae >= 220, archive: Ae >= 500, prayer: false, sets: false };
+    if (p.upper === "floor") B.building.fh = p.fh || 3.6;
+    return B; };
+  // подбор: самая большая программа без потерь (менеджеров от ориентира вниз, опции по уровням 0 → 2); возвращает { M, level, score, lost, brief, variant }
+  KB.presetFit = function (p, o = {}) {
+    const A = p.w * p.d, Ae = p.upper === "floor" ? 2 * A : p.upper === "mezz" ? Math.round(A * 1.2) : A;
+    const M0 = Math.max(2, Math.min(16, Math.round(Ae / (Ae < 200 ? 40 : Ae < 500 ? 55 : 65)))), cands = [];
+    const PEN = [0, 6, 14, 30];   // штраф за урезание программы: без VIP, без бара/детской/банка, без макета и РОП (минимум — только для павильонов)
+    const rank = c => c.M * 10 - PEN[c.level] + c.score / 20;
+    let fallback = null;
+    for (let M = M0; M >= 2; M--) { let okAt = -1;
+      for (const level of (A < 130 ? [0, 1, 2, 3] : [0, 1, 2])) { const B = KB.presetBrief(p, M, { level });
+        let V; try { V = KB.briefVariants(B, { formats: false, max: 6 }); } catch (e) { continue; }
+        const v = V[0]; if (!v) continue;
+        const ok = !v.lost.length && !(v.reduced && v.reduced.some(x => x.k === "maket" && x.steps >= 2)) && v.score.score >= (o.minScore || 70);
+        const c = { ok, M, level, score: v.score.score, lost: v.lost, reduced: v.reduced || [], brief: B, variant: v };
+        if (!fallback || v.lost.length < fallback.lost.length || (v.lost.length === fallback.lost.length && v.score.score > fallback.score)) fallback = c;
+        if (ok) { cands.push(c); okAt = level; break; } }
+      if (okAt === 0) break;   // полная программа при этом M — меньше менеджеров смысла нет
+      if (cands.length && M < cands[0].M - 2) break; }
+    if (!cands.length) return fallback;
+    return cands.sort((a, b) => rank(b) - rank(a))[0]; };
+  /*PRESET_FIT*/ KB.PRESET_FIT = {}; /*END_PRESET_FIT*/
+  KB.presetSummary = function (B) {   // короткая строка «что вмещается»
+    const L = [`${B.sales.managers} менедж.`, `ожидание ${B.waiting}`]; if (B.meet) L.push(`переговорн. ${B.meet.n} на ${B.meet.seats}`); if (B.vip) L.push(`VIP ${B.vip}`); if (B.bank) L.push(`банк ${B.bank}`); if (B.cashier) L.push("касса"); if (B.notary) L.push("нотариус");
+    L.push(`макет ${String(B.maket).replace("x", "×")}`); if (B.cafe) L.push(B.cafe === "bar" ? "бар" : "кофе"); if (B.kids) L.push(B.kids === "room" ? "детская комната" : "детский уголок"); if (B.media) L.push("медиа"); if (B.director) L.push("РОП");
+    if (B.backoffice) L.push(`бэк-офис ${B.backoffice}`); if (B.accounting) L.push("бухгалтерия"); if (B.callcenter) L.push("колл-центр"); L.push(B.wc_guest === "mf" ? "с/у Ж | МГН | М" : "с/у МГН"); return L.join(", "); };
+
   /* ============================================================ ТЗ / ГАЛОЧКИ → ПЛАН
    * brief — что нужно заказчику (формат: .claude/skills/office-brief-to-plan/references/brief-format.md):
    * { name, building: {area, w, d, h, upper: auto|mezz|floor|none, fh}, sales: {managers, format: glass|open}, meet: {n, seats}, vip, bank, cashier,

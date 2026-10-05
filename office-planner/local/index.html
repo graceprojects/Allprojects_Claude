@@ -933,11 +933,12 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
   KB.wcScheme = function (need) {
     if (!need || need.shared) return { key: "one", name: "одна универсальная кабина МГН", parts: [{ name: null, w: 2.4 }] };
     const mF = need.m.wc + need.m.ur, wF = need.w.wc;
-    if (mF <= 1 && wF <= 1) return { key: "pair", name: "М и Ж одноместные с раковиной (1,5 м, зеркально) плюс МГН — до 15 работающих в смену по СП 44 п. 5.17 можно не делить на М/Ж", parts: [{ name: "С/у МГН", w: 2.3 }, { name: "С/у мужской", w: 1.5 }, { name: "С/у женский", w: 1.5 }] };
-    if (wF >= 3 || mF >= 4) { const mW = Math.min(4.2, Math.max(3.0, 0.1 + 0.9 * need.m.wc + 0.8 * need.m.ur)), wW = Math.min(4.2, Math.max(3.0, 0.1 + 0.9 * need.w.wc));
-      return { key: "large", name: "большой блок: М | МГН | Ж, раковины внутри у входа", parts: [{ name: "С/у мужской", w: mW }, { name: "С/у МГН", w: 2.3 }, { name: "С/у женский", w: wW }] }; }
-    const mW = 0.1 + 0.9 * need.m.wc + 0.8 * need.m.ur, wW = 0.1 + 0.9 * need.w.wc;
-    return { key: "lock", name: "М | санхолл-умывальная | Ж плюс МГН", parts: [{ name: "С/у МГН", w: 2.3 }, { name: "С/у мужской", w: Math.max(1.5, Math.min(2.8, mW)) }, { name: "Санхолл — умывальная (шлюз)", w: 1.5 }, { name: "С/у женский", w: Math.max(1.5, Math.min(2.8, wW)) }] }; };
+    /* эталонный блок заказчика (планы 11 / 14 / 27 / 30): Ж | МГН | М в ряд на общих мокрых стенах, двери всех трёх из коридора, умывальники внутри;
+     * Ж — 2 кабины (0,9) + умывальник: 2,0–2,4 м; М — кабина + 2 писсуара + умывальники: 2,0–2,4 м; МГН 1,9 (1,7 × 2,2 с боковым унитазом) или 2,3 (2,2 × 2,25) */
+    const wWc = Math.max(2, need.w.wc), mWc = Math.max(1, need.m.wc), mUr = Math.max(need.m.wc >= 2 ? 2 : 1, need.m.ur);
+    const wW = Math.min(4.2, Math.max(2.0, 0.1 + 0.9 * wWc + 0.3)), mW = Math.min(4.2, Math.max(2.0, 0.1 + 0.9 * mWc + 0.75 * mUr + 0.2));
+    if (wF >= 3 || mF >= 4) return { key: "large", name: "большой блок Ж | МГН | М: Ж 3 кабины, М 2 кабины + 2 писсуара, умывальники у входа", parts: [{ name: "С/у женский", w: Math.max(3.0, wW) }, { name: "С/у МГН", w: 2.3 }, { name: "С/у мужской", w: Math.max(3.0, mW) }] };
+    return { key: "mf", name: "блок Ж | МГН | М по 2 кабины, умывальники внутри, двери из коридора у общих стен (планы 11 / 30)", parts: [{ name: "С/у женский", w: wW }, { name: "С/у МГН", w: 2.0 }, { name: "С/у мужской", w: mW }] }; };
   KB.FK = Object.fromEntries(KB.FURN.map(f => [f[0], { k: f[0], n: f[1], g: f[2], w: f[3], h: f[4], z: f[5], d: f[6], c: f[7] }]));
 
   KB.DEFAULTS = {
@@ -1490,7 +1491,9 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
     const mgnWc = wcv.filter(r => has(r, "мгн") || has(r, "универсал")), chkWc = mgnWc.length ? mgnWc : wcv.length ? [wcv.slice().sort((x, y) => y.w * y.h - x.w * x.h)[0]] : [];   // размер МГН проверяем у кабины МГН (или у самого большого с/у)
     for (const r of chkWc) { const a = Math.min(r.w, r.h), bb = Math.max(r.w, r.h);
       if (a < KB.WC.accMin[0] - 0.01 || bb < KB.WC.accMin[1] - 0.01) add("red", `«${r.name}»: ${r.w.toFixed(2)}×${r.h.toFixed(2)} м — универсальная кабина МГН не помещается (минимум 1,70×2,20 с унитазом у стены, 2,20×2,25 с унитазом по центру).`, "СП 59.13330.2020 табл. 6.1", r.id);
-      else if (a < KB.WC.mgn[0] - 0.01 || bb < KB.WC.mgn[1] - 0.01) add("yellow", `«${r.name}»: ${r.w.toFixed(2)}×${r.h.toFixed(2)} м — универсальная кабина только с унитазом у боковой стены (1,70×2,20); с унитазом по центру нужно 2,20×2,25.`, "СП 59.13330.2020 табл. 6.1", r.id);
+      else if (a < KB.WC.mgn[0] - 0.01 || bb < KB.WC.mgn[1] - 0.01) { const wcIt = (S.items || []).find(i => i.t === "item" && i.k === "wc" && (i.lv || 0) === (r.lv || 0) && (() => { const q = aabbOf(i); return q.x + q.w / 2 > r.x && q.x + q.w / 2 < r.x + r.w && q.y + q.h / 2 > r.y && q.y + q.h / 2 < r.y + r.h; })());
+        const q = wcIt && aabbOf(wcIt), sides = q ? [q.x - r.x, r.x + r.w - q.x - q.w, q.y - r.y, r.y + r.h - q.y - q.h].filter(g => g < 0.15).length : 0;   // унитаз у боковой стены (две стены вплотную) — схема 1,7 × 2,2 выполнена
+        if (sides < 2) add("yellow", `«${r.name}»: ${r.w.toFixed(2)}×${r.h.toFixed(2)} м — универсальная кабина только с унитазом у боковой стены (1,70×2,20); с унитазом по центру нужно 2,20×2,25.`, "СП 59.13330.2020 табл. 6.1", r.id); }
       const dr = mgnWc.includes(r) ? (S.items || []).find(i => i.t === "item" && /^(door|slide|auto)/.test(i.k) && (i.lv || 0) === (r.lv || 0) && rectGap(aabbOf(i), r) < 0.2) : null;   // дверь — только у комнаты, названной кабиной МГН
       if (dr && /^door/.test(dr.k)) { const dw = Math.max(dr.w, dr.h); if (dw < 0.9 - 0.01) add("yellow", `«${r.name}»: дверь ${dw.toFixed(2)} м — для кабины МГН нужен проём ≥ 0,9 м, открывание наружу.`, "СП 59.13330.2020 п. 6.2.4, 6.3.3", r.id);
         else { const a2 = aabbOf(dr), cx = a2.x + a2.w / 2, cy = a2.y + a2.h / 2; if (cx > r.x + 0.1 && cx < r.x + r.w - 0.1 && cy > r.y + 0.1 && cy < r.y + r.h - 0.1) add("yellow", `«${r.name}»: дверь кабины МГН открывается внутрь — должна открываться наружу (упавшего человека иначе не достать).`, "СП 59.13330.2020 п. 6.3.3", r.id); } } }
@@ -2484,9 +2487,9 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
           const hz = face === "n" || face === "s", base = hz ? r.x : r.y, e = hz ? E[0] : E[1], lo = off0, hi = Math.max(0.05, along - dw - off0);
           const near = Math.abs(base + lo + dw / 2 - e) <= Math.abs(base + hi + dw / 2 - e) ? lo : hi, want = /мужск/.test(norm(r.name)) ? near : (near === lo ? hi : lo);
           wcFlip = want !== off; off = want; }
-        else { const nb = S.items.find(q => q.t === "room" && q !== r && lvOf(q) === lv && /мужск|женск/i.test(q.name || "") && rectGap(q, r) < 0.35);   // одноместные М и Ж через общую стену: двери врозь, раковины спина к спине у стояка
+        else { const nb = S.items.find(q => q.t === "room" && q !== r && lvOf(q) === lv && /мужск|женск|мгн|универсал/i.test(q.name || "") && rectGap(q, r) < 0.35);   // сосед по мокрой стене (Ж | МГН | М): дверь — у общей стены, умывальник — в переднем углу у наружной (планы 11, 14, 27, 30)
           if (nb) { const hz = face === "n" || face === "s", plus = hz ? nb.x + nb.w / 2 > r.x + r.w / 2 : nb.y + nb.h / 2 > r.y + r.h / 2, rev = face === "n" || face === "e";
-            const lo = off0, hi = Math.max(0.05, along - dw - off0), nbSide = (plus !== rev) ? hi : lo, want = nbSide === lo ? hi : lo; wcFlip = want !== off; off = want; } } }
+            const lo = off0, hi = Math.max(0.05, along - dw - off0), want = (plus !== rev) ? hi : lo; wcFlip = want !== off; off = want; } } }
       const inward = T.key === "wcmf" || !(T.wc || T.key === "kui" || T.key === "elec" || T.key === "server" || T.key === "archive");
       out.push(r.border === "glass" && T.key !== "vip" && T.key !== "meet" && T.key !== "showroom" ? slideDoor(r, face, off) : door(r, face, off, dw, inward));
     }
@@ -2550,20 +2553,26 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
           if (!lock) { const s0 = 0.05 + C.doorW + 0.2, nS = Math.max(1, Math.min(2, Math.floor((W - cd - 0.15 - s0) / C.sinkW)));   // без шлюза — раковины на стене входа, справа от двери (как в блоке 3,6 × 8: кабины у дальней стены, раковины у двери)
             for (let i = 0; i < nS; i++) P("sink", s0 + i * C.sinkW + (C.sinkW - 0.55) / 2, D - 0.47, 180, { label: i ? "" : "зеркало над раковиной" }); }
           out._note = `кабин ${nWc}${nUr ? `, писсуаров ${nUr}` : ""}${lock ? "; руки моют в санхолле-шлюзе" : ", раковина у входа"}; проход ${(W - cd).toFixed(2)} м`; break; }
-        const L = W - 0.1;   // дверь на торцевой стене: у двери — раковины, в глубине — кабины, напротив двери — дверь кабины
-        if (!lock && L < 1.75) { P("wc", (W - 0.4) / 2, 0.05); P("sink", W - 0.5, Math.max(0.8, D - 1.9), 90);   // одноместный 1,4 × 2,4–3,2: унитаз в глубине, раковина на боковой стене у двери (план 2,8 × 2,4)
+        const L = W - 0.1;   // дверь на торцевой стене (из коридора), у общей стены с соседним санузлом; локально u = 0 — сторона двери, u = W — наружная стена
+        if (!lock && L < 1.75) { P("wc", (W - 0.4) / 2, 0.05); P("sink", W - 0.5, Math.max(0.8, D - 1.9), 90);   // одноместный 1,4–1,5 × 2,2–3,2: унитаз в глубине, раковина у наружной стены ближе к двери
           out._note = `одноместный: унитаз в глубине, раковина у двери; ширина ${W.toFixed(2)} м`; break; }
+        /* эталон (планы 11, 14, 24, 27, 30): кабины 0,9 вдоль дальней стены с дверцами в переднюю зону ≥ 1,2; Ж — кабины от наружной стены;
+         * М — кабина у наружной стены, писсуары с экраном у дальней стены со стороны двери; умывальники — в переднем углу у наружной стены (на стене входа при ширине ≥ 2,2, иначе на наружной боковой);
+         * дверь — у общей стены, внутрь: створка ложится на перегородку, умывальник и кабины вне её дуги */
         const cd = D - C.sinkD - C.passMin >= C.cabIn ? C.cabIn : C.cabOut;
-        let nWc = men ? 1 : Math.max(1, Math.floor(L / C.cabW)), nUr = men ? Math.max(0, Math.floor((L - C.cabW) / C.urW)) : 0;
-        if (men && nUr >= 3 && L >= 2 * C.cabW + 2 * C.urW) { nWc = 2; nUr = Math.floor((L - 2 * C.cabW) / C.urW); }
-        nUr = Math.min(nUr, 3); nWc = Math.min(nWc, 6);
-        let u = 0.05;
-        for (let i = 0; i < nWc; i++) { P("cubicle", u, 0.02, 0, { w: C.cabW, h: cd }); P("wc", u + (C.cabW - 0.4) / 2, 0.05); u += C.cabW; }
-        for (let i = 0; i < nUr; i++) { u += 0.1; P("urinal", u + (C.urW - 0.4) / 2 - 0.05, 0.02); P("urSep", u + C.urW - 0.12, 0.02); u += C.urW - 0.1; }
-        const s0 = 0.3 + C.doorW + 0.25, nS = lock ? 0 : Math.max(1, Math.min(Math.ceil((nWc + nUr) / 2) + (men ? 0 : 1), Math.floor((W - s0 - 0.05) / C.sinkW)));
-        if (nS && W - s0 >= 0.6) for (let i = 0; i < nS; i++) P("sink", s0 + i * C.sinkW + (C.sinkW - 0.55) / 2, D - 0.47, 180, { label: i ? "" : "зеркало над раковиной" });
-        else if (nS && D - cd - 0.5 >= 0.9) P("sink", W - 0.5, cd + 0.2, 90);
-        out._note = `кабин ${nWc}${nUr ? `, писсуаров ${nUr}` : ""}, раковин ${nS}${lock ? " (руки — в шлюзе)" : ""}; проход перед кабинами ${(D - cd - (nS ? C.sinkD : 0)).toFixed(2)} м`; break; }
+        let nWc = men ? 1 : Math.max(1, Math.floor(L / C.cabW)), nUr = men ? Math.max(0, Math.min(3, Math.floor((L - C.cabW - 0.3) / C.urW))) : 0;
+        if (men && L >= 2 * C.cabW + C.urW + 0.3 && (nUr >= 2 || L >= 3.0)) { nWc = 2; nUr = Math.max(1, Math.min(3, Math.floor((L - 2 * C.cabW - 0.3) / C.urW))); }
+        nWc = Math.min(nWc, 6);
+        let u = W - 0.05;
+        for (let i = 0; i < nWc; i++) { u -= C.cabW; P("cubicle", u, 0.02, 0, { w: C.cabW, h: cd }); P("wc", u + (C.cabW - 0.4) / 2, 0.05); }
+        if (men) { let v = u - 0.1; for (let i = 0; i < nUr; i++) { v -= C.urW; if (v < 0.3) { nUr = i; break; } P("urinal", v + (C.urW - 0.4) / 2 + 0.05, 0.02); P("urSep", v + C.urW - 0.06, 0.02); }
+          if (nUr && v >= 0.3) P("urSep", v - 0.06, 0.02); }   // экран со стороны двери
+        const sMax = W - 0.05 - (C.doorW + 0.35), nS0 = men ? Math.min(2, Math.max(1, Math.ceil((nWc + nUr) / 2))) : Math.min(2, Math.max(1, Math.ceil(nWc / 2)));
+        let nS = 0;
+        if (sMax >= C.sinkW + 0.05) { nS = Math.min(nS0, Math.floor(sMax / C.sinkW));   // на стене входа, от наружного угла к двери
+          for (let i = 0; i < nS; i++) P("sink", W - 0.05 - (i + 1) * C.sinkW + (C.sinkW - 0.55) / 2, D - 0.47, 180, { label: i ? "" : "зеркало над раковиной" }); }
+        else if (D - cd - 0.6 >= 0.75) { nS = 1; P("sink", W - 0.5, Math.max(cd + 0.15, D - 0.6 - 0.75), 90); }   // узкая комната — на наружной боковой стене у входа
+        out._note = `кабин ${nWc}${nUr ? `, писсуаров ${nUr}` : ""}, раковин ${nS}; передняя зона ${(D - cd - (nS && sMax >= C.sinkW + 0.05 ? C.sinkD : 0)).toFixed(2)} м; дверь у общей стены, умывальник у наружной`; break; }
       case "kui": case "server": case "archive": P("shelf", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 3)) });
         if (T.key === "archive" && D >= 2.6 && W >= 2) P("shelf", 0.05, 0.6, 90, { w: Math.min(D - 1.6, 3) }); break;
       case "elec": P("cab", 0.1, 0.05, 0, { w: Math.max(0.6, Math.min(W - 0.2, 1.8)), label: "щиты" }); break;
@@ -2840,7 +2849,7 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
     const coreBack = [];
     const wcv = get("wcv");
     if (wcv) { if (wcv.area >= 10) { const bo = get("backoffice"), staffN = (cab ? cab.n : 4) + (bo ? Math.round(areaOf(bo) / 6) : 0) + STAFFX.reduce((t, k) => t + (get(k) ? Math.round(areaOf(get(k)) / 5) : 0), 0) + 2, lg = get("lounge");
-        const need = KB.wcNeed({ staff: staffN, visitors: (p.pkgDef && +p.pkgDef.wcVisitors) || (lg ? (lg.seats || Math.round(lg.area / 1.8)) : 6) });   /* по заказанной численности, а не по ужатым местам ожидания */ const sch = KB.wcScheme(need.shared ? { shared: false, m: { wc: 1, ur: 0 }, w: { wc: 1 } } : need);   // заказаны М/Ж — минимум одноместные
+        const need = KB.wcNeed({ staff: staffN, visitors: (p.pkgDef && +p.pkgDef.wcVisitors) || (lg ? (lg.seats || Math.round(lg.area / 1.8)) : 6) });   /* по заказанной численности, а не по ужатым местам ожидания */ const sch = KB.wcScheme(need.shared ? { shared: false, m: { wc: 1, ur: 1 }, w: { wc: 2 } } : need);   // заказаны М/Ж — минимум эталонный блок по 2 кабины
         for (const q of sch.parts) coreBack.push({ r: wcv, name: q.name, w: q.w }); }   /* схемы pair / lock / large — KB.wcScheme, restrooms.md §8 */ else coreBack.push({ r: wcv, w: Math.max(2.4, wcv.area / rb) }); }
     if (!upKeys.includes("wcs")) for (const r of copies("wcs")) coreBack.push({ r, w: Math.max(1.5, areaOf(r) / rb) });
     for (const k of ["kui", "elec"]) { const r = get(k); if (r) coreBack.push({ r, w: wOf(r, rb, k === "kui" ? 1.2 : 1.4) }); }

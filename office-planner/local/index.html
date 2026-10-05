@@ -341,6 +341,11 @@ kbd{font-family:var(--font-ui);border:0;background:var(--fill);border-radius:5px
 .pbox{position:relative;width:100%;max-height:150px;border:3px solid var(--ink);border-bottom:6px solid #4aa3df;border-radius:4px;display:flex;align-items:center;justify-content:center;font:600 15px system-ui;background:var(--fill);overflow:hidden}.pbox i{position:absolute;bottom:2px;right:6px;font:10px system-ui;color:#4aa3df;font-style:normal}
 .pbox.has{border:1px solid var(--line);background:#fff;aspect-ratio:auto!important;max-height:170px}.pbox.has svg{width:100%;height:auto;max-height:168px;display:block}
 .pt b{display:block;font-size:14px}.pf{font-size:12.5px;line-height:1.4}.pf em{font-style:normal;font-weight:700;color:var(--ok);margin-right:4px}.pf em.mid{color:var(--orange)}.pf em.low{color:var(--warn)}.pf .warn{color:var(--orange)}
+.modal.start .dlg{max-width:1180px}.sladder{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 16px;margin:12px 0 10px}
+.sitem{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 8px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font:inherit;color:var(--ink);min-width:96px;transition:box-shadow .15s,border-color .15s}.sitem:hover,.sitem:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,163,223,.25);outline:none}
+.sitem .sfig{display:block;line-height:0}.sitem .sfig svg{display:block;max-width:100%;height:auto}.sitem .scap{display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;line-height:1.2}.sitem .scap b{font-size:14px}.sitem .scap span{font-size:12.5px}.sitem .scap em{font-style:normal;font-size:11px;color:var(--muted)}.sitem .scap small{font-size:10.5px;color:var(--muted);max-width:150px}
+.slegend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:8px}.slegend i{display:inline-block;width:18px;height:10px;border:1.5px solid #1f2a37;background:#fff;margin-right:5px;vertical-align:-1px;border-radius:1px}.slegend i.l2{border-top:3px dashed #6b7785}.slegend i.l3{box-shadow:3px -3px 0 -1px #8a97a6}.slegend i.l4{border-bottom:3px solid #4aa3df}
+@media (max-width:900px){ .sladder{gap:8px} .sitem{min-width:70px;padding:8px 5px 6px;max-width:calc(50% - 4px)} .sitem .sfig svg{max-width:100%} .sitem .scap small{max-width:120px} .sitem .scap b{font-size:13px} }
 .pcard .actions{margin-top:auto;display:flex;gap:6px;flex-wrap:wrap}.pcard .actions .btn{padding:6px 10px;font-size:12.5px}
 .varbar.busy{opacity:.6;pointer-events:none}.varbar .vt em{font-style:normal;font-weight:700;color:var(--ok)}.varbar .vt em.mid{color:var(--orange)}.varbar .vt em.low{color:var(--warn)}
 .score{display:flex;align-items:center;gap:12px;margin:4px 0 10px;padding:10px 12px;border-radius:12px;background:var(--fill)}.score b{font-size:28px;line-height:1;min-width:46px;text-align:center}.score span{font-size:12.5px;line-height:1.35}.score small{color:var(--muted)}
@@ -5164,6 +5169,39 @@ function presetsDialog(onPick,onBuild){ const F=OfficeKB.PRESET_FIT||{}; const t
   m.addEventListener("click",e=>{ const t=e.target.closest("button"); if(e.target===m||(t&&t.id==="pr_close")){ alive=false; return m.remove(); } if(!t) return;
     if(t.dataset.g){ m.querySelectorAll(".ptabs button").forEach(b=>b.classList.toggle("on",b===t)); m.querySelectorAll(".pgrid").forEach(g=>g.hidden=g.dataset.grp!==t.dataset.g); return; }
     const key=t.dataset.pick||t.dataset.build; if(!key) return; const p=P.find(x=>x.key===key); alive=false; m.remove(); (t.dataset.build?onBuild:onPick)(p); }); }
+function startCatalog(){ const F=OfficeKB.PRESET_FIT||{}; const K=7, tot=p=>p.w*p.d*(p.upper==="floor"?2:p.upper==="mezz"?1.2:1);
+  const P=OfficeKB.PRESETS.slice().sort((a,b)=>tot(a)-tot(b)||a.w*a.d-b.w*b.d);
+  const lvl=p=>p.upper==="floor"?"2 этажа":p.upper==="mezz"?"1 этаж + антресоль":"1 этаж";
+  const area=p=>{ const a=p.w*p.d; return p.upper==="floor"?`${m2(2*a)} м²`:p.upper==="mezz"?`${m2(a)} м² + антр.`:`${m2(a)} м²`; };
+  // все боксы — в одном масштабе (K px на метр): длинная сторона внизу — фасад с витражом к дороге; 2 этажа — второй контур со сдвигом, антресоль — пунктир в глубине
+  const box=(p,thumb)=>{ const w=p.w*K, d=p.d*K, off=p.upper==="floor"?Math.round(Math.min(10,Math.max(5,d*.12))):0, W=w+off, H=d+off, dw=Math.min(12,Math.max(5,w*.2));
+    const up=p.upper==="floor"?`<rect x="${off}" y="0" width="${w}" height="${d}" fill="#e9eff6" stroke="#8a97a6" stroke-width="1.5"/>`:"";
+    const mz=p.upper==="mezz"?`<rect x="${w*.03}" y="${off+d*.05}" width="${w*.94}" height="${d*.34}" fill="#eef3f8" stroke="#6b7785" stroke-width="1" stroke-dasharray="3 2"/>`:"";
+    const inner=thumb?thumb.replace("<svg ",`<svg x="0" y="${off}" width="${w}" height="${d}" `):"";
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${up}<rect x="0" y="${off}" width="${w}" height="${d}" fill="#fff" stroke="#1f2a37" stroke-width="2"/>${inner}${mz}<line x1="0" y1="${off+d}" x2="${w}" y2="${off+d}" stroke="#4aa3df" stroke-width="3"/><rect x="${w/2-dw/2}" y="${off+d-3.5}" width="${dw}" height="5" fill="#1f2a37"/></svg>`; };
+  const item=p=>{ const f=F[p.key]; const cap=f?`${f.M} раб. мест${f.M===1?"о":f.M<5?"а":""}`:"";
+    return `<button class="sitem" data-key="${p.key}" title="${esc(p.name)} — ${esc(lvl(p))}${f?`. ${esc(f.summary)}`:""}${p.note?`. ${esc(p.note)}`:""}">
+      <span class="sfig">${box(p,PRESET_PLANS[p.key]?planThumb(PRESET_PLANS[p.key]):"")}</span>
+      <span class="scap"><b>${area(p)}</b><span>${fmt(p.w,1)} × ${fmt(p.d,1)} м</span><em>${lvl(p)}</em><small>${esc(p.name)}${cap?` · ${cap}`:""}</small></span></button>`; };
+  const m=document.createElement("div"); m.className="modal start";
+  m.innerHTML=`<div class="dlg wide" role="dialog" aria-label="Готовые офисы продаж"><h3>Выберите готовый офис продаж</h3>
+    <p class="note">Все боксы нарисованы в одном масштабе, от самого маленького к самому большому: от блок-контейнера 6 м до 1120 м² на двух этажах. Нижняя синяя грань — фасад с витражом и входом, к дороге. Нажмите на подходящий по площади и габаритам — план с готовой начинкой соберётся сразу, внутри всё можно двигать и менять.</p>
+    <div class="sladder">${P.map(item).join("")}</div>
+    <div class="slegend"><span><i class="l1"></i>1 этаж</span><span><i class="l2"></i>1 этаж + антресоль</span><span><i class="l3"></i>2 этажа</span><span><i class="l4"></i>фасад · витраж · вход</span><span class="spacer"></span><span id="sc_status"></span></div>
+    <div class="actions"><button class="btn primary" id="sc_custom">Свои размеры и состав → мастер</button><button class="btn" id="sc_close">Пустой лист</button></div></div>`;
+  document.body.appendChild(m);
+  // начинка боксов: строим по одному в фоне (тот же кэш, что у каталога в мастере), совсем маленькие боксы оставляем контуром
+  let alive=true; const step=()=>{ if(!alive) return; const k=P.map(p=>p.key).filter(k=>PRESET_PLANS[k]===undefined)[0]; const st=m.querySelector("#sc_status"); if(!k){ if(st) st.textContent=""; return; }
+    const p=OfficeKB.PRESETS.find(x=>x.key===k), f=F[k]; if(st) st.textContent=`рисую начинку: ${p.name}…`;
+    try{ const B=OfficeKB.presetBrief(p,f?f.M:4,{level:f?f.level:0}); const V=OfficeKB.briefVariants(B,{formats:false,max:4}); PRESET_PLANS[k]=V[0]?V[0].project:OfficeKB.fromBrief(B).project; }catch(err){ PRESET_PLANS[k]=null; }
+    if(PRESET_PLANS[k]&&p.w*K>=80){ const fig=m.querySelector(`.sitem[data-key="${k}"] .sfig`); if(fig) fig.innerHTML=box(p,planThumb(PRESET_PLANS[k])); }
+    setTimeout(step,30); };
+  setTimeout(step,400);
+  const build=p=>{ alive=false; m.remove(); const st={A:250,autoB:true,w:0,d:0,lvl:"one",h:4.5,fh:3.6,name:"Офис продаж",sets:true,style:"base",touched:[],f:{}}; const touched=new Set(); bwApplyPreset(st,p,touched); st.touched=[...touched];
+    briefWizard(st); const g=document.getElementById("bw_go"); if(g) g.click(); };
+  m.addEventListener("click",e=>{ const t=e.target.closest("button"); if(e.target===m||(t&&t.id==="sc_close")){ alive=false; return m.remove(); } if(!t) return;
+    if(t.id==="sc_custom"){ alive=false; m.remove(); return briefWizard(); }
+    const p=t.dataset.key&&P.find(x=>x.key===t.dataset.key); if(p) build(p); }); }
 function bwBrief(st){ const f=st.f, on=k=>f[k]&&f[k].on;
   const M=f.managers.n, Bo=on("backoffice")?f.backoffice.n:0;
   return { name:st.name, sets:!!st.sets, style:st.style,
@@ -5368,7 +5406,7 @@ function openExampleFromURL(){ const q=(new URLSearchParams(location.search).get
 const openedExample = openExampleFromURL();
 addEventListener("hashchange",()=>{ if(openExampleFromURL()){ setView("2d"); fit(); render(); } });
 renderLib(); fit(); setView.fitted=true; render(); setStatus(openedExample?"Открыт пример":"Новый проект — ваши проекты в «Проекты»");
-if(!openedExample) setTimeout(()=>{ if(!document.querySelector(".modal")) briefWizard(); },250);
+if(!openedExample) setTimeout(()=>{ if(!document.querySelector(".modal")) startCatalog(); },250);
 (async()=>{
   if(location.protocol.startsWith("http")&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&await livePing(location.origin)) liveConnect(location.origin,false);
   if(!window.claude||!window.claude.use) { if(!LIVE.base) setTimeout(()=>setStatus("Сохранение в этом браузере"),2500); return; }

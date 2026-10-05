@@ -834,7 +834,7 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
       { name: "мобильный архив + сейф", w: 4.0, h: 2.4, items: [SI("archM", 0, 0, 0, 0), SI("safe", 3.3, 0), SI("docCab", 3.1, 1.9, 180, 0)] },
     ] },
     { key: "wc", name: "Санузел", room: /с\/у|санузел|туалет|мгн/i, align: "back", variants: [
-      { name: "кабина: унитаз + раковина", w: 1.2, h: 2.0, items: [SI("wc", .4, 0), SI("sink", .33, 1.55, 180)] },
+      { name: "кабина: унитаз + раковина", w: 1.2, h: 2.0, items: [SI("wc", .2, 0), SI("sink", .7, 1.1, 90)] },
       { name: "универсальный МГН (СП 59)", w: 2.2, h: 2.25, items: [SI("wcset", 0, 0, 0, 0)] },
       { name: "мужской · 2 кабины + 2 писсуара", w: 3.0, h: 2.6, items: [SI("cubicle", 0, 0, 0, 0), SI("cubicle", .9, 0, 0, 0), SI("urinal", 2.0, 0), SI("urSep", 2.45, 0), SI("urinal", 2.55, 0), SI("sinkD", 1.8, 2.1, 180, 1)] },
       { name: "женский · 3 кабины + столешница", w: 3.0, h: 2.6, items: [SI("cubicle", 0, 0, 0, 1), SI("cubicle", 1.0, 0, 0, 1), SI("cubicle", 2.0, 0, 0, 1), SI("sinkD", 1.4, 2.05, 180, 2)] },
@@ -907,7 +907,7 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
     return Math.max(0, pick(v => fit(v))); };
   /* Санузлы: размеры и приборы (скилл sales-office-zoning → references/restrooms.md). */
   // кабина 0,9×1,5 (дверь внутрь) / 0,9×1,25 (наружу), СП 44 минимум 0,8×1,2; шаг писсуаров 0,8; проход перед кабинами 1,2 (СП 44 табл. 1); МГН 2,2×2,25 (СП 59 п. 6.3.3)
-  KB.WC = { cabW: 0.9, cabIn: 1.5, cabOut: 1.25, cabMin: [0.85, 1.2], urW: 0.75, sinkW: 0.65, sinkD: 0.5, passMin: 1.2, passRows: 1.5, doorW: 0.8, mgn: [2.2, 2.25], mgnSide: [1.7, 2.2], accMin: [1.65, 2.2],
+  KB.WC = { cabW: 0.9, cabIn: 1.5, cabOut: 1.25, cabMin: [0.85, 1.2], urW: 0.7, sinkW: 0.65, sinkD: 0.5, passMin: 1.2, passRows: 1.5, doorW: 0.8, mgn: [2.2, 2.25], mgnSide: [1.7, 2.2], accMin: [1.65, 2.2],
     single: [1.2, 1.8], singleOk: [1.5, 1.8], wcFront: 0.6, wcSide: 0.4, sinkFront: 0.55, puiMin: 2 };
   /* Размеры (restrooms.md §0, §9): кабина 0,85 × 1,2 (дверь наружу) / 0,85 × 1,5 (внутрь) — СП 118 табл. 5.5; оси писсуаров 0,7, умывальников 0,65 — СП 44 табл. 1;
    * проход между рядами кабин 1,5 (СП 118 табл. 5.5), у ряда вдоль стены — практика 1,2; универсальная кабина 2,2 × 2,25 (унитаз по центру) или 1,7 × 2,2 (унитаз у стены),
@@ -2532,10 +2532,11 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
         break; }
       case "wcv": {   // универсальная кабина МГН — одноместная: унитаз в дальнем углу (рядом ≥ 0,8 м для пересадки с коляски), умывальник у стены, круг разворота Ø 1,4 м
         P("wc", W - 0.65, 0.05);   // унитаз у правой стены: ось 0,45 от стены (поручень), слева от него ≥ 0,8 м свободно для пересадки с коляски (СП 59 п. 6.3.3, Doc M)
-        P("sink", 0.05, Math.max(0.3, Math.min(D - 1.9, D - 0.9 - 0.8)), 270);   // раковина — на стене двери (левая боковая), досягаема с унитаза; дверь наружу ≥ 0,9
+        P("sink", 0.05, Math.max(0.3, D - 1.55), 270);   // раковина — на стене двери (левая боковая) у входа, досягаема с унитаза; дверь наружу ≥ 0,9
         out._note = `универсальная кабина ${W.toFixed(2)} × ${D.toFixed(2)}: унитаз у стены, сбоку ≥ 0,8 м, умывальник у двери, дверь наружу 0,9${Math.min(W, D) < 2.2 ? " (вариант 1,7 × 2,2 с боковым унитазом, СП 59 табл. 6.1)" : ""}`;
         break; }
-      case "wcs": P("wc", Math.min(0.6, W - 0.5), 0.05); P("sink", W - 0.5, Math.min(1.0, D - 1.3), 90); break;
+      case "wcs": P("wc", Math.max(0.25, Math.min(0.6, W - 0.5)), 0.05); P("sink", W - 0.5, Math.max(0.8, D - 1.5), 90);   // одноместный персонала: унитаз у дальней стены, раковина на боковой стене у двери
+        out._note = "одноместный с/у персонала: унитаз в глубине, раковина у двери"; break;
       case "wclock": {   // санхолл-умывальная (шлюз): дверь из коридора; раковины с зеркалом — на дальней стене, напротив входа; М и Ж — на боковых стенах
         const C = KB.WC, n = Math.max(1, Math.min(3, Math.floor((W - 0.1) / C.sinkW)));
         for (let i = 0; i < n; i++) P("sink", (W - n * C.sinkW) / 2 + i * C.sinkW + (C.sinkW - 0.55) / 2, 0.02, 0, { label: i ? "" : "зеркало над раковинами" });
@@ -2554,19 +2555,19 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
             for (let i = 0; i < nS; i++) P("sink", s0 + i * C.sinkW + (C.sinkW - 0.55) / 2, D - 0.47, 180, { label: i ? "" : "зеркало над раковиной" }); }
           out._note = `кабин ${nWc}${nUr ? `, писсуаров ${nUr}` : ""}${lock ? "; руки моют в санхолле-шлюзе" : ", раковина у входа"}; проход ${(W - cd).toFixed(2)} м`; break; }
         const L = W - 0.1;   // дверь на торцевой стене (из коридора), у общей стены с соседним санузлом; локально u = 0 — сторона двери, u = W — наружная стена
-        if (!lock && L < 1.75) { P("wc", (W - 0.4) / 2, 0.05); P("sink", W - 0.5, Math.max(0.8, D - 1.9), 90);   // одноместный 1,4–1,5 × 2,2–3,2: унитаз в глубине, раковина у наружной стены ближе к двери
+        if (!lock && L < 1.75) { P("wc", (W - 0.4) / 2, 0.05); P("sink", W - 0.5, Math.max(0.8, D - 1.5), 90);   // одноместный 1,4–1,5 × 2,2–3,2: унитаз в глубине, раковина у наружной стены ближе к двери
           out._note = `одноместный: унитаз в глубине, раковина у двери; ширина ${W.toFixed(2)} м`; break; }
         /* эталон (планы 11, 14, 24, 27, 30): кабины 0,9 вдоль дальней стены с дверцами в переднюю зону ≥ 1,2; Ж — кабины от наружной стены;
          * М — кабина у наружной стены, писсуары с экраном у дальней стены со стороны двери; умывальники — в переднем углу у наружной стены (на стене входа при ширине ≥ 2,2, иначе на наружной боковой);
          * дверь — у общей стены, внутрь: створка ложится на перегородку, умывальник и кабины вне её дуги */
         const cd = D - C.sinkD - C.passMin >= C.cabIn ? C.cabIn : C.cabOut;
-        let nWc = men ? 1 : Math.max(1, Math.floor(L / C.cabW)), nUr = men ? Math.max(0, Math.min(3, Math.floor((L - C.cabW - 0.3) / C.urW))) : 0;
+        let nWc = men ? 1 : Math.max(1, Math.floor(L / C.cabW)), nUr = men ? Math.max(0, Math.min(3, Math.floor((L - C.cabW - 0.2) / C.urW))) : 0;
         if (men && L >= 2 * C.cabW + C.urW + 0.3 && (nUr >= 2 || L >= 3.0)) { nWc = 2; nUr = Math.max(1, Math.min(3, Math.floor((L - 2 * C.cabW - 0.3) / C.urW))); }
         nWc = Math.min(nWc, 6);
         let u = W - 0.05;
         for (let i = 0; i < nWc; i++) { u -= C.cabW; P("cubicle", u, 0.02, 0, { w: C.cabW, h: cd }); P("wc", u + (C.cabW - 0.4) / 2, 0.05); }
-        if (men) { let v = u - 0.1; for (let i = 0; i < nUr; i++) { v -= C.urW; if (v < 0.3) { nUr = i; break; } P("urinal", v + (C.urW - 0.4) / 2 + 0.05, 0.02); P("urSep", v + C.urW - 0.06, 0.02); }
-          if (nUr && v >= 0.3) P("urSep", v - 0.06, 0.02); }   // экран со стороны двери
+        if (men) { let v = u - 0.1; for (let i = 0; i < nUr; i++) { v -= C.urW; if (v < 0.15) { nUr = i; break; } P("urinal", v + (C.urW - 0.4) / 2 + 0.05, 0.02); P("urSep", v + C.urW - 0.06, 0.02); }
+          if (nUr && v >= 0.15) P("urSep", v - 0.06, 0.02); }   // экран со стороны двери
         const sMax = W - 0.05 - (C.doorW + 0.35), nS0 = men ? Math.min(2, Math.max(1, Math.ceil((nWc + nUr) / 2))) : Math.min(2, Math.max(1, Math.ceil(nWc / 2)));
         let nS = 0;
         if (sMax >= C.sinkW + 0.05) { nS = Math.min(nS0, Math.floor(sMax / C.sinkW));   // на стене входа, от наружного угла к двери
@@ -2731,6 +2732,7 @@ table.cjm td{padding:3px 4px}table.cjm .cj{display:inline-grid;place-items:cente
       for (const r of S.items.filter(i => i.t === "room" && (a.lv == null || lvOf(i) === +a.lv))) { if (/^Зона продаж/i.test(r.name) || isHall(r)) continue;   // зона open space — внутри уже ячейки; зал и холлы — не комната для набора (иначе набор снесёт всё, что в зале)
         const st = KB.SETS.find(x => x.room.test(r.name)); if (!st) continue;
         if (st.key === "maket" && KB.contents(S, r).some(i => i.t === "item" && i.k === "model")) continue;   // стол макета уже по ТЗ — набор не должен его уменьшать
+        if (st.key === "wc" || /с\/у|санузел|туалет|уборн|санхолл|шлюз|мгн/i.test(r.name)) continue;   // санузлы расставляет только furnishRoom по эталонным схемам (restrooms.md §10); набор ставил унитаз с раковиной по центру и убирал кабины
         try { let res = KB.OPS.add_set(S, { set: st.key, room: r.id, variant: "auto", style: a.style });
           if (/дверь/.test(res.msg)) {   // дверь задевает — пробуем варианты поменьше
             const cur = st.variants.findIndex(v => res.msg.includes(v.name)), order = st.variants.map((v, i) => i).filter(i => i !== cur && st.variants[i].w * st.variants[i].h <= st.variants[Math.max(0, cur)].w * st.variants[Math.max(0, cur)].h).sort((x, y) => st.variants[y].w * st.variants[y].h - st.variants[x].w * st.variants[x].h);
